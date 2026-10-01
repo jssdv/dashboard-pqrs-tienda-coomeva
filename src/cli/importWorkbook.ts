@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
 import { parseDictionary } from "../domain/dictionary.js";
-import { importCases } from "../import/importCases.js";
+import { importLoadedCases } from "../holidays/nationalHolidays.js";
 import { readWorkbook } from "../import/readWorkbook.js";
 import { openSqliteRepository } from "../store/sqliteRepository.js";
 
@@ -10,14 +10,18 @@ if (!workbookPath || !dictionaryPath || !dbPath) {
   process.exit(1);
 }
 
-const { rows } = await readWorkbook(workbookPath);
-const dictionary = parseDictionary(readFileSync(dictionaryPath, "utf8"));
-const result = importCases({ rows, holidays: [], dictionary });
-openSqliteRepository(dbPath).replaceAll(result.cases);
-console.log(
-  JSON.stringify({
-    imported: result.cases.length,
-    skipped: result.skipped,
-    invalidDates: result.invalidDates,
-  }),
-);
+try {
+  const { rows } = await readWorkbook(workbookPath);
+  const dictionary = parseDictionary(readFileSync(dictionaryPath, "utf8"));
+  const summary = await importLoadedCases({
+    rows,
+    dictionary,
+    dbPath,
+    fetchImpl: fetch,
+    openRepository: openSqliteRepository,
+  });
+  console.log(JSON.stringify(summary));
+} catch (error) {
+  console.error(error instanceof Error ? error.message : String(error));
+  process.exit(1);
+}

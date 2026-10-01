@@ -14,14 +14,10 @@ Rama de trabajo: `feature/pqr-core`.
 - Diccionario CSV `field,from,to` para `area`, `fuente`, `tipo` y `tema`. Si no hay entrada, el valor oficial es el original recortado.
 - `data/dictionary.csv` ya trae el mapeo oficial (boletería, pines, devoluciones, fuentes y áreas).
 - Repositorio SQLite que reemplaza todos los casos en cada importación.
-- CLI de importación. Los festivos van vacíos (`holidays: []`); no llama a la API de calendarios.
+- CLI de importación. Antes de escribir SQLite pide los festivos nacionales de Colombia (`/co/v1/{año}/nacionales.json`) para los años de las hojas, más el anterior y el siguiente. Si esa petición falla, no reemplaza los casos.
 - Resumen de agregados (`summarize`) sobre los casos ya importados: totales, catálogos, año, mes y días promedio.
 - API local `GET /summary` que devuelve ese resumen. No lista casos: nombre, correo y texto libre no salen por HTTP.
 - Pantalla en `GET /` con los mismos totales, meses, tipo, área, fuente, tema y año. Tampoco muestra nombre, correo ni texto libre.
-
-## Qué sigue
-
-Festivos: un plan posterior debe inyectar la lista ISO desde `https://calendariosnacionales.com/co/api/`. El CLI de este núcleo no lo hace.
 
 ## Arranque
 
@@ -47,7 +43,7 @@ npm run serve -- ./data/pqr.sqlite
 Imprime una línea JSON:
 
 ```json
-{"imported": 0, "skipped": 0, "invalidDates": 0}
+{"imported": 0, "skipped": 0, "invalidDates": 0, "holidays": 0}
 ```
 
 `*.sqlite` está en `.gitignore`. Nombres, correos y texto libre se quedan en ese archivo local.
