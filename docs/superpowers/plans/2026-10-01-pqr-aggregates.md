@@ -450,7 +450,7 @@ EOF
 - Consumes: `summarize` from Task 3
 - Produces: README status text only
 
-- [ ] **Step 1: Update Qué ya está and Qué sigue**
+- [x] **Step 1: Update Qué ya está and Qué sigue**
 
 Under `## Qué ya está`, add this bullet after the CLI line:
 
@@ -467,7 +467,7 @@ Under `## Qué sigue`, remove the line `1. Consultas de agregados para el dashbo
 2. Interfaz web.
 ```
 
-- [ ] **Step 2: Commit**
+- [x] **Step 2: Commit**
 
 ```bash
 git add README.md docs/superpowers/plans/2026-10-01-pqr-aggregates.md

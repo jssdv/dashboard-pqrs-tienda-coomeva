@@ -15,12 +15,12 @@ Rama de trabajo: `feature/pqr-core`.
 - `data/dictionary.csv` ya trae el mapeo oficial (boletería, pines, devoluciones, fuentes y áreas).
 - Repositorio SQLite que reemplaza todos los casos en cada importación.
 - CLI de importación. Los festivos van vacíos (`holidays: []`); no llama a la API de calendarios.
+- Resumen de agregados (`summarize`) sobre los casos ya importados: totales, catálogos, año, mes y días promedio.
 
 ## Qué sigue
 
-1. Consultas de agregados para el dashboard.
-2. API que alimente esas consultas.
-3. Interfaz web.
+1. API que alimente esas consultas.
+2. Interfaz web.
 
 Festivos: un plan posterior debe inyectar la lista ISO desde `https://calendariosnacionales.com/co/api/`. El CLI de este núcleo no lo hace.
 
