@@ -4,7 +4,8 @@
   "type": "module",
   "scripts": {
     "test": "vitest run",
-    "import": "tsx src/cli/importWorkbook.ts"
+    "import": "tsx src/cli/importWorkbook.ts",
+    "serve": "tsx src/cli/serveSummary.ts"
   },
   "dependencies": {
     "better-sqlite3": "^11.10.0",
