@@ -68,6 +68,32 @@ describe("GET /summary", () => {
   });
 });
 
+describe("GET /", () => {
+  it("returns the dashboard html and omits personal fields", async () => {
+    const server = createSummaryServer(
+      memoryRepo([caso({ id: "2026-2", sheetYear: 2026, rowNumber: 2 })]),
+    );
+    const port = await listen(server);
+    try {
+      const page = await fetch(`http://127.0.0.1:${port}/`);
+      const css = await fetch(`http://127.0.0.1:${port}/dashboard.css`);
+      expect(page.status).toBe(200);
+      expect(page.headers.get("content-type")).toContain("text/html");
+      const html = await page.text();
+      expect(html).toContain('data-kpi="total">1');
+      expect(html).toContain('data-kpi="abiertos">1');
+      expect(html).toContain('data-kpi="cerrados">0');
+      expect(html).not.toContain("NOMBRE");
+      expect(html).not.toContain("a@b.co");
+      expect(css.status).toBe(200);
+      expect(css.headers.get("content-type")).toContain("text/css");
+      expect(await css.text()).toContain("--color-primary");
+    } finally {
+      await new Promise((resolve) => server.close(resolve));
+    }
+  });
+});
+
 describe("unknown routes", () => {
   it("returns 404 for GET /cases and POST /summary", async () => {
     const server = createSummaryServer(memoryRepo([]));
