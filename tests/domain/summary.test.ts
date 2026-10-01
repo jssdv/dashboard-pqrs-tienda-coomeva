@@ -100,3 +100,41 @@ describe("summarize catalogs and years", () => {
     ]);
   });
 });
+
+describe("summarize months and days", () => {
+  it("groups valid start months ascending and ignores invalid or null starts", () => {
+    const cases = [
+      caso({ id: "2026-2", sheetYear: 2026, rowNumber: 2, fechaInicial: "2026-03-01" }),
+      caso({ id: "2026-3", sheetYear: 2026, rowNumber: 3, fechaInicial: "2026-01-15" }),
+      caso({ id: "2026-4", sheetYear: 2026, rowNumber: 4, fechaInicial: "2026-01-20" }),
+      caso({
+        id: "2026-5",
+        sheetYear: 2026,
+        rowNumber: 5,
+        fechaInicial: "1999-01-01",
+        fechaInicialInvalida: true,
+      }),
+      caso({ id: "2026-6", sheetYear: 2026, rowNumber: 6, fechaInicial: null }),
+    ];
+    expect(summarize(cases).porMes).toEqual([
+      { key: "2026-01", count: 2 },
+      { key: "2026-03", count: 1 },
+    ]);
+  });
+
+  it("averages days only when both dates are valid and diasSolucion is set", () => {
+    const cases = [
+      caso({ id: "2026-2", sheetYear: 2026, rowNumber: 2, diasSolucion: 1 }),
+      caso({ id: "2026-3", sheetYear: 2026, rowNumber: 3, diasSolucion: 3 }),
+      caso({
+        id: "2026-4",
+        sheetYear: 2026,
+        rowNumber: 4,
+        fechaSolucionInvalida: true,
+        diasSolucion: 9,
+      }),
+      caso({ id: "2026-5", sheetYear: 2026, rowNumber: 5, diasSolucion: null }),
+    ];
+    expect(summarize(cases).dias).toEqual({ casos: 2, promedio: 2 });
+  });
+});

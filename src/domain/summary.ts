@@ -48,6 +48,26 @@ export function summarize(cases: PqrCase[]): DashboardSummary {
     .sort((a, b) => a[0] - b[0])
     .map(([year, count]) => ({ key: String(year), count }));
 
+  const months = new Map<string, number>();
+  for (const row of cases) {
+    if (row.fechaInicial === null || row.fechaInicialInvalida) continue;
+    const month = row.fechaInicial.slice(0, 7);
+    months.set(month, (months.get(month) ?? 0) + 1);
+  }
+  const porMes = [...months.entries()]
+    .sort((a, b) => a[0].localeCompare(b[0]))
+    .map(([key, count]) => ({ key, count }));
+
+  const withDays = cases.filter(
+    (row) =>
+      !row.fechaInicialInvalida && !row.fechaSolucionInvalida && row.diasSolucion !== null,
+  );
+  const casos = withDays.length;
+  const promedio =
+    casos === 0
+      ? null
+      : withDays.reduce((sum, row) => sum + (row.diasSolucion as number), 0) / casos;
+
   return {
     total,
     abiertos,
@@ -58,7 +78,7 @@ export function summarize(cases: PqrCase[]): DashboardSummary {
     porFuente: catalogBuckets(cases, "fuente"),
     porTipo: catalogBuckets(cases, "tipo"),
     porTema: catalogBuckets(cases, "tema"),
-    porMes: [],
-    dias: { casos: 0, promedio: null },
+    porMes,
+    dias: { casos, promedio },
   };
 }

@@ -346,7 +346,7 @@ EOF
 - Consumes: `summarize` from Task 2
 - Produces: `porMes` and `dias.casos` / `dias.promedio`
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Append:
 
@@ -390,12 +390,12 @@ describe("summarize months and days", () => {
 });
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `npx vitest run tests/domain/summary.test.ts`
 Expected: FAIL, `porMes` is `[]` and `dias.casos` is `0`.
 
-- [ ] **Step 3: Write minimal implementation**
+- [x] **Step 3: Write minimal implementation**
 
 In `summarize`, replace the `porMes: []` and `dias: { casos: 0, promedio: null }` return fields with computed values. Add this block before the `return`:
 
@@ -423,12 +423,12 @@ In `summarize`, replace the `porMes: []` and `dias: { casos: 0, promedio: null }
 
 And return `porMes` and `dias: { casos, promedio }`.
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run: `npx vitest run tests/domain/summary.test.ts`
 Expected: PASS
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add tests/domain/summary.test.ts src/domain/summary.ts docs/superpowers/plans/2026-10-01-pqr-aggregates.md
