@@ -1,4 +1,4 @@
-import type { PqrCase } from "./types.js";
+import type { CatalogField, PqrCase } from "./types.js";
 
 export interface CountBucket {
   key: string;
@@ -19,15 +19,19 @@ export interface DashboardSummary {
   dias: { casos: number; promedio: number | null };
 }
 
-const emptyBuckets = {
-  porAnio: [] as CountBucket[],
-  porArea: [] as CountBucket[],
-  porFuente: [] as CountBucket[],
-  porTipo: [] as CountBucket[],
-  porTema: [] as CountBucket[],
-  porMes: [] as CountBucket[],
-  dias: { casos: 0, promedio: null as number | null },
-};
+const SIN_VALOR = "(sin valor)";
+
+function catalogBuckets(cases: PqrCase[], field: CatalogField): CountBucket[] {
+  const counts = new Map<string, number>();
+  for (const row of cases) {
+    const raw = row[field];
+    const key = raw === null ? SIN_VALOR : raw;
+    counts.set(key, (counts.get(key) ?? 0) + 1);
+  }
+  return [...counts.entries()]
+    .map(([key, count]) => ({ key, count }))
+    .sort((a, b) => b.count - a.count || a.key.localeCompare(b.key));
+}
 
 export function summarize(cases: PqrCase[]): DashboardSummary {
   const total = cases.length;
@@ -35,11 +39,26 @@ export function summarize(cases: PqrCase[]): DashboardSummary {
   const fechasInvalidas = cases.filter(
     (row) => row.fechaInicialInvalida || row.fechaSolucionInvalida,
   ).length;
+
+  const years = new Map<number, number>();
+  for (const row of cases) {
+    years.set(row.sheetYear, (years.get(row.sheetYear) ?? 0) + 1);
+  }
+  const porAnio = [...years.entries()]
+    .sort((a, b) => a[0] - b[0])
+    .map(([year, count]) => ({ key: String(year), count }));
+
   return {
     total,
     abiertos,
     cerrados: total - abiertos,
     fechasInvalidas,
-    ...emptyBuckets,
+    porAnio,
+    porArea: catalogBuckets(cases, "area"),
+    porFuente: catalogBuckets(cases, "fuente"),
+    porTipo: catalogBuckets(cases, "tipo"),
+    porTema: catalogBuckets(cases, "tema"),
+    porMes: [],
+    dias: { casos: 0, promedio: null },
   };
 }

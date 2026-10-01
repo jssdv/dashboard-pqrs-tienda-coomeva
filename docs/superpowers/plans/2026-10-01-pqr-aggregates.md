@@ -197,7 +197,7 @@ EOF
 - Consumes: `summarize` from Task 1
 - Produces: filled `porArea`, `porFuente`, `porTipo`, `porTema`, `porAnio`
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Append to `tests/domain/summary.test.ts` (keep the `caso` helper from Task 1):
 
@@ -242,12 +242,12 @@ describe("summarize catalogs and years", () => {
 });
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `npx vitest run tests/domain/summary.test.ts`
 Expected: FAIL, `porTema` / `porAnio` are empty arrays.
 
-- [ ] **Step 3: Write minimal implementation**
+- [x] **Step 3: Write minimal implementation**
 
 Replace `src/domain/summary.ts` with:
 
@@ -318,12 +318,12 @@ export function summarize(cases: PqrCase[]): DashboardSummary {
 }
 ```
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run: `npx vitest run tests/domain/summary.test.ts`
 Expected: PASS
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add tests/domain/summary.test.ts src/domain/summary.ts docs/superpowers/plans/2026-10-01-pqr-aggregates.md

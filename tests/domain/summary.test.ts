@@ -61,3 +61,42 @@ describe("summarize totals", () => {
     expect(summary.fechasInvalidas).toBe(1);
   });
 });
+
+describe("summarize catalogs and years", () => {
+  it("buckets official text, labels nulls, and sorts years ascending", () => {
+    const cases = [
+      caso({ id: "2026-2", sheetYear: 2026, rowNumber: 2, tema: null, area: "B" }),
+      caso({ id: "2026-3", sheetYear: 2026, rowNumber: 3, tema: "BOLETERIA", area: "A" }),
+      caso({ id: "2025-4", sheetYear: 2025, rowNumber: 4, tema: "BOLETERIA", area: "A", fuente: null }),
+    ];
+    const summary = summarize(cases);
+    expect(summary.porTema).toEqual([
+      { key: "BOLETERIA", count: 2 },
+      { key: "(sin valor)", count: 1 },
+    ]);
+    expect(summary.porArea).toEqual([
+      { key: "A", count: 2 },
+      { key: "B", count: 1 },
+    ]);
+    expect(summary.porFuente).toEqual([
+      { key: "Correo Tienda", count: 2 },
+      { key: "(sin valor)", count: 1 },
+    ]);
+    expect(summary.porTipo).toEqual([{ key: "RECLAMO", count: 3 }]);
+    expect(summary.porAnio).toEqual([
+      { key: "2025", count: 1 },
+      { key: "2026", count: 2 },
+    ]);
+  });
+
+  it("breaks catalog ties by key ascending", () => {
+    const cases = [
+      caso({ id: "2026-2", sheetYear: 2026, rowNumber: 2, tipo: "Z" }),
+      caso({ id: "2026-3", sheetYear: 2026, rowNumber: 3, tipo: "A" }),
+    ];
+    expect(summarize(cases).porTipo).toEqual([
+      { key: "A", count: 1 },
+      { key: "Z", count: 1 },
+    ]);
+  });
+});
