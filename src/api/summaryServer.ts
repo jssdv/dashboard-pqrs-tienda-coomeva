@@ -41,6 +41,7 @@ interface CaseQuery {
   tipo?: string;
   mes?: string;
   plazo?: string;
+  fecha?: string;
 }
 
 function json(res: ServerResponse, status: number, body: unknown): void {
@@ -82,6 +83,7 @@ function queryOf(url: URL): CaseQuery {
     tipo: url.searchParams.get("tipo") ?? undefined,
     mes: url.searchParams.get("mes") ?? undefined,
     plazo: url.searchParams.get("plazo") ?? undefined,
+    fecha: url.searchParams.get("fecha") ?? undefined,
   };
 }
 
@@ -128,6 +130,7 @@ function applyFilters(
   }
   return {
     rows: rows.filter((row) => {
+      if (query.fecha === "invalida" && row.fechaInicial !== null && !row.fechaInicialInvalida) return false;
       if (query.area && (row.area ?? "(sin valor)") !== query.area) return false;
       if (query.tipo && (row.tipo ?? "(sin valor)") !== query.tipo) return false;
       if (query.mes) {
@@ -194,16 +197,31 @@ export function createSummaryServer(
         return;
       }
       if (req.method === "GET" && url.pathname === "/api/proveedores") {
-        const counts = new Map<string, number>();
+        const { holidays, today: hoy } = clock();
+        const groups = new Map<string, PqrCase[]>();
         for (const row of repository.list()) {
           if (!row.area) continue;
-          counts.set(row.area, (counts.get(row.area) ?? 0) + 1);
+          groups.set(row.area, [...(groups.get(row.area) ?? []), row]);
         }
         json(res, 200, {
-          proveedores: repository.listProveedores().map((nombre) => ({
-            nombre,
-            casos: counts.get(nombre) ?? 0,
-          })),
+          proveedores: repository.listProveedores().map((nombre) => {
+            const rows = groups.get(nombre) ?? [];
+            const dias = rows
+              .filter((row) => !row.fechaInicialInvalida && !row.fechaSolucionInvalida)
+              .map((row) => row.diasSolucion)
+              .filter((value): value is number => value !== null);
+            return {
+              nombre,
+              casos: rows.length,
+              abiertos: rows.filter((row) => row.fechaSolucion === null).length,
+              vencidos:
+                holidays.length === 0
+                  ? null
+                  : rows.filter((row) => riskOf(row, holidays, hoy)?.estado === "vencido").length,
+              diasPromedio:
+                dias.length === 0 ? null : dias.reduce((sum, value) => sum + value, 0) / dias.length,
+            };
+          }),
         });
         return;
       }

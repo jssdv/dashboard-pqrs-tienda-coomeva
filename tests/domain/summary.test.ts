@@ -286,3 +286,17 @@ describe("summarize matrizProveedorTipo", () => {
     expect(summarize([]).matrizProveedorTipo).toEqual([]);
   });
 });
+
+describe("summarize sinFechaValida", () => {
+  it("counts open cases without a usable start date", () => {
+    const open = { fechaSolucion: null, diasSolucion: null };
+    const result = summarize([
+      caso({ id: "a", sheetYear: 2026, rowNumber: 2, ...open, fechaInicial: null }),
+      caso({ id: "b", sheetYear: 2026, rowNumber: 3, ...open, fechaInicialInvalida: true }),
+      caso({ id: "c", sheetYear: 2026, rowNumber: 4, ...open }),
+      caso({ id: "d", sheetYear: 2026, rowNumber: 5, fechaInicial: null }),
+    ]);
+    expect(result.sinFechaValida).toBe(2);
+    expect(summarize([]).sinFechaValida).toBe(0);
+  });
+});

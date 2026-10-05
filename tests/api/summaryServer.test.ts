@@ -279,6 +279,71 @@ describe("GET /api/proveedores/:nombre/linea", () => {
   });
 });
 
+describe("GET /api/proveedores metrics", () => {
+  const now = () => new Date("2026-01-19T15:00:00Z");
+  const rows = () => [
+    caso({ id: "1", sheetYear: 2026, rowNumber: 2, area: "Tienda", fechaInicial: "2026-01-05" }),
+    caso({ id: "2", sheetYear: 2026, rowNumber: 3, area: "Tienda", fechaInicial: "2026-01-16" }),
+    caso({
+      id: "3",
+      sheetYear: 2026,
+      rowNumber: 4,
+      area: "Tienda",
+      fechaInicial: "2026-01-05",
+      fechaSolucion: "2026-01-09",
+      diasSolucion: 4,
+    }),
+    caso({ id: "4", sheetYear: 2026, rowNumber: 5, area: "Sin cierres", fechaInicial: "2026-01-16" }),
+  ];
+  const withProveedores = (repo: CaseRepository, names: string[]): CaseRepository => ({
+    ...repo,
+    listProveedores: () => names,
+  });
+
+  it("returns abiertos, vencidos and diasPromedio per provider", async () => {
+    const server = createSummaryServer(withProveedores(memoryRepo(rows()), ["Tienda", "Sin cierres"]), { now });
+    const port = await listen(server);
+    try {
+      const body = await (await fetch(`http://127.0.0.1:${port}/api/proveedores`)).json();
+      const byName = Object.fromEntries(body.proveedores.map((row: { nombre: string }) => [row.nombre, row]));
+      expect(byName.Tienda).toMatchObject({ casos: 3, abiertos: 2, vencidos: 1, diasPromedio: 4 });
+      expect(byName["Sin cierres"]).toMatchObject({ casos: 1, abiertos: 1, vencidos: 0, diasPromedio: null });
+    } finally {
+      await new Promise((resolve) => server.close(resolve));
+    }
+  });
+
+  it("returns vencidos null without holidays", async () => {
+    const server = createSummaryServer(withProveedores(memoryRepo(rows(), []), ["Tienda"]), { now });
+    const port = await listen(server);
+    try {
+      const body = await (await fetch(`http://127.0.0.1:${port}/api/proveedores`)).json();
+      expect(body.proveedores[0].vencidos).toBeNull();
+    } finally {
+      await new Promise((resolve) => server.close(resolve));
+    }
+  });
+});
+
+describe("GET /api/casos fecha=invalida", () => {
+  it("returns only cases without a usable start date", async () => {
+    const server = createSummaryServer(
+      memoryRepo([
+        caso({ id: "nula", sheetYear: 2026, rowNumber: 2, fechaInicial: null }),
+        caso({ id: "mala", sheetYear: 2026, rowNumber: 3, fechaInicialInvalida: true }),
+        caso({ id: "ok", sheetYear: 2026, rowNumber: 4 }),
+      ]),
+    );
+    const port = await listen(server);
+    try {
+      const body = await (await fetch(`http://127.0.0.1:${port}/api/casos?fecha=invalida`)).json();
+      expect(body.cases.map((row: { id: string }) => row.id)).toEqual(["nula", "mala"]);
+    } finally {
+      await new Promise((resolve) => server.close(resolve));
+    }
+  });
+});
+
 describe("POST /api/casos", () => {
   it("returns 400 with the field list and does not insert", async () => {
     const repo = memoryRepo([]);

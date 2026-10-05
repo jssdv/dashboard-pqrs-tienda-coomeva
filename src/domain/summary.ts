@@ -40,6 +40,7 @@ export interface DashboardSummary {
   colaVencida: number | null;
   colaError: string | null;
   cierrePorTipo: CloseRate[];
+  sinFechaValida: number;
   curvas: AreaCurve[];
   matrizProveedorTipo: MatrixRow[];
 }
@@ -166,6 +167,9 @@ export function summarize(
     colaVencida,
     colaError,
     cierrePorTipo: closeRates(cases),
+    sinFechaValida: abiertosCasos.filter(
+      (row) => row.fechaInicial === null || row.fechaInicialInvalida,
+    ).length,
     curvas: areaCurves(cases),
     matrizProveedorTipo: providerTypeMatrix(cases),
   };
