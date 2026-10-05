@@ -29,7 +29,11 @@ FECHA INICIAL, FECHA SOLUCION, AREA, ID ORDEN, ASOCIADO, CORREO, FUENTE, TIPO PQ
 
 ## Resumen (`summarize`)
 
-`DashboardSummary`: totales (total, abiertos, cerrados, fechas inválidas); conteos por año, área, fuente, tipo, tema, mes; flujo mensual entrados/cerrados; antigüedad (`0-5`, `6-10`, `mas-10`) de abiertos; abiertos por área y tema; promedio de días; `colaVencida` / `colaError`; tasa de cierre por tipo (`closeRates`); curvas acumuladas por área y tipo (`areaCurves`). Valores nulos se agrupan como `(sin valor)`.
+`DashboardSummary`: totales (total, abiertos, cerrados, fechas inválidas); `sinFechaValida` (abiertos sin fecha inicial utilizable); conteos por año, área, fuente, tipo, tema, mes; flujo mensual entrados/cerrados; antigüedad (`0-5`, `6-10`, `mas-10`) de abiertos; abiertos por área y tema; promedio de días; `colaVencida` / `colaError`; tasa de cierre por tipo (`closeRates`); matriz proveedor × tipo (`providerTypeMatrix`).
+
+## Riesgo de vencimiento (`risk.ts`)
+
+`riskOf(caso, holidays, today)` → `{diasAbiertos, diasParaVencer, estado}` con plazo de 10 días hábiles: `en-plazo` (0–5), `por-vencer` (6–10), `vencido` (>10). Cerrados y casos sin fecha válida dan `null`; sin festivos lanza error. `providerTimeline(cases, area)` da entrados, cerrados y días promedio por mes de un proveedor. En agregados, los valores nulos se agrupan como `(sin valor)`.
 
 ## Alta de caso (`validateCreate` / `caseFromCreate`)
 

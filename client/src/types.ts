@@ -10,21 +10,6 @@ export interface CloseRate {
   tasa: number;
 }
 
-export interface CurvePoint {
-  mes: string;
-  acumulado: number;
-}
-
-export interface CurveSeries {
-  tipo: string;
-  points: CurvePoint[];
-}
-
-export interface AreaCurve {
-  area: string;
-  series: CurveSeries[];
-}
-
 export interface MonthFlow {
   mes: string;
   entrados: number;
@@ -69,7 +54,6 @@ export interface DashboardSummary {
   colaError: string | null;
   cierrePorTipo: CloseRate[];
   sinFechaValida: number;
-  curvas: AreaCurve[];
   matrizProveedorTipo: MatrixRow[];
 }
 

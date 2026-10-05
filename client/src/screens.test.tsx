@@ -34,7 +34,6 @@ function summary(over: Partial<DashboardSummary> = {}): DashboardSummary {
     colaError: null,
     cierrePorTipo: [],
     sinFechaValida: 0,
-    curvas: [],
     matrizProveedorTipo: [],
     ...over,
   };
@@ -154,7 +153,7 @@ it("keeps the sin fecha válida link even when the count is 0", async () => {
   expect(link?.getAttribute("href")).toBe("/casos?estado=abiertos&fecha=invalida");
 });
 
-it("renders close rate and monthly flow without the area module", async () => {
+it("renders close rate, monthly flow and plazos", async () => {
   vi.stubGlobal(
     "fetch",
     vi.fn(async () => ({
@@ -174,10 +173,6 @@ it("renders close rate and monthly flow without the area module", async () => {
             { key: "6-10", count: 0 },
             { key: "mas-10", count: 1 },
           ],
-          curvas: [
-            { area: "Tienda", series: [{ tipo: "RECLAMO", points: [{ mes: "2026-01", acumulado: 1 }] }] },
-            { area: "Bodega", series: [{ tipo: "QUEJA", points: [{ mes: "2026-01", acumulado: 1 }] }] },
-          ],
         }),
     })),
   );
@@ -195,7 +190,6 @@ it("renders close rate and monthly flow without the area module", async () => {
     "/casos?estado=abiertos&tema=Cine",
   );
   expect(screen.getByRole("link", { name: /Vencido/ }).getAttribute("href")).toBe("/casos?plazo=vencido");
-  expect(screen.queryByRole("heading", { name: "Bodega" })).toBeNull();
   expect(screen.queryByRole("tab")).toBeNull();
   const tipoLinks = screen.getAllByRole("link", { name: "RECLAMO" });
   expect(tipoLinks.some((link) => link.getAttribute("href") === "/casos?tipo=RECLAMO")).toBe(true);

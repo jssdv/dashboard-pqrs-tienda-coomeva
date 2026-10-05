@@ -1,4 +1,3 @@
-import { areaCurves, type AreaCurve } from "./areaCurves.js";
 import { closeRates, type CloseRate } from "./closeRate.js";
 import { bogotaToday, openQueue } from "./openQueue.js";
 import { providerTypeMatrix, type MatrixRow } from "./providerTypeMatrix.js";
@@ -41,7 +40,6 @@ export interface DashboardSummary {
   colaError: string | null;
   cierrePorTipo: CloseRate[];
   sinFechaValida: number;
-  curvas: AreaCurve[];
   matrizProveedorTipo: MatrixRow[];
 }
 
@@ -170,7 +168,6 @@ export function summarize(
     sinFechaValida: abiertosCasos.filter(
       (row) => row.fechaInicial === null || row.fechaInicialInvalida,
     ).length,
-    curvas: areaCurves(cases),
     matrizProveedorTipo: providerTypeMatrix(cases),
   };
 }
