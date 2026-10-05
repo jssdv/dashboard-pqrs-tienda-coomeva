@@ -68,6 +68,7 @@ export interface DashboardSummary {
   colaVencida: number | null;
   colaError: string | null;
   cierrePorTipo: CloseRate[];
+  sinFechaValida: number;
   curvas: AreaCurve[];
   matrizProveedorTipo: MatrixRow[];
 }
@@ -133,6 +134,7 @@ export interface CaseQuery {
   tipo?: string;
   mes?: string;
   plazo?: string;
+  fecha?: string;
 }
 
 export interface TimelinePoint {

@@ -33,13 +33,14 @@ function summary(over: Partial<DashboardSummary> = {}): DashboardSummary {
     colaVencida: 4,
     colaError: null,
     cierrePorTipo: [],
+    sinFechaValida: 0,
     curvas: [],
     matrizProveedorTipo: [],
     ...over,
   };
 }
 
-it("shows Más de 10 días and links it to the overdue queue", async () => {
+it("shows Vencidos and links it to the overdue plazo", async () => {
   vi.stubGlobal(
     "fetch",
     vi.fn(async () => ({ ok: true, status: 200, json: async () => summary() })),
@@ -49,8 +50,8 @@ it("shows Más de 10 días and links it to the overdue queue", async () => {
       <Resumen />
     </MemoryRouter>,
   );
-  expect(await screen.findByText("Más de 10 días")).toBeTruthy();
-  expect(screen.getByRole("link", { name: "4" }).getAttribute("href")).toBe("/casos?cola=vencida");
+  expect(await screen.findByText("Vencidos")).toBeTruthy();
+  expect(screen.getByRole("link", { name: "4" }).getAttribute("href")).toBe("/casos?plazo=vencido");
 });
 
 it("shows 20 cases and the page range", async () => {
@@ -112,13 +113,14 @@ it("shows the empty filter message and Nuevo caso", async () => {
   expect(screen.getByRole("link", { name: "Nuevo caso" }).getAttribute("href")).toBe("/casos/nuevo");
 });
 
-it("links the headline counts into the case list", async () => {
+it("links the four headline figures into the case list", async () => {
   vi.stubGlobal(
     "fetch",
     vi.fn(async () => ({
       ok: true,
       status: 200,
-      json: async () => summary({ total: 3, abiertos: 2, cerrados: 1, colaVencida: 4 }),
+      json: async () =>
+        summary({ total: 9, abiertos: 7, cerrados: 2, colaVencida: 4, sinFechaValida: 3, dias: { casos: 2, promedio: 13.1 } }),
     })),
   );
   render(
@@ -126,11 +128,30 @@ it("links the headline counts into the case list", async () => {
       <Resumen />
     </MemoryRouter>,
   );
-  expect((await screen.findByRole("link", { name: "3" })).getAttribute("href")).toBe("/casos");
-  expect(screen.getByRole("link", { name: "2" }).getAttribute("href")).toBe("/casos?estado=abiertos");
-  expect(screen.getByRole("link", { name: "1" }).getAttribute("href")).toBe("/casos?estado=cerrados");
-  expect(screen.getByRole("link", { name: "Ver cola" }).getAttribute("href")).toBe("/casos?cola=vencida");
-  expect(screen.queryByRole("tab")).toBeNull();
+  expect((await screen.findByRole("link", { name: "7" })).getAttribute("href")).toBe("/casos?estado=abiertos");
+  expect(screen.getByRole("link", { name: "4" }).getAttribute("href")).toBe("/casos?plazo=vencido");
+  expect(screen.getByRole("link", { name: "3" }).getAttribute("href")).toBe(
+    "/casos?estado=abiertos&fecha=invalida",
+  );
+  expect(screen.getByText("13.1")).toBeTruthy();
+  expect(screen.queryByText("Total")).toBeNull();
+  expect(screen.queryByText("Cerrados")).toBeNull();
+});
+
+it("keeps the sin fecha válida link even when the count is 0", async () => {
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async () => ({ ok: true, status: 200, json: async () => summary({ total: 1, abiertos: 0, sinFechaValida: 0 }) })),
+  );
+  render(
+    <MemoryRouter>
+      <Resumen />
+    </MemoryRouter>,
+  );
+  await screen.findByText("Sin fecha válida");
+  const link = document.querySelector('[data-kpi="sin-fecha"] a');
+  expect(link?.textContent).toBe("0");
+  expect(link?.getAttribute("href")).toBe("/casos?estado=abiertos&fecha=invalida");
 });
 
 it("renders close rate and monthly flow without the area module", async () => {
@@ -167,21 +188,18 @@ it("renders close rate and monthly flow without the area module", async () => {
   );
   expect((await screen.findAllByText("Cierre por tipo")).length).toBeGreaterThan(0);
   expect(screen.getByRole("heading", { name: "Entrados y cerrados" })).toBeTruthy();
-  expect(screen.getByRole("link", { name: "2026-01" }).getAttribute("href")).toBe("/casos?mes=2026-01");
   expect(screen.getByRole("link", { name: "Tienda" }).getAttribute("href")).toBe(
     "/casos?estado=abiertos&area=Tienda",
   );
   expect(screen.getByRole("link", { name: "Cine" }).getAttribute("href")).toBe(
     "/casos?estado=abiertos&tema=Cine",
   );
-  expect(screen.getByRole("link", { name: "Más de 10 días hábiles" }).getAttribute("href")).toBe(
-    "/casos?cola=vencida",
-  );
+  expect(screen.getByRole("link", { name: /Vencido/ }).getAttribute("href")).toBe("/casos?plazo=vencido");
   expect(screen.queryByRole("heading", { name: "Bodega" })).toBeNull();
   expect(screen.queryByRole("tab")).toBeNull();
   const tipoLinks = screen.getAllByRole("link", { name: "RECLAMO" });
   expect(tipoLinks.some((link) => link.getAttribute("href") === "/casos?tipo=RECLAMO")).toBe(true);
-  expect(document.querySelectorAll(".recharts-responsive-container").length).toBe(2);
+  expect(document.querySelectorAll(".recharts-responsive-container").length).toBe(1);
 });
 
 it("expands a case and shows the person, order, and solution text", async () => {
@@ -448,97 +466,4 @@ it("sends plazo to the API when the Plazo filter changes", async () => {
   fireEvent.change(screen.getByLabelText("Plazo"), { target: { value: "por-vencer" } });
   await screen.findByText("No hay casos con ese filtro.");
   expect(fetchMock).toHaveBeenLastCalledWith("/api/casos?plazo=por-vencer");
-});
-
-it("links each provider by type cell to the filtered case list", async () => {
-  vi.stubGlobal(
-    "fetch",
-    vi.fn(async () => ({
-      ok: true,
-      status: 200,
-      json: async () =>
-        summary({
-          total: 3,
-          matrizProveedorTipo: [
-            {
-              area: "Tienda",
-              total: 3,
-              abiertos: 2,
-              celdas: [
-                { tipo: "QUEJA", total: 0, abiertos: 0 },
-                { tipo: "(sin valor)", total: 3, abiertos: 2 },
-              ],
-            },
-          ],
-        }),
-    })),
-  );
-  render(
-    <MemoryRouter>
-      <Resumen />
-    </MemoryRouter>,
-  );
-  const link = await screen.findByRole("link", { name: /^3 · 2 abiertos/ });
-  expect(link.getAttribute("href")).toBe("/casos?area=Tienda&tipo=%28sin+valor%29");
-  expect(screen.getByRole("columnheader", { name: "QUEJA" })).toBeTruthy();
-  expect(screen.getAllByText("—").length).toBeGreaterThan(0);
-});
-
-function timelineFetch(puntos: unknown, ok = true) {
-  return vi.fn(async (url: string) => {
-    if (url.includes("/linea")) {
-      return { ok, status: ok ? 200 : 500, json: async () => (ok ? { puntos } : { error: "falló" }) };
-    }
-    return {
-      ok: true,
-      status: 200,
-      json: async () =>
-        summary({
-          total: 2,
-          porArea: [
-            { key: "Tienda", count: 1 },
-            { key: "Educación / Coomeva", count: 1 },
-          ],
-        }),
-    };
-  });
-}
-
-it("loads the timeline of the first provider and reloads on change", async () => {
-  const fetchMock = timelineFetch([{ mes: "2026-01", entrados: 1, cerrados: 0, diasPromedio: null }]);
-  vi.stubGlobal("fetch", fetchMock);
-  render(
-    <MemoryRouter>
-      <Resumen />
-    </MemoryRouter>,
-  );
-  const select = await screen.findByLabelText("Proveedor");
-  expect(await screen.findByText(/2026-01: 1 entrados, 0 cerrados/)).toBeTruthy();
-  expect(fetchMock).toHaveBeenCalledWith("/api/proveedores/Tienda/linea");
-  fireEvent.change(select, { target: { value: "Educación / Coomeva" } });
-  await screen.findByText(/2026-01: 1 entrados/);
-  expect(fetchMock).toHaveBeenCalledWith(
-    `/api/proveedores/${encodeURIComponent("Educación / Coomeva")}/linea`,
-  );
-});
-
-it("shows an empty message when the provider has no valid months", async () => {
-  vi.stubGlobal("fetch", timelineFetch([]));
-  render(
-    <MemoryRouter>
-      <Resumen />
-    </MemoryRouter>,
-  );
-  expect(await screen.findByText("Este proveedor no tiene meses con fecha válida.")).toBeTruthy();
-});
-
-it("keeps the rest of the summary when the timeline request fails", async () => {
-  vi.stubGlobal("fetch", timelineFetch(null, false));
-  render(
-    <MemoryRouter>
-      <Resumen />
-    </MemoryRouter>,
-  );
-  expect(await screen.findByText("falló")).toBeTruthy();
-  expect(screen.getByText("Total")).toBeTruthy();
 });
