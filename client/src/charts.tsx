@@ -1,9 +1,11 @@
 import { useEffect, useState, type ReactNode } from "react";
 
-export const PRIMARY = "var(--primary)";
-export const WARNING = "var(--warning)";
-export const GRID = "var(--border)";
-export const AXIS = { fontSize: 12, fill: "var(--muted-foreground)" } as const;
+// SVG presentation attributes do not resolve var(--token), so these mirror
+// --primary, --warning, --border and --muted-foreground from index.css.
+export const PRIMARY = "#00843d";
+export const WARNING = "#d97706";
+export const GRID = "#e7e5e4";
+export const AXIS = { fontSize: 12, fill: "#52525b" } as const;
 
 export function useMotion() {
   const [on, setOn] = useState(true);
