@@ -1,13 +1,12 @@
 import type { ReactNode } from "react";
-import { LayoutDashboard, List, Store } from "lucide-react";
-import { NavLink, Outlet, useLocation } from "react-router-dom";
+import { LayoutDashboard, List, Plus, Store } from "lucide-react";
+import { Link, NavLink, Outlet, useLocation } from "react-router-dom";
 import { useState } from "react";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card as UiCard, CardContent, CardHeader } from "@/components/ui/card";
-import { Separator } from "@/components/ui/separator";
 import {
   Sheet,
-  SheetClose,
   SheetContent,
   SheetDescription,
   SheetHeader,
@@ -15,6 +14,7 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { useVencidos } from "./useVencidos";
 
 const navClass = ({ isActive }: { isActive: boolean }) =>
   `flex min-h-11 cursor-pointer items-center gap-2 rounded-lg px-3 text-sm font-semibold no-underline transition-[background-color,color,box-shadow] duration-200 ease-[cubic-bezier(0.22,1,0.36,1)] focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-none ${
@@ -23,36 +23,36 @@ const navClass = ({ isActive }: { isActive: boolean }) =>
       : "text-foreground hover:bg-accent hover:text-accent-foreground"
   }`;
 
-function Brand() {
-  return (
-    <div className="mb-5 flex items-center gap-3">
-      <span className="grid size-11 shrink-0 place-items-center rounded-xl bg-primary font-display text-sm font-bold text-primary-foreground">
-        PQ
-      </span>
-      <div>
-        <p className="font-display text-lg leading-none font-bold tracking-wide text-primary">PQRS</p>
-        <p className="mt-1 text-sm text-muted-foreground">Tienda Coomeva</p>
-      </div>
-    </div>
-  );
-}
-
 function Nav({ onNavigate }: { onNavigate?: () => void }) {
+  const vencidos = useVencidos();
   return (
-    <nav aria-label="Principal" className="grid gap-2" onClick={onNavigate}>
-      <NavLink to="/" end className={navClass}>
-        <LayoutDashboard aria-hidden="true" />
-        Resumen
-      </NavLink>
-      <NavLink to="/casos" className={navClass}>
-        <List aria-hidden="true" />
-        Casos
-      </NavLink>
-      <NavLink to="/proveedores" className={navClass}>
-        <Store aria-hidden="true" />
-        Proveedores
-      </NavLink>
-    </nav>
+    <div className="grid gap-4">
+      <Button asChild className="min-h-11 w-full">
+        <Link to="/casos/nuevo" onClick={onNavigate}>
+          <Plus aria-hidden="true" />
+          Nuevo caso
+        </Link>
+      </Button>
+      <nav aria-label="Principal" className="grid gap-1" onClick={onNavigate}>
+        <NavLink to="/" end className={navClass}>
+          <LayoutDashboard aria-hidden="true" />
+          Resumen
+        </NavLink>
+        <NavLink to="/casos" className={navClass}>
+          <List aria-hidden="true" />
+          Casos
+          {vencidos ? (
+            <Badge variant="destructive" className="ml-auto" aria-label={`${vencidos} vencidos`}>
+              {vencidos}
+            </Badge>
+          ) : null}
+        </NavLink>
+        <NavLink to="/proveedores" className={navClass}>
+          <Store aria-hidden="true" />
+          Proveedores
+        </NavLink>
+      </nav>
+    </div>
   );
 }
 
@@ -69,40 +69,32 @@ export function Shell() {
         >
           Saltar al contenido
         </a>
-        <aside className="hidden w-60 shrink-0 flex-col border-r border-border bg-card px-4 py-6 md:flex">
-          <Brand />
-          <Separator className="mb-4" />
+        <aside className="hidden w-52 shrink-0 flex-col border-r border-border bg-card px-3 py-6 md:flex">
           <Nav />
         </aside>
         <div className="app-canvas flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
-          <div className="px-4 pt-4 md:hidden">
+          <div className="flex items-center justify-between px-4 pt-4 md:hidden">
+            <span className="font-display text-lg font-bold text-primary">PQRS</span>
             <Sheet open={open} onOpenChange={setOpen}>
               <SheetTrigger asChild>
-                <Button type="button" className="min-h-11">
+                <Button type="button" variant="outline" className="min-h-11">
                   Menú
                 </Button>
               </SheetTrigger>
-              <SheetContent side="left" showCloseButton={false}>
+              <SheetContent side="left">
                 <SheetHeader>
                   <SheetTitle>PQRS</SheetTitle>
-                  <SheetDescription>Tienda Coomeva</SheetDescription>
+                  <SheetDescription>Navegación</SheetDescription>
                 </SheetHeader>
                 <div className="px-4">
                   <Nav onNavigate={() => setOpen(false)} />
-                </div>
-                <div className="mt-auto p-4">
-                  <SheetClose asChild>
-                    <Button type="button" className="w-full min-h-11">
-                      Cerrar menú
-                    </Button>
-                  </SheetClose>
                 </div>
               </SheetContent>
             </Sheet>
           </div>
           <main
             id="contenido"
-            className="mx-auto min-h-0 w-full min-w-0 max-w-[80rem] flex-1 overflow-x-hidden overflow-y-auto px-4 py-6 md:px-8 md:py-8"
+            className="mx-auto min-h-0 w-full min-w-0 max-w-[72rem] flex-1 overflow-x-hidden overflow-y-auto px-4 py-6 md:px-8 md:py-8"
           >
             <div key={location.pathname} className="rise-in">
               <Outlet />
@@ -114,12 +106,11 @@ export function Shell() {
   );
 }
 
-export function PageHead({ title, lede }: { title: string; lede: string }) {
+export function PageHead({ title, lede }: { title: string; lede?: string }) {
   return (
     <header className="mb-6">
-      <p className="text-xs font-semibold tracking-[0.14em] text-primary uppercase">Tienda Coomeva</p>
-      <h1 className="mt-1 font-display text-[1.75rem] leading-tight font-semibold tracking-tight">{title}</h1>
-      <p className="mt-2 max-w-2xl text-muted-foreground">{lede}</p>
+      <h1 className="font-display text-[1.75rem] leading-tight font-semibold tracking-tight">{title}</h1>
+      {lede ? <p className="mt-1 max-w-2xl text-muted-foreground">{lede}</p> : null}
     </header>
   );
 }
@@ -135,7 +126,7 @@ export function Card({
 }) {
   const Title = level === 2 ? "h2" : "h3";
   return (
-    <UiCard className="h-full border-border shadow-[0_2px_8px_-3px_rgba(0,0,0,0.05)]">
+    <UiCard className="h-full border-border shadow-none">
       <CardHeader className="pb-0">
         <Title className="font-display text-lg font-semibold">{title}</Title>
       </CardHeader>

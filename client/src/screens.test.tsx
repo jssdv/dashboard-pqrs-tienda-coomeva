@@ -267,7 +267,7 @@ it("keeps scrolling inside the content pane", () => {
   expect(main?.className).toContain("overflow-y-auto");
   expect(main?.className).toContain("overflow-x-hidden");
   expect(main?.className).toContain("min-w-0");
-  expect(main?.className).toContain("max-w-[80rem]");
+  expect(main?.className).toContain("max-w-[72rem]");
   expect(screen.getByRole("button", { name: "Menú" })).toBeTruthy();
 });
 
