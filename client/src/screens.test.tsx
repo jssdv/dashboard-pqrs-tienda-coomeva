@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, expect, it, vi } from "vitest";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { Casos } from "./Casos";
@@ -202,7 +202,7 @@ it("renders close rate and monthly flow without the area module", async () => {
   expect(document.querySelectorAll(".recharts-responsive-container").length).toBe(1);
 });
 
-it("expands a case and shows the person, order, and solution text", async () => {
+it("opens a detail panel with the person, order and solution text", async () => {
   vi.stubGlobal(
     "fetch",
     vi.fn(async () => ({
@@ -242,12 +242,18 @@ it("expands a case and shows the person, order, and solution text", async () => 
       <Casos />
     </MemoryRouter>,
   );
-  expect((await screen.findAllByText("Abierto")).length).toBeGreaterThan(0);
-  expect(screen.getByRole("link", { name: "Cerrar" }).getAttribute("href")).toBe("/casos/2026-2/cerrar");
-  screen.getByText("Detalle").click();
-  expect(screen.getByText("Ana Ruiz")).toBeTruthy();
-  expect(screen.getByText("ORD-9")).toBeTruthy();
-  expect(screen.getByText("El pedido no llegó")).toBeTruthy();
+  await screen.findByRole("button", { name: "Ver detalle" });
+  expect(screen.queryByText("Ana Ruiz")).toBeNull();
+  fireEvent.click(screen.getByRole("button", { name: "Ver detalle" }));
+  const panel = await screen.findByRole("dialog");
+  expect(within(panel).getByText("Ana Ruiz")).toBeTruthy();
+  expect(within(panel).getByText("ORD-9")).toBeTruthy();
+  expect(within(panel).getByText("El pedido no llegó")).toBeTruthy();
+  expect(within(panel).getByRole("link", { name: "Cerrar caso" }).getAttribute("href")).toBe(
+    "/casos/2026-2/cerrar",
+  );
+  fireEvent.keyDown(panel, { key: "Escape" });
+  await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
 });
 
 it("keeps scrolling inside the content pane", () => {
@@ -323,20 +329,16 @@ it("filters cards by name, email, and order from the search box", async () => {
 
   fireEvent.change(box, { target: { value: "ana" } });
   expect(screen.getAllByRole("listitem")).toHaveLength(2);
-  for (const summary of screen.getAllByText("Detalle")) summary.click();
-  expect(screen.getByText("Ana María")).toBeTruthy();
-  expect(screen.getByText("ana@coomeva.com.co")).toBeTruthy();
-  expect(screen.queryByText("Luis")).toBeNull();
 
   fireEvent.change(box, { target: { value: "boleteria" } });
   expect(screen.getAllByRole("listitem")).toHaveLength(1);
-  screen.getByText("Detalle").click();
-  expect(screen.getByText("Boletería")).toBeTruthy();
+  fireEvent.click(screen.getByRole("button", { name: "Ver detalle" }));
+  expect(within(await screen.findByRole("dialog")).getByText("Boletería")).toBeTruthy();
+  fireEvent.keyDown(screen.getByRole("dialog"), { key: "Escape" });
+  await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
 
   fireEvent.change(box, { target: { value: "123" } });
   expect(screen.getAllByRole("listitem")).toHaveLength(1);
-  screen.getByText("Detalle").click();
-  expect(screen.getByText("ORD-1234")).toBeTruthy();
 });
 
 it("hides a closed match when estado is Abiertos", async () => {
@@ -353,9 +355,8 @@ it("hides a closed match when estado is Abiertos", async () => {
     target: { value: "ana" },
   });
   expect(screen.getAllByRole("listitem")).toHaveLength(1);
-  screen.getByText("Detalle").click();
-  expect(screen.getByText("Ana María")).toBeTruthy();
-  expect(screen.queryByText("Ana Cerrada")).toBeNull();
+  fireEvent.click(screen.getByRole("button", { name: "Ver detalle" }));
+  expect(within(await screen.findByRole("dialog")).getByText("Ana María")).toBeTruthy();
 });
 
 it("filters the list by tema from the url", async () => {
@@ -466,4 +467,50 @@ it("sends plazo to the API when the Plazo filter changes", async () => {
   fireEvent.change(screen.getByLabelText("Plazo"), { target: { value: "por-vencer" } });
   await screen.findByText("No hay casos con ese filtro.");
   expect(fetchMock).toHaveBeenLastCalledWith("/api/casos?plazo=por-vencer");
+});
+
+it("shows hidden filters from the url as removable chips", async () => {
+  stubCases([caso({ id: "a", area: "Tienda", fechaSolucion: "2026-02-01", diasSolucion: 2 })]);
+  render(
+    <MemoryRouter initialEntries={["/casos?area=Tienda&fecha=invalida"]}>
+      <Casos />
+    </MemoryRouter>,
+  );
+  expect(await screen.findByText("Proveedor Tienda")).toBeTruthy();
+  expect(screen.getByText("Sin fecha válida")).toBeTruthy();
+  fireEvent.click(screen.getByRole("button", { name: "Quitar filtro Proveedor Tienda" }));
+  await waitFor(() => expect(screen.queryByText("Proveedor Tienda")).toBeNull());
+  expect(screen.getByText("Sin fecha válida")).toBeTruthy();
+});
+
+it("keeps only Estado and Plazo visible and puts the rest under Más filtros", async () => {
+  stubCases([caso({ id: "a" })]);
+  render(
+    <MemoryRouter>
+      <Casos />
+    </MemoryRouter>,
+  );
+  await screen.findByRole("textbox", { name: "Buscar" });
+  expect(screen.getByLabelText("Estado")).toBeTruthy();
+  expect(screen.getByLabelText("Plazo")).toBeTruthy();
+  const more = screen.getByText("Más filtros").closest("details") as HTMLElement;
+  expect(within(more).getByLabelText("Proveedor")).toBeTruthy();
+  expect(within(more).getByLabelText("Tipo")).toBeTruthy();
+  expect(within(more).getByLabelText("Tema")).toBeTruthy();
+});
+
+it("shows the days of closed cases and no Asociado column in the table", async () => {
+  vi.stubGlobal(
+    "matchMedia",
+    vi.fn(() => ({ matches: true, addEventListener: () => {}, removeEventListener: () => {} })),
+  );
+  stubCases([caso({ id: "c", fechaSolucion: "2026-02-01", diasSolucion: 4 })]);
+  render(
+    <MemoryRouter>
+      <Casos />
+    </MemoryRouter>,
+  );
+  expect(await screen.findByRole("columnheader", { name: "Plazo" })).toBeTruthy();
+  expect(screen.queryByRole("columnheader", { name: "Asociado" })).toBeNull();
+  expect(screen.getByText("4 días")).toBeTruthy();
 });

@@ -5,7 +5,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ApiError, getCases } from "./api";
-import { filterLabel, plazoLabel, textOrDash } from "./format";
+import { CaseDetail } from "./CaseDetail";
+import { plazoLabel, textOrDash } from "./format";
 import { matchesSearch } from "./matchesSearch";
 import { fieldClass, PageHead } from "./Shell";
 import type { CaseQuery, PqrCase } from "./types";
@@ -35,6 +36,7 @@ function queryFrom(params: URLSearchParams): CaseQuery {
     tipo: params.get("tipo") ?? undefined,
     mes: params.get("mes") ?? undefined,
     plazo: params.get("plazo") ?? undefined,
+    fecha: params.get("fecha") ?? undefined,
   };
 }
 
@@ -53,8 +55,23 @@ function optionValues(values: (string | null)[], selected?: string): string[] {
   return [...set].sort((left, right) => left.localeCompare(right, "es"));
 }
 
-function daysLabel(row: PqrCase): string {
-  return row.diasSolucion === null ? "Abierto" : `${row.diasSolucion} días`;
+
+const CHIP_KEYS = [
+  ["area", "Proveedor"],
+  ["tipo", "Tipo"],
+  ["tema", "Tema"],
+  ["mes", "Mes"],
+] as const;
+
+function chipsFrom(params: URLSearchParams): Array<{ key: string; text: string }> {
+  const chips: Array<{ key: string; text: string }> = [];
+  for (const [key, label] of CHIP_KEYS) {
+    const value = params.get(key);
+    if (value) chips.push({ key, text: `${label} ${value}` });
+  }
+  if (params.get("cola") === "vencida") chips.push({ key: "cola", text: "Más de 10 días hábiles" });
+  if (params.get("fecha") === "invalida") chips.push({ key: "fecha", text: "Sin fecha válida" });
+  return chips;
 }
 
 export function Casos() {
@@ -67,8 +84,9 @@ export function Casos() {
   const [cases, setCases] = useState<PqrCase[]>([]);
   const [status, setStatus] = useState<"loading" | "ready" | "error">("loading");
   const [message, setMessage] = useState<string | null>(null);
-  const label = filterLabel(query);
-  const filtersActive = Boolean(estado || tema || query.area || query.tipo || query.cola || query.mes || query.plazo || q.trim());
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const chips = chipsFrom(params);
+  const filtersActive = Boolean(estado || query.plazo || chips.length > 0 || q.trim());
 
   useEffect(() => {
     let cancelled = false;
@@ -90,9 +108,9 @@ export function Casos() {
     return () => {
       cancelled = true;
     };
-  }, [query.cola, query.area, query.tipo, query.mes, query.plazo]);
+  }, [query.cola, query.area, query.tipo, query.mes, query.plazo, query.fecha]);
 
-  function setFilter(key: "estado" | "area" | "tipo" | "tema" | "plazo", value: string) {
+  function setFilter(key: string, value: string) {
     const next = new URLSearchParams(params);
     if (value) next.set(key, value);
     else next.delete(key);
@@ -129,19 +147,26 @@ export function Casos() {
   const pageRows = visible.slice(startIndex, startIndex + PAGE_SIZE);
   const rangeStart = visible.length === 0 ? 0 : startIndex + 1;
   const rangeEnd = startIndex + pageRows.length;
+  const selected = cases.find((row) => row.id === selectedId) ?? null;
 
   return (
     <>
-      <PageHead title="Casos" lede="Ficha de cada caso" />
-      <div className="mb-4 flex min-w-0 flex-wrap items-end gap-3">
-        <Button asChild variant="secondary" className="min-h-11">
-          <Link to="/casos/nuevo">Nuevo caso</Link>
-        </Button>
+      <PageHead title="Casos" />
+      <div className="mb-3 flex min-w-0 flex-wrap items-end gap-3">
+        <div className="grid min-w-[12rem] flex-1 gap-1.5">
+          <Label htmlFor="buscar">Buscar</Label>
+          <Input
+            id="buscar"
+            placeholder="Orden, asociado o correo"
+            value={q}
+            onChange={(event) => setQuery(event.target.value)}
+          />
+        </div>
         <div className="grid gap-1.5">
           <Label htmlFor="filtro-estado">Estado</Label>
           <select
             id="filtro-estado"
-            className={`${fieldClass} w-auto min-w-36`}
+            className={`${fieldClass} w-auto min-w-32`}
             value={estado === "abiertos" || estado === "cerrados" ? estado : ""}
             onChange={(event) => setFilter("estado", event.target.value)}
           >
@@ -154,7 +179,7 @@ export function Casos() {
           <Label htmlFor="filtro-plazo">Plazo</Label>
           <select
             id="filtro-plazo"
-            className={`${fieldClass} w-auto min-w-36`}
+            className={`${fieldClass} w-auto min-w-32`}
             value={query.plazo ?? ""}
             onChange={(event) => setFilter("plazo", event.target.value)}
           >
@@ -164,94 +189,115 @@ export function Casos() {
             <option value="vencido">Vencido</option>
           </select>
         </div>
-        <div className="grid gap-1.5">
-          <Label htmlFor="filtro-area">Proveedor</Label>
-          <select
-            id="filtro-area"
-            className={`${fieldClass} w-auto min-w-36`}
-            value={query.area ?? ""}
-            onChange={(event) => setFilter("area", event.target.value)}
-          >
-            <option value="">Todos</option>
-            {optionValues(
-              cases.map((row) => row.area),
-              query.area,
-            ).map((area) => (
-              <option key={area} value={area}>
-                {area}
-              </option>
-            ))}
-          </select>
+        <Button asChild variant="secondary" className="min-h-11 md:hidden">
+          <Link to="/casos/nuevo">Nuevo caso</Link>
+        </Button>
+      </div>
+      <details className="mb-3">
+        <summary className="flex min-h-11 w-fit cursor-pointer items-center font-semibold text-primary">
+          Más filtros
+        </summary>
+        <div className="mt-1 flex flex-wrap gap-3">
+          <div className="grid gap-1.5">
+            <Label htmlFor="filtro-area">Proveedor</Label>
+            <select
+              id="filtro-area"
+              className={`${fieldClass} w-auto min-w-36`}
+              value={query.area ?? ""}
+              onChange={(event) => setFilter("area", event.target.value)}
+            >
+              <option value="">Todos</option>
+              {optionValues(
+                cases.map((row) => row.area),
+                query.area,
+              ).map((area) => (
+                <option key={area} value={area}>
+                  {area}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="grid gap-1.5">
+            <Label htmlFor="filtro-tipo">Tipo</Label>
+            <select
+              id="filtro-tipo"
+              className={`${fieldClass} w-auto min-w-36`}
+              value={query.tipo ?? ""}
+              onChange={(event) => setFilter("tipo", event.target.value)}
+            >
+              <option value="">Todos</option>
+              {optionValues(
+                cases.map((row) => row.tipo),
+                query.tipo,
+              ).map((tipo) => (
+                <option key={tipo} value={tipo}>
+                  {tipo}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="grid gap-1.5">
+            <Label htmlFor="filtro-tema">Tema</Label>
+            <select
+              id="filtro-tema"
+              className={`${fieldClass} w-auto min-w-36`}
+              value={tema}
+              onChange={(event) => setFilter("tema", event.target.value)}
+            >
+              <option value="">Todos</option>
+              {optionValues(
+                cases.map((row) => row.tema),
+                tema,
+              ).map((item) => (
+                <option key={item} value={item}>
+                  {item}
+                </option>
+              ))}
+            </select>
+          </div>
         </div>
-        <div className="grid gap-1.5">
-          <Label htmlFor="filtro-tipo">Tipo</Label>
-          <select
-            id="filtro-tipo"
-            className={`${fieldClass} w-auto min-w-36`}
-            value={query.tipo ?? ""}
-            onChange={(event) => setFilter("tipo", event.target.value)}
-          >
-            <option value="">Todos</option>
-            {optionValues(
-              cases.map((row) => row.tipo),
-              query.tipo,
-            ).map((tipo) => (
-              <option key={tipo} value={tipo}>
-                {tipo}
-              </option>
-            ))}
-          </select>
-        </div>
-        <div className="grid gap-1.5">
-          <Label htmlFor="filtro-tema">Tema</Label>
-          <select
-            id="filtro-tema"
-            className={`${fieldClass} w-auto min-w-36`}
-            value={tema}
-            onChange={(event) => setFilter("tema", event.target.value)}
-          >
-            <option value="">Todos</option>
-            {optionValues(
-              cases.map((row) => row.tema),
-              tema,
-            ).map((item) => (
-              <option key={item} value={item}>
-                {item}
-              </option>
-            ))}
-          </select>
-        </div>
-        <div className="grid min-w-[12rem] flex-1 gap-1.5">
-          <Label htmlFor="buscar">Buscar</Label>
-          <Input
-            id="buscar"
-            placeholder="Orden, asociado o correo"
-            value={q}
-            onChange={(event) => setQuery(event.target.value)}
-          />
-        </div>
-        {label ? <p className="m-0 min-h-11 self-end leading-[2.75rem]">Filtro: {label}</p> : null}
-        {tema ? <p className="m-0 min-h-11 self-end leading-[2.75rem]">Tema {tema}</p> : null}
-        {filtersActive ? (
+      </details>
+      {chips.length > 0 || filtersActive ? (
+        <div className="mb-4 flex flex-wrap items-center gap-2">
+          {chips.map((chip) => (
+            <span
+              key={chip.key}
+              className="inline-flex min-h-8 items-center gap-1 rounded-full border border-border bg-card pr-1 pl-3 text-sm"
+            >
+              {chip.text}
+              <button
+                type="button"
+                aria-label={`Quitar filtro ${chip.text}`}
+                className="grid size-8 cursor-pointer place-items-center rounded-full text-muted-foreground hover:bg-muted"
+                onClick={() => setFilter(chip.key, "")}
+              >
+                <span aria-hidden="true">×</span>
+              </button>
+            </span>
+          ))}
           <Button asChild variant="ghost" className="min-h-11">
             <Link to="/casos">Quitar filtros</Link>
           </Button>
-        ) : null}
-      </div>
+        </div>
+      ) : null}
       {status === "loading" ? (
         <p className="text-muted-foreground" aria-busy="true">
           Cargando…
         </p>
       ) : null}
       {status === "error" ? (
-        <p className="rounded-xl border border-border bg-card p-4 shadow-sm">{message}</p>
+        <p className="rounded-xl border border-border bg-card p-4">{message}</p>
       ) : null}
       {status === "ready" && visible.length === 0 ? (
-        <p className="rounded-xl border border-border bg-card p-4 shadow-sm">No hay casos con ese filtro.</p>
+        <p className="rounded-xl border border-border bg-card p-4">No hay casos con ese filtro.</p>
       ) : null}
       {status === "ready" && visible.length > 0 ? (
         <>
-          {wide ? <CaseTable rows={pageRows} /> : <CaseCards rows={pageRows} />}
+          {wide ? (
+            <CaseTable rows={pageRows} onOpen={setSelectedId} />
+          ) : (
+            <CaseCards rows={pageRows} onOpen={setSelectedId} />
+          )}
           <nav aria-label="Paginación" className="mt-4 flex flex-wrap items-center gap-3">
             <p className="m-0 min-h-11 font-mono leading-[2.75rem] tabular-nums">
               {rangeStart}–{rangeEnd} de {visible.length}
@@ -265,137 +311,99 @@ export function Casos() {
           </nav>
         </>
       ) : null}
+      <CaseDetail caso={selected} onClose={() => setSelectedId(null)} />
     </>
   );
 }
 
-function PlazoBadge({ row }: { row: PqrCase }) {
+function PlazoCell({ row }: { row: PqrCase }) {
+  if (!isOpen(row)) {
+    return <span className="font-mono tabular-nums">{row.diasSolucion === null ? "Cerrado" : `${row.diasSolucion} días`}</span>;
+  }
   const plazo = plazoLabel(row.riesgo);
-  if (!plazo) return <span aria-label="Sin plazo">—</span>;
-  return <Badge variant={plazo.variant}>{plazo.text}</Badge>;
+  if (plazo) return <Badge variant={plazo.variant}>{plazo.text}</Badge>;
+  return <span className="text-muted-foreground">Sin fecha válida</span>;
 }
 
-function StatusBadge({ row }: { row: PqrCase }) {
-  const open = isOpen(row);
-  return <Badge variant={open ? "warning" : "secondary"}>{open ? "Abierto" : "Cerrado"}</Badge>;
-}
-
-function CloseAction({ row }: { row: PqrCase }) {
-  if (!isOpen(row)) return null;
+function OpenButton({ row, onOpen }: { row: PqrCase; onOpen: (id: string) => void }) {
   return (
-    <Button asChild className="min-h-11">
-      <Link to={`/casos/${encodeURIComponent(row.id)}/cerrar`}>Cerrar</Link>
+    <Button
+      type="button"
+      variant="ghost"
+      className="min-h-11"
+      aria-label="Ver detalle"
+      onClick={(event) => {
+        event.stopPropagation();
+        onOpen(row.id);
+      }}
+    >
+      Ver
     </Button>
   );
 }
 
-function CaseFacts({ row }: { row: PqrCase }) {
-  return (
-    <dl className="mt-2 grid grid-cols-1 gap-3 sm:grid-cols-2">
-      <Detail label="Fecha de solución" value={row.fechaSolucion} />
-      <Detail label="ID de orden" value={row.idOrden} />
-      <Detail label="Asociado" value={row.asociado} />
-      <Detail label="Correo" value={row.correo} />
-      <Detail label="Fuente" value={row.fuente} />
-      <Detail label="Motivo" value={row.motivo} />
-      <Detail label="Solución" value={row.solucion} />
-    </dl>
-  );
-}
-
-function CaseCards({ rows }: { rows: PqrCase[] }) {
+function CaseCards({ rows, onOpen }: { rows: PqrCase[]; onOpen: (id: string) => void }) {
   return (
     <ul className="grid list-none gap-3 p-0">
       {rows.map((row) => (
-        <li
-          key={row.id}
-          className="min-w-0 rounded-xl border border-border bg-card p-4 shadow-[0_2px_8px_-3px_rgba(0,0,0,0.05)]"
-        >
-          <div className="grid min-w-0 grid-cols-1 items-center gap-3 sm:grid-cols-[7.5rem_minmax(0,1.2fr)_minmax(0,1fr)_minmax(0,1fr)_auto_auto]">
-            <span className="font-mono tabular-nums">{textOrDash(row.fechaInicial)}</span>
-            <span className="min-w-0 break-words">{textOrDash(row.area)}</span>
-            <span className="min-w-0 break-words">{textOrDash(row.tipo)}</span>
-            <span className="min-w-0 break-words">{textOrDash(row.tema)}</span>
-            <span className="font-mono text-sm tabular-nums">{daysLabel(row)}</span>
-            <StatusBadge row={row} />
-          </div>
-          {row.riesgo ? (
-            <div className="mt-2">
-              <PlazoBadge row={row} />
+        <li key={row.id} className="min-w-0 rounded-xl border border-border bg-card p-4">
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0">
+              <p className="m-0 break-words font-semibold">{textOrDash(row.area)}</p>
+              <p className="m-0 mt-1 break-words text-sm text-muted-foreground">
+                {textOrDash(row.tipo)} · {textOrDash(row.tema)}
+              </p>
             </div>
-          ) : null}
-          <div className="mt-3 flex flex-wrap items-center gap-3">
-            <CloseAction row={row} />
+            <span className="shrink-0 font-mono text-sm tabular-nums">{textOrDash(row.fechaInicial)}</span>
           </div>
-          <details className="group mt-2">
-            <summary className="flex min-h-11 cursor-pointer items-center font-semibold text-primary">
-              Detalle
-            </summary>
-            <CaseFacts row={row} />
-          </details>
+          <div className="mt-3 flex items-center justify-between gap-3">
+            <PlazoCell row={row} />
+            <OpenButton row={row} onOpen={onOpen} />
+          </div>
         </li>
       ))}
     </ul>
   );
 }
 
-function CaseTable({ rows }: { rows: PqrCase[] }) {
+function CaseTable({ rows, onOpen }: { rows: PqrCase[]; onOpen: (id: string) => void }) {
   return (
-    <div className="min-w-0 overflow-x-auto rounded-xl border border-border bg-card shadow-[0_2px_8px_-3px_rgba(0,0,0,0.05)]">
-      <table className="w-full min-w-[58rem] border-collapse text-sm">
+    <div className="min-w-0 overflow-x-auto rounded-xl border border-border bg-card">
+      <table className="w-full min-w-[40rem] border-collapse text-sm">
         <caption className="sr-only">Casos</caption>
         <thead className="sticky top-0 z-10 bg-card">
           <tr className="border-b border-border text-left">
             <th className="px-3 py-2 font-semibold">Fecha</th>
-            <th className="px-3 py-2 font-semibold">Días</th>
             <th className="px-3 py-2 font-semibold">Proveedor</th>
             <th className="px-3 py-2 font-semibold">Tipo</th>
             <th className="px-3 py-2 font-semibold">Tema</th>
-            <th className="px-3 py-2 font-semibold">Asociado</th>
-            <th className="px-3 py-2 font-semibold">Estado</th>
             <th className="px-3 py-2 font-semibold">Plazo</th>
-            <th className="px-3 py-2 font-semibold">Acción</th>
+            <th className="px-3 py-2">
+              <span className="sr-only">Acciones</span>
+            </th>
           </tr>
         </thead>
         <tbody>
           {rows.map((row) => (
-            <tr key={row.id} className="border-b border-border align-top hover:bg-muted/70">
-              <td className="px-3 py-3 font-mono tabular-nums">{textOrDash(row.fechaInicial)}</td>
-              <td className="px-3 py-3 font-mono tabular-nums">{daysLabel(row)}</td>
-              <td className="px-3 py-3 break-words">{textOrDash(row.area)}</td>
-              <td className="px-3 py-3 break-words">{textOrDash(row.tipo)}</td>
-              <td className="px-3 py-3 break-words">{textOrDash(row.tema)}</td>
-              <td className="px-3 py-3 break-words">{textOrDash(row.asociado)}</td>
-              <td className="px-3 py-3">
-                <StatusBadge row={row} />
+            <tr
+              key={row.id}
+              className="cursor-pointer border-b border-border hover:bg-muted/70"
+              onClick={() => onOpen(row.id)}
+            >
+              <td className="px-3 py-2 font-mono tabular-nums">{textOrDash(row.fechaInicial)}</td>
+              <td className="px-3 py-2 break-words">{textOrDash(row.area)}</td>
+              <td className="px-3 py-2 break-words">{textOrDash(row.tipo)}</td>
+              <td className="px-3 py-2 break-words">{textOrDash(row.tema)}</td>
+              <td className="px-3 py-2">
+                <PlazoCell row={row} />
               </td>
-              <td className="px-3 py-3">
-                <PlazoBadge row={row} />
-              </td>
-              <td className="px-3 py-3">
-                <div className="flex flex-col items-start gap-2">
-                  <CloseAction row={row} />
-                  <details>
-                    <summary className="flex min-h-11 cursor-pointer items-center font-semibold text-primary">
-                      Detalle
-                    </summary>
-                    <CaseFacts row={row} />
-                  </details>
-                </div>
+              <td className="px-3 py-1 text-right">
+                <OpenButton row={row} onOpen={onOpen} />
               </td>
             </tr>
           ))}
         </tbody>
       </table>
-    </div>
-  );
-}
-
-function Detail({ label, value }: { label: string; value: string | null }) {
-  return (
-    <div className="min-w-0">
-      <dt className="text-sm text-muted-foreground">{label}</dt>
-      <dd className="m-0 break-words">{textOrDash(value)}</dd>
     </div>
   );
 }

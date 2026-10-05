@@ -1,4 +1,4 @@
-import type { CaseQuery, FieldError, Riesgo } from "./types";
+import type { FieldError, Riesgo } from "./types";
 
 export function promedioText(value: number | null): string {
   if (value === null) return "—";
@@ -18,16 +18,6 @@ export function casosHref(params: Record<string, string | undefined>): string {
   }
   const query = search.toString();
   return query ? `/casos?${query}` : "/casos";
-}
-
-export function filterLabel(query: CaseQuery): string | null {
-  const parts: string[] = [];
-  if (query.cola === "vencida") parts.push("Más de 10 días hábiles");
-  if (query.area) parts.push(`Proveedor ${query.area}`);
-  if (query.tipo) parts.push(`Tipo ${query.tipo}`);
-  if (query.mes) parts.push(`Mes ${query.mes}`);
-  if (query.plazo) parts.push(`Plazo ${query.plazo}`);
-  return parts.length === 0 ? null : parts.join(" · ");
 }
 
 export function fieldMessage(errors: FieldError[], field: string): string {
