@@ -8,8 +8,14 @@ function cellValue(value: ExcelJS.CellValue): RawCell {
   if (typeof value === "object" && "richText" in value) {
     return value.richText.map((part) => part.text).join("");
   }
+  if (typeof value === "object" && "hyperlink" in value) {
+    return cellValue(value.text as ExcelJS.CellValue);
+  }
   if (typeof value === "object" && "result" in value) {
     return cellValue(value.result as ExcelJS.CellValue);
+  }
+  if (typeof value === "object" && ("error" in value || "formula" in value || "sharedFormula" in value)) {
+    return null;
   }
   return String(value);
 }

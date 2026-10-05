@@ -35,3 +35,24 @@ it("reads a case sheet and ignores Festivos", async () => {
   ]);
   expect(result.holidays).toEqual([]);
 });
+
+it("reads hyperlink, rich text and error cells as plain text", async () => {
+  const workbook = new ExcelJS.Workbook();
+  const cases = workbook.addWorksheet("PQRs 2026");
+  cases.addRow(["FECHA INICIAL", "AREA", "ASOCIADO", "CORREO", "PQRs"]);
+  cases.addRow([46027, "Tienda Coomeva", "NOMBRE", "", "motivo"]);
+  cases.addRow([46028, "Tienda Coomeva", "OTRO", "", "motivo"]);
+  cases.addRow([46029, "Tienda Coomeva", "TERCERO", "", "motivo"]);
+  cases.getCell("D2").value = { text: "ana@coomeva.com.co", hyperlink: "mailto:ana@coomeva.com.co" };
+  cases.getCell("D3").value = {
+    text: { richText: [{ text: "luis@" }, { text: "coomeva.com.co" }] },
+    hyperlink: "mailto:luis@coomeva.com.co",
+  } as ExcelJS.CellValue;
+  cases.getCell("D4").value = { error: "#N/A" } as ExcelJS.CellValue;
+  await workbook.xlsx.writeFile(workbookPath);
+
+  const { rows } = await readWorkbook(workbookPath);
+  expect(rows[0].cells.CORREO).toBe("ana@coomeva.com.co");
+  expect(rows[1].cells.CORREO).toBe("luis@coomeva.com.co");
+  expect(rows[2].cells.CORREO).toBeUndefined();
+});
