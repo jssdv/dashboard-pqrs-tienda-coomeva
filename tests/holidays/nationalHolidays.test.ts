@@ -46,6 +46,25 @@ describe("loadNationalHolidays", () => {
     expect(dates).toEqual(["2024-01-01", "2025-01-01", "2026-01-01", "2027-01-01"]);
   });
 
+  it("skips years the service does not have (404) and reports them", async () => {
+    const fetchImpl = (async (url: string) => {
+      const year = url.match(/(\d{4})/)?.[1];
+      if (year === "2024") return { ok: false, status: 404 } as Response;
+      return ok({ holidays: [{ date: `${year}-01-01` }] });
+    }) as typeof fetch;
+    const missing: number[] = [];
+
+    const dates = await loadNationalHolidays([2024, 2025], fetchImpl, (year) => missing.push(year));
+
+    expect(dates).toEqual(["2025-01-01"]);
+    expect(missing).toEqual([2024]);
+  });
+
+  it("throws when the service has none of the requested years", async () => {
+    const fetchImpl = (async () => ({ ok: false, status: 404 }) as Response) as typeof fetch;
+    await expect(loadNationalHolidays([2024, 2025], fetchImpl)).rejects.toThrow(/no holidays/);
+  });
+
   it("throws with the year when the response is not 200", async () => {
     const fetchImpl = (async () => ({ ok: false, status: 500 }) as Response) as typeof fetch;
     await expect(loadNationalHolidays([2026], fetchImpl)).rejects.toThrow(/2026/);

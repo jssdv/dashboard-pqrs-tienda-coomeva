@@ -30,17 +30,26 @@ export function yearsToLoad(sheetYears: readonly number[]): number[] {
 export async function loadNationalHolidays(
   years: readonly number[],
   fetchImpl: typeof fetch,
+  onMissing?: (year: number) => void,
 ): Promise<string[]> {
   const dates = new Set<string>();
-  for (const year of [...new Set(years)].sort((a, b) => a - b)) {
+  const unique = [...new Set(years)].sort((a, b) => a - b);
+  for (const year of unique) {
     const response = await fetchImpl(
       `https://calendariosnacionales.com/co/v1/${year}/nacionales.json`,
       { headers: { "User-Agent": "pqr-core" } },
     );
+    if (response.status === 404) {
+      onMissing?.(year);
+      continue;
+    }
     if (!response.ok) {
       throw new Error(`holiday request failed for ${year}: ${response.status}`);
     }
     for (const date of holidayDates(await response.json())) dates.add(date);
+  }
+  if (unique.length > 0 && dates.size === 0) {
+    throw new Error(`no holidays available for ${unique.join(", ")}`);
   }
   return [...dates].sort();
 }
@@ -51,10 +60,12 @@ export async function importLoadedCases(input: {
   dbPath: string;
   fetchImpl: typeof fetch;
   openRepository: (dbPath: string) => CaseRepository;
+  onMissingYear?: (year: number) => void;
 }): Promise<{ imported: number; skipped: number; invalidDates: number; holidays: number }> {
   const holidays = await loadNationalHolidays(
     yearsToLoad(input.rows.map((row) => row.sheetYear)),
     input.fetchImpl,
+    input.onMissingYear,
   );
   const result = importCases({ rows: input.rows, holidays, dictionary: input.dictionary });
   const repository = input.openRepository(input.dbPath);

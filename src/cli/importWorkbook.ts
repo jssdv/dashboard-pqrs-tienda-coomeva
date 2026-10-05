@@ -19,6 +19,8 @@ try {
     dbPath,
     fetchImpl: fetch,
     openRepository: openSqliteRepository,
+    onMissingYear: (year) =>
+      console.error(`warning: no national holidays available for ${year}; business days use none for that year`),
   });
   console.log(JSON.stringify(summary));
 } catch (error) {
