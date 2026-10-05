@@ -60,6 +60,9 @@ export async function createCase(fields: CreateFields): Promise<PqrCase> {
 export interface ProveedorRow {
   nombre: string;
   casos: number;
+  abiertos: number;
+  vencidos: number | null;
+  diasPromedio: number | null;
 }
 
 export async function getProveedores(): Promise<ProveedorRow[]> {
