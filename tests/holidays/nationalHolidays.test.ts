@@ -4,6 +4,7 @@ import {
   holidayDates,
   importLoadedCases,
   loadNationalHolidays,
+  parseHolidayCsv,
   yearsToLoad,
 } from "../../src/holidays/nationalHolidays";
 
@@ -22,6 +23,19 @@ describe("holidayDates", () => {
 
   it("throws when holidays is missing", () => {
     expect(() => holidayDates({ year: 2026 })).toThrow(/holidays/);
+  });
+});
+
+describe("parseHolidayCsv", () => {
+  it("reads ISO dates, ignoring header, blanks and comments, sorted and unique", () => {
+    expect(parseHolidayCsv("date\n# nota\n2024-01-08\n\n2024-01-01\n2024-01-08\n")).toEqual([
+      "2024-01-01",
+      "2024-01-08",
+    ]);
+  });
+
+  it("throws on a line that is not an ISO date", () => {
+    expect(() => parseHolidayCsv("date\n08/01/2024")).toThrow(/08\/01\/2024/);
   });
 });
 
@@ -111,5 +125,44 @@ describe("importLoadedCases", () => {
       openRepository: () => repository,
     });
     expect(repository.addHolidays).toHaveBeenCalledWith(["2025-01-01", "2026-01-01", "2027-01-01"]);
+  });
+
+  it("uses extra holidays and does not request the years they cover", async () => {
+    const repository = {
+      replaceAll: vi.fn(),
+      addHolidays: vi.fn(),
+      list: () => [],
+      insert: vi.fn(),
+      update: vi.fn(),
+      listHolidays: () => [],
+      listProveedores: () => [],
+      addProveedor: vi.fn(),
+      renameProveedor: vi.fn(),
+    };
+    const requested: string[] = [];
+    const fetchImpl = (async (url: string) => {
+      const year = String(url).match(/(\d{4})/)?.[1] as string;
+      requested.push(year);
+      if (Number(year) < 2025) return { ok: false, status: 404 } as Response;
+      return ok({ holidays: [{ date: `${year}-01-01` }] });
+    }) as typeof fetch;
+    const missing: number[] = [];
+    await importLoadedCases({
+      rows: [{ sheetYear: 2024, rowNumber: 2, cells: {} }, { sheetYear: 2025, rowNumber: 3, cells: {} }],
+      dictionary: new Dictionary(new Map()),
+      dbPath: "./data/pqr.sqlite",
+      fetchImpl,
+      openRepository: () => repository,
+      extraHolidays: ["2023-01-09", "2024-01-08"],
+      onMissingYear: (year) => missing.push(year),
+    });
+    expect(requested).toEqual(["2025", "2026"]);
+    expect(missing).toEqual([]);
+    expect(repository.addHolidays).toHaveBeenCalledWith([
+      "2023-01-09",
+      "2024-01-08",
+      "2025-01-01",
+      "2026-01-01",
+    ]);
   });
 });

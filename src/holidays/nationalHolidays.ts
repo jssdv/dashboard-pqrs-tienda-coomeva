@@ -18,6 +18,17 @@ export function holidayDates(body: unknown): string[] {
   return [...dates].sort();
 }
 
+export function parseHolidayCsv(text: string): string[] {
+  const dates = new Set<string>();
+  for (const raw of text.split(/\r?\n/)) {
+    const line = raw.trim();
+    if (!line || line.startsWith("#") || line.toLowerCase() === "date") continue;
+    if (!DATE.test(line)) throw new Error(`invalid holiday date: ${line}`);
+    dates.add(line);
+  }
+  return [...dates].sort();
+}
+
 export function yearsToLoad(sheetYears: readonly number[]): number[] {
   if (sheetYears.length === 0) return [];
   const min = Math.min(...sheetYears);
@@ -61,12 +72,16 @@ export async function importLoadedCases(input: {
   fetchImpl: typeof fetch;
   openRepository: (dbPath: string) => CaseRepository;
   onMissingYear?: (year: number) => void;
+  extraHolidays?: readonly string[];
 }): Promise<{ imported: number; skipped: number; invalidDates: number; holidays: number }> {
-  const holidays = await loadNationalHolidays(
-    yearsToLoad(input.rows.map((row) => row.sheetYear)),
+  const extra = input.extraHolidays ?? [];
+  const covered = new Set(extra.map((date) => Number(date.slice(0, 4))));
+  const fetched = await loadNationalHolidays(
+    yearsToLoad(input.rows.map((row) => row.sheetYear)).filter((year) => !covered.has(year)),
     input.fetchImpl,
     input.onMissingYear,
   );
+  const holidays = [...new Set([...extra, ...fetched])].sort();
   const result = importCases({ rows: input.rows, holidays, dictionary: input.dictionary });
   const repository = input.openRepository(input.dbPath);
   repository.replaceAll(result.cases);
