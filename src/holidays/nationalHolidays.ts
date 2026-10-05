@@ -57,11 +57,31 @@ export async function importLoadedCases(input: {
     input.fetchImpl,
   );
   const result = importCases({ rows: input.rows, holidays, dictionary: input.dictionary });
-  input.openRepository(input.dbPath).replaceAll(result.cases);
+  const repository = input.openRepository(input.dbPath);
+  repository.replaceAll(result.cases);
+  repository.addHolidays(holidays);
   return {
     imported: result.cases.length,
     skipped: result.skipped,
     invalidDates: result.invalidDates,
     holidays: holidays.length,
   };
+}
+
+export async function ensureHolidayYears(
+  repository: CaseRepository,
+  years: readonly number[],
+  fetchImpl: typeof fetch,
+): Promise<void> {
+  const present = new Set(repository.listHolidays().map((date) => date.slice(0, 4)));
+  const missing = [...new Set(years)]
+    .filter((year) => !present.has(String(year)))
+    .sort((a, b) => a - b);
+  if (missing.length === 0) return;
+  const dates = await loadNationalHolidays(missing, fetchImpl);
+  repository.addHolidays(dates);
+  const loaded = new Set(repository.listHolidays().map((date) => date.slice(0, 4)));
+  for (const year of missing) {
+    if (!loaded.has(String(year))) throw new Error(`no holidays loaded for ${year}`);
+  }
 }

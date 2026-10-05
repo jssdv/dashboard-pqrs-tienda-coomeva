@@ -67,4 +67,30 @@ describe("importLoadedCases", () => {
     ).rejects.toThrow(/holiday request failed/);
     expect(openRepository).not.toHaveBeenCalled();
   });
+
+  it("stores the loaded holiday dates after replacing cases", async () => {
+    const repository = {
+      replaceAll: vi.fn(),
+      addHolidays: vi.fn(),
+      list: () => [],
+      insert: vi.fn(),
+      update: vi.fn(),
+      listHolidays: () => [],
+      listProveedores: () => [],
+      addProveedor: vi.fn(),
+      renameProveedor: vi.fn(),
+    };
+    const fetchImpl = (async (url: string) => {
+      const year = String(url).match(/(\d{4})/)?.[1];
+      return ok({ holidays: [{ date: `${year}-01-01` }] });
+    }) as typeof fetch;
+    await importLoadedCases({
+      rows: [{ sheetYear: 2026, rowNumber: 2, cells: {} }],
+      dictionary: new Dictionary(new Map()),
+      dbPath: "./data/pqr.sqlite",
+      fetchImpl,
+      openRepository: () => repository,
+    });
+    expect(repository.addHolidays).toHaveBeenCalledWith(["2025-01-01", "2026-01-01", "2027-01-01"]);
+  });
 });

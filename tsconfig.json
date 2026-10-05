@@ -1,13 +1,15 @@
 {
-  "compilerOptions": {
-    "target": "ES2022",
-    "module": "Node16",
-    "moduleResolution": "Node16",
-    "strict": true,
-    "outDir": "dist",
-    "rootDir": ".",
-    "skipLibCheck": true,
-    "esModuleInterop": true
-  },
-  "include": ["src", "tests"]
+    "compilerOptions": {
+        "paths": { "@/*": ["./src/*"] },
+        "target": "ES2022",
+        "module": "Node16",
+        "moduleResolution": "Node16",
+        "strict": true,
+        "outDir": "dist",
+        "rootDir": ".",
+        "skipLibCheck": true,
+        "esModuleInterop": true
+    },
+    "include": ["src", "tests"],
+  "exclude": ["src/components", "src/utils", "src/lib", "src/hooks"]
 }

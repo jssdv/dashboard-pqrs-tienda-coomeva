@@ -16,4 +16,37 @@ describe("mapHeaders", () => {
     expect(headers["SOLUCIÓN"]).toBe("solucion");
     expect(headers["DIAS SOLUCION"]).toBeUndefined();
   });
+
+  it("maps the current twelve-column sheet and ignores dias", () => {
+    const headers = mapHeaders([
+      "FECHA INICIAL",
+      "FECHA SOLUCION",
+      "DIAS SOLUCION",
+      "AREA",
+      "ID ORDEN",
+      "ASOCIADO",
+      "CORREO",
+      "FUENTE",
+      "TIPO PQRs",
+      "TEMA",
+      "Motivo PQRs",
+      "SOLUCIÓN",
+    ]);
+    expect(Object.values(headers).sort()).toEqual(
+      [
+        "area",
+        "asociado",
+        "correo",
+        "fechaInicial",
+        "fechaSolucion",
+        "fuente",
+        "idOrden",
+        "motivo",
+        "solucion",
+        "tema",
+        "tipo",
+      ].sort(),
+    );
+    expect(headers["DIAS SOLUCION"]).toBeUndefined();
+  });
 });

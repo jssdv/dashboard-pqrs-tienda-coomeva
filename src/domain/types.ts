@@ -30,9 +30,4 @@ export interface PqrCase {
   temaOriginal: string | null;
   motivo: string | null;
   solucion: string | null;
-  valorDevolucion: string | null;
-  mesCompra: string | null;
-  tipoDevolucion: string | null;
-  fechaSolicitud: string | null;
-  observaciones: string | null;
 }

@@ -27,11 +27,6 @@ function sample(overrides: Partial<PqrCase> = {}): PqrCase {
     temaOriginal: "CINE",
     motivo: "texto",
     solucion: null,
-    valorDevolucion: null,
-    mesCompra: null,
-    tipoDevolucion: null,
-    fechaSolicitud: null,
-    observaciones: null,
     ...overrides,
   };
 }
@@ -43,4 +38,17 @@ it("replaces the case set and round-trips flags", () => {
   expect(db.list()).toEqual([row]);
   db.replaceAll([]);
   expect(db.list()).toEqual([]);
+});
+
+it("inserts and updates one case without dropping holidays", () => {
+  const db = openSqliteRepository(path.join(os.tmpdir(), `pqr-${Date.now()}-h.sqlite`));
+  const row = sample({ id: "app-1", sheetYear: 2026, rowNumber: 0 });
+  db.addHolidays(["2026-01-01", "2026-01-01"]);
+  db.insert(row);
+  db.replaceAll([]);
+  expect(db.list()).toEqual([]);
+  expect(db.listHolidays()).toEqual(["2026-01-01"]);
+  db.insert(row);
+  db.update(sample({ id: "app-1", sheetYear: 2026, rowNumber: 0, solucion: "Listo" }));
+  expect(db.list()[0]?.solucion).toBe("Listo");
 });

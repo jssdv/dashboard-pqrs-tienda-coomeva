@@ -11,12 +11,7 @@ export type CanonicalField =
   | "tipo"
   | "tema"
   | "motivo"
-  | "solucion"
-  | "valorDevolucion"
-  | "mesCompra"
-  | "tipoDevolucion"
-  | "fechaSolicitud"
-  | "observaciones";
+  | "solucion";
 
 const LABELS: Record<string, CanonicalField> = {
   [lookupKey("FECHA INICIAL")]: "fechaInicial",
@@ -31,11 +26,6 @@ const LABELS: Record<string, CanonicalField> = {
   [lookupKey("PQRS")]: "motivo",
   [lookupKey("MOTIVO PQRS")]: "motivo",
   [lookupKey("SOLUCION")]: "solucion",
-  [lookupKey("VALOR DEVOLUCION")]: "valorDevolucion",
-  [lookupKey("MES DE COMPRA")]: "mesCompra",
-  [lookupKey("TIPO DE DEVOLUCION")]: "tipoDevolucion",
-  [lookupKey("FECHA SOLICITUD")]: "fechaSolicitud",
-  [lookupKey("OBSERVACIONES")]: "observaciones",
 };
 
 export function mapHeaders(labels: readonly string[]): Record<string, CanonicalField> {

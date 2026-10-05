@@ -14,11 +14,6 @@ const TEXT_FIELDS = [
   "tema",
   "motivo",
   "solucion",
-  "valorDevolucion",
-  "mesCompra",
-  "tipoDevolucion",
-  "fechaSolicitud",
-  "observaciones",
 ] as const;
 
 type TextField = (typeof TEXT_FIELDS)[number];
@@ -82,11 +77,6 @@ export function mapRow(
     temaOriginal: text.tema,
     motivo: text.motivo,
     solucion: text.solucion,
-    valorDevolucion: text.valorDevolucion,
-    mesCompra: text.mesCompra,
-    tipoDevolucion: text.tipoDevolucion,
-    fechaSolicitud: text.fechaSolicitud,
-    observaciones: text.observaciones,
   };
 
   if (

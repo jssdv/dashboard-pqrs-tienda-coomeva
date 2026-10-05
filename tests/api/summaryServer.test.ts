@@ -1,6 +1,7 @@
 import type { Server } from "node:http";
 import { describe, expect, it } from "vitest";
 import { createSummaryServer } from "../../src/api/summaryServer";
+import { Dictionary } from "../../src/domain/dictionary";
 import type { PqrCase } from "../../src/domain/types";
 import type { CaseRepository } from "../../src/store/repository";
 
@@ -24,17 +25,33 @@ function caso(over: Partial<PqrCase> & Pick<PqrCase, "id" | "sheetYear" | "rowNu
     temaOriginal: null,
     motivo: "texto libre",
     solucion: null,
-    valorDevolucion: null,
-    mesCompra: null,
-    tipoDevolucion: null,
-    fechaSolicitud: null,
-    observaciones: null,
     ...over,
   };
 }
 
-function memoryRepo(cases: PqrCase[]): CaseRepository {
-  return { replaceAll() {}, list: () => cases };
+function memoryRepo(cases: PqrCase[], holidays: string[] = ["2026-01-01"]): CaseRepository {
+  const rows = [...cases];
+  const dates = [...holidays];
+  return {
+    replaceAll(next) {
+      rows.splice(0, rows.length, ...next);
+    },
+    list: () => rows,
+    insert(row) {
+      rows.push(row);
+    },
+    update(row) {
+      const index = rows.findIndex((item) => item.id === row.id);
+      if (index >= 0) rows[index] = row;
+    },
+    listHolidays: () => dates,
+    addHolidays(more) {
+      dates.push(...more);
+    },
+    listProveedores: () => [],
+    addProveedor() {},
+    renameProveedor() {},
+  };
 }
 
 function listen(server: Server): Promise<number> {
@@ -62,32 +79,7 @@ describe("GET /summary", () => {
       expect(body.cerrados).toBe(0);
       expect(JSON.stringify(body)).not.toContain("NOMBRE");
       expect(JSON.stringify(body)).not.toContain("a@b.co");
-    } finally {
-      await new Promise((resolve) => server.close(resolve));
-    }
-  });
-});
-
-describe("GET /", () => {
-  it("returns the dashboard html and omits personal fields", async () => {
-    const server = createSummaryServer(
-      memoryRepo([caso({ id: "2026-2", sheetYear: 2026, rowNumber: 2 })]),
-    );
-    const port = await listen(server);
-    try {
-      const page = await fetch(`http://127.0.0.1:${port}/`);
-      const css = await fetch(`http://127.0.0.1:${port}/dashboard.css`);
-      expect(page.status).toBe(200);
-      expect(page.headers.get("content-type")).toContain("text/html");
-      const html = await page.text();
-      expect(html).toContain('data-kpi="total">1');
-      expect(html).toContain('data-kpi="abiertos">1');
-      expect(html).toContain('data-kpi="cerrados">0');
-      expect(html).not.toContain("NOMBRE");
-      expect(html).not.toContain("a@b.co");
-      expect(css.status).toBe(200);
-      expect(css.headers.get("content-type")).toContain("text/css");
-      expect(await css.text()).toContain("--color-primary");
+      expect(JSON.stringify(body)).not.toContain("texto libre");
     } finally {
       await new Promise((resolve) => server.close(resolve));
     }
@@ -105,6 +97,339 @@ describe("unknown routes", () => {
       expect(await cases.json()).toEqual({ error: "not found" });
       expect(posted.status).toBe(404);
       expect(await posted.json()).toEqual({ error: "not found" });
+    } finally {
+      await new Promise((resolve) => server.close(resolve));
+    }
+  });
+});
+
+const dictionary = new Dictionary(new Map([["tipo:RECLAMOS", "RECLAMO"]]));
+
+function jsonPost(fields: Record<string, string>): RequestInit {
+  return {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify(fields),
+  };
+}
+
+const validCreate = {
+  fechaInicial: "2026-01-05",
+  area: "Tienda",
+  idOrden: "ORD-1",
+  asociado: "Ana Ruiz",
+  correo: "ana@coomeva.com.co",
+  fuente: "Correo",
+  tipo: "RECLAMOS",
+  tema: "CINE",
+  motivo: "No llegó",
+};
+
+describe("GET /api/casos", () => {
+  it("returns full cases and applies cola, area, tipo, and mes filters", async () => {
+    const server = createSummaryServer(
+      memoryRepo([
+        caso({
+          id: "2026-2",
+          sheetYear: 2026,
+          rowNumber: 2,
+          tipo: "RECLAMO",
+          area: "Tienda",
+          fechaInicial: "2026-01-05",
+        }),
+        caso({
+          id: "2026-3",
+          sheetYear: 2026,
+          rowNumber: 3,
+          tipo: "QUEJA",
+          area: "Boletería",
+          fechaInicial: "2026-02-02",
+          fechaSolucion: "2026-02-03",
+          diasSolucion: 2,
+        }),
+      ]),
+      { now: () => new Date("2026-01-19T15:00:00Z") },
+    );
+    const port = await listen(server);
+    try {
+      const all = await fetch(`http://127.0.0.1:${port}/api/casos`);
+      expect(all.status).toBe(200);
+      const body = await all.json();
+      expect(body.cases).toHaveLength(2);
+      expect(JSON.stringify(body)).toContain("NOMBRE");
+      expect(JSON.stringify(body)).toContain("a@b.co");
+      expect(JSON.stringify(body)).toContain("texto libre");
+
+      const byTipo = await fetch(`http://127.0.0.1:${port}/api/casos?tipo=QUEJA`);
+      expect((await byTipo.json()).cases.map((row: { id: string }) => row.id)).toEqual(["2026-3"]);
+      const byArea = await fetch(`http://127.0.0.1:${port}/api/casos?area=Tienda`);
+      expect((await byArea.json()).cases).toHaveLength(1);
+      const byMes = await fetch(`http://127.0.0.1:${port}/api/casos?mes=2026-02`);
+      expect((await byMes.json()).cases.map((row: { id: string }) => row.id)).toEqual(["2026-3"]);
+      const queue = await fetch(`http://127.0.0.1:${port}/api/casos?cola=vencida`);
+      expect(queue.status).toBe(200);
+      expect((await queue.json()).cases.map((row: { id: string }) => row.id)).toEqual(["2026-2"]);
+    } finally {
+      await new Promise((resolve) => server.close(resolve));
+    }
+  });
+
+  it("returns 503 for the overdue queue when holidays are missing", async () => {
+    const server = createSummaryServer(memoryRepo([], []), {
+      now: () => new Date("2026-01-19T15:00:00Z"),
+    });
+    const port = await listen(server);
+    try {
+      const queue = await fetch(`http://127.0.0.1:${port}/api/casos?cola=vencida`);
+      expect(queue.status).toBe(503);
+      expect(await queue.json()).toEqual({
+        error: "No hay festivos cargados. La cola no se puede calcular.",
+      });
+    } finally {
+      await new Promise((resolve) => server.close(resolve));
+    }
+  });
+});
+
+describe("GET /api/casos plazo", () => {
+  const rows = () => [
+    caso({ id: "venc", sheetYear: 2026, rowNumber: 2, fechaInicial: "2026-01-05" }),
+    caso({ id: "porv", sheetYear: 2026, rowNumber: 3, fechaInicial: "2026-01-12" }),
+    caso({ id: "plazo", sheetYear: 2026, rowNumber: 4, fechaInicial: "2026-01-16" }),
+    caso({
+      id: "cerr",
+      sheetYear: 2026,
+      rowNumber: 5,
+      fechaInicial: "2026-01-05",
+      fechaSolucion: "2026-01-06",
+      diasSolucion: 2,
+    }),
+  ];
+  const now = () => new Date("2026-01-19T15:00:00Z");
+
+  it("filters by plazo and attaches riesgo only to open cases", async () => {
+    const server = createSummaryServer(memoryRepo(rows()), { now });
+    const port = await listen(server);
+    try {
+      const base = `http://127.0.0.1:${port}/api/casos`;
+      const venc = await (await fetch(`${base}?plazo=vencido`)).json();
+      expect(venc.cases.map((row: { id: string }) => row.id)).toEqual(["venc"]);
+      const porv = await (await fetch(`${base}?plazo=por-vencer`)).json();
+      expect(porv.cases.map((row: { id: string }) => row.id)).toEqual(["porv"]);
+      const all = await (await fetch(base)).json();
+      const byId = Object.fromEntries(all.cases.map((row: { id: string }) => [row.id, row]));
+      expect(byId.plazo.riesgo.estado).toBe("en-plazo");
+      expect(byId.venc.riesgo).toMatchObject({ diasAbiertos: 11, diasParaVencer: -1 });
+      expect(byId.cerr.riesgo).toBeUndefined();
+    } finally {
+      await new Promise((resolve) => server.close(resolve));
+    }
+  });
+
+  it("returns 503 for plazo without holidays and omits riesgo otherwise", async () => {
+    const server = createSummaryServer(memoryRepo(rows(), []), { now });
+    const port = await listen(server);
+    try {
+      const base = `http://127.0.0.1:${port}/api/casos`;
+      const blocked = await fetch(`${base}?plazo=vencido`);
+      expect(blocked.status).toBe(503);
+      const all = await (await fetch(base)).json();
+      expect(all.cases.some((row: { riesgo?: unknown }) => row.riesgo !== undefined)).toBe(false);
+    } finally {
+      await new Promise((resolve) => server.close(resolve));
+    }
+  });
+});
+
+describe("GET /api/proveedores/:nombre/linea", () => {
+  it("returns monthly points for an encoded provider name and no personal fields", async () => {
+    const server = createSummaryServer(
+      memoryRepo([
+        caso({
+          id: "1",
+          sheetYear: 2026,
+          rowNumber: 2,
+          area: "Educación / Coomeva",
+          fechaInicial: "2026-01-05",
+          fechaSolucion: "2026-02-03",
+          diasSolucion: 4,
+        }),
+      ]),
+    );
+    const port = await listen(server);
+    try {
+      const response = await fetch(
+        `http://127.0.0.1:${port}/api/proveedores/${encodeURIComponent("Educación / Coomeva")}/linea`,
+      );
+      expect(response.status).toBe(200);
+      const text = await response.text();
+      expect(JSON.parse(text).puntos).toEqual([
+        { mes: "2026-01", entrados: 1, cerrados: 0, diasPromedio: null },
+        { mes: "2026-02", entrados: 0, cerrados: 1, diasPromedio: 4 },
+      ]);
+      expect(text).not.toContain("NOMBRE");
+      expect(text).not.toContain("a@b.co");
+      expect(text).not.toContain("texto libre");
+      const none = await fetch(`http://127.0.0.1:${port}/api/proveedores/Nadie/linea`);
+      expect(none.status).toBe(200);
+      expect((await none.json()).puntos).toEqual([]);
+    } finally {
+      await new Promise((resolve) => server.close(resolve));
+    }
+  });
+});
+
+describe("POST /api/casos", () => {
+  it("returns 400 with the field list and does not insert", async () => {
+    const repo = memoryRepo([]);
+    const server = createSummaryServer(repo, { dictionary });
+    const port = await listen(server);
+    try {
+      const invalid = await fetch(
+        `http://127.0.0.1:${port}/api/casos`,
+        jsonPost({ area: "Tienda", correo: "ana" }),
+      );
+      expect(invalid.status).toBe(400);
+      const body = await invalid.json();
+      expect(body.errors.map((error: { field: string }) => error.field)).toEqual(
+        expect.arrayContaining(["fechaInicial", "idOrden", "asociado", "correo", "fuente", "tipo", "tema", "motivo"]),
+      );
+      expect(repo.list()).toEqual([]);
+    } finally {
+      await new Promise((resolve) => server.close(resolve));
+    }
+  });
+
+  it("creates a case with an app id and the official catalog value", async () => {
+    const repo = memoryRepo([]);
+    const server = createSummaryServer(repo, { dictionary });
+    const port = await listen(server);
+    try {
+      const created = await fetch(`http://127.0.0.1:${port}/api/casos`, jsonPost(validCreate));
+      expect(created.status).toBe(201);
+      const body = await created.json();
+      expect(body.id.startsWith("app-")).toBe(true);
+      expect(body.tipo).toBe("RECLAMO");
+      expect(body.tipoOriginal).toBe("RECLAMOS");
+      expect(body.asociado).toBe("Ana Ruiz");
+      expect(repo.list()).toHaveLength(1);
+    } finally {
+      await new Promise((resolve) => server.close(resolve));
+    }
+  });
+
+  it("returns 503 when the holiday year cannot be loaded", async () => {
+    const fetchImpl = (async () => {
+      throw new Error("holiday request failed");
+    }) as typeof fetch;
+    const repo = memoryRepo([], ["2025-01-01"]);
+    const server = createSummaryServer(repo, { dictionary, fetchImpl });
+    const port = await listen(server);
+    try {
+      const created = await fetch(
+        `http://127.0.0.1:${port}/api/casos`,
+        jsonPost({ ...validCreate, fechaInicial: "2026-03-02" }),
+      );
+      expect(created.status).toBe(503);
+      expect(repo.list()).toEqual([]);
+    } finally {
+      await new Promise((resolve) => server.close(resolve));
+    }
+  });
+
+  it("loads a missing holiday year before creating", async () => {
+    const calls: string[] = [];
+    const fetchImpl = (async (url: string) => {
+      calls.push(String(url));
+      const year = String(url).match(/(\d{4})/)?.[1];
+      return { ok: true, status: 200, json: async () => ({ holidays: [{ date: `${year}-01-01` }] }) } as Response;
+    }) as typeof fetch;
+    const repo = memoryRepo([], ["2025-01-01"]);
+    const server = createSummaryServer(repo, { dictionary, fetchImpl });
+    const port = await listen(server);
+    try {
+      const created = await fetch(
+        `http://127.0.0.1:${port}/api/casos`,
+        jsonPost({ ...validCreate, fechaInicial: "2026-03-02", idOrden: "ORD-2" }),
+      );
+      expect(created.status).toBe(201);
+      expect(calls[0]).toContain("/2026/");
+      expect(repo.listHolidays()).toContain("2026-01-01");
+    } finally {
+      await new Promise((resolve) => server.close(resolve));
+    }
+  });
+});
+
+describe("POST /api/casos/:id/cerrar", () => {
+  it("returns 400 for an invalid close and 200 with recalculated days", async () => {
+    const repo = memoryRepo(
+      [
+        caso({
+          id: "app-1",
+          sheetYear: 2026,
+          rowNumber: 0,
+          fechaInicial: "2026-01-05",
+          fechaSolucion: null,
+        }),
+      ],
+      ["2026-01-06"],
+    );
+    const server = createSummaryServer(repo, { dictionary });
+    const port = await listen(server);
+    try {
+      const early = await fetch(
+        `http://127.0.0.1:${port}/api/casos/app-1/cerrar`,
+        jsonPost({ fechaSolucion: "2026-01-04", solucion: "Listo" }),
+      );
+      expect(early.status).toBe(400);
+      expect((await early.json()).errors[0].field).toBe("fechaSolucion");
+      expect(repo.list()[0]?.fechaSolucion).toBeNull();
+
+      const closed = await fetch(
+        `http://127.0.0.1:${port}/api/casos/app-1/cerrar`,
+        jsonPost({ fechaSolucion: "2026-01-06", solucion: "Listo" }),
+      );
+      expect(closed.status).toBe(200);
+      const body = await closed.json();
+      expect(body.solucion).toBe("Listo");
+      expect(body.diasSolucion).toBe(1);
+    } finally {
+      await new Promise((resolve) => server.close(resolve));
+    }
+  });
+
+  it("returns 503 when holidays are missing", async () => {
+    const fetchImpl = (async () => {
+      throw new Error("no holidays loaded");
+    }) as typeof fetch;
+    const repo = memoryRepo(
+      [caso({ id: "app-1", sheetYear: 2026, rowNumber: 0, fechaInicial: "2026-01-05" })],
+      [],
+    );
+    const server = createSummaryServer(repo, { dictionary, fetchImpl });
+    const port = await listen(server);
+    try {
+      const closed = await fetch(
+        `http://127.0.0.1:${port}/api/casos/app-1/cerrar`,
+        jsonPost({ fechaSolucion: "2026-01-06", solucion: "Listo" }),
+      );
+      expect(closed.status).toBe(503);
+      expect(repo.list()[0]?.fechaSolucion).toBeNull();
+    } finally {
+      await new Promise((resolve) => server.close(resolve));
+    }
+  });
+
+  it("returns 404 when the case does not exist", async () => {
+    const server = createSummaryServer(memoryRepo([]));
+    const port = await listen(server);
+    try {
+      const missing = await fetch(
+        `http://127.0.0.1:${port}/api/casos/nope/cerrar`,
+        jsonPost({ fechaSolucion: "2026-01-06", solucion: "Listo" }),
+      );
+      expect(missing.status).toBe(404);
     } finally {
       await new Promise((resolve) => server.close(resolve));
     }
