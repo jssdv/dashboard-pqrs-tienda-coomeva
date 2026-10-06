@@ -50,27 +50,12 @@ describe("editorial style rules", () => {
     expect(offenders(/ring-\[3px\]/)).toEqual([]);
   });
 
-  it("uses no library icons in the controls migrated so far", () => {
-    const migrated = [
-      /ui\/Select\.tsx$/,
-      /ui\/Combobox\.tsx$/,
-      /ui\/ThemeToggle\.tsx$/,
-      /ui\/FormDialog\.tsx$/,
-      /ui\/sheet\.tsx$/,
-      /Shell\.tsx$/,
-      /CommandPalette\.tsx$/,
-      /Resumen\.tsx$/,
-      /ui\/StatCard\.tsx$/,
-      /Casos\.tsx$/,
-      /CaseFilters\.tsx$/,
-      /CaseDetail\.tsx$/,
-      /Proveedores\.tsx$/,
-      /ProveedorDetalle\.tsx$/,
-      /CaseForm\.tsx$/,
-    ];
-    const hits = FILES.filter((path) => migrated.some((rule) => rule.test(path))).filter((path) =>
-      /lucide-react/.test(readFileSync(path, "utf8")),
-    );
-    expect(hits.map((path) => relative(ROOT, path))).toEqual([]);
+  it("imports no icon library anywhere", () => {
+    expect(offenders(/lucide-react|@untitledui\/icons/)).toEqual([]);
+  });
+
+  it("does not depend on lucide-react", () => {
+    const pkg = JSON.parse(readFileSync(join(ROOT, "package.json"), "utf8")) as { dependencies: Record<string, string> };
+    expect(Object.keys(pkg.dependencies)).not.toContain("lucide-react");
   });
 });
