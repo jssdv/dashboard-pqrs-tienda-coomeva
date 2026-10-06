@@ -136,3 +136,10 @@ it("Combobox without Todos uses the placeholder and flags the error on the input
   const options = within(listbox()).getAllByRole("option", { hidden: true });
   expect(options.map((option) => option.textContent)).toEqual(["Tienda", "Educación / Coomeva", "Lagobo"]);
 });
+
+it("lists stay clickable inside a modal dialog (popover re-enables pointer events)", () => {
+  render(<Select label="Estado" value="" onChange={() => {}} options={ESTADOS} />);
+  fireEvent.click(screen.getByRole("button", { name: /Estado/ }));
+  const popover = listbox().closest("[data-trigger]") as HTMLElement;
+  expect(popover.className).toContain("pointer-events-auto");
+});
