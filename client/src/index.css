@@ -6,9 +6,9 @@
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
-  --font-sans: "Inter", "SF Pro", system-ui, sans-serif;
-  --font-display: "Sora", "Inter", system-ui, sans-serif;
-  --font-mono: "JetBrains Mono", ui-monospace, monospace;
+  --font-sans: "Geist", "Inter", system-ui, sans-serif;
+  --font-display: "Geist", "Inter", system-ui, sans-serif;
+  --font-mono: "Geist Mono", ui-monospace, monospace;
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-card: var(--card);
@@ -52,7 +52,7 @@
   --accent-foreground: #064e2a;
   --warning: #d97706;
   --warning-foreground: #9a3412;
-  --destructive: #b45309;
+  --destructive: #b91c1c;
   --border: #e7e5e4;
   --input: #e7e5e4;
   --ring: #00843d;
@@ -74,7 +74,7 @@
   --accent-foreground: #ecfdf5;
   --warning: #fbbf24;
   --warning-foreground: #fde68a;
-  --destructive: #f59e0b;
+  --destructive: #f87171;
   --border: #2a3830;
   --input: #2a3830;
   --ring: #3dce7a;
@@ -107,6 +107,10 @@
   h2,
   h3 {
     font-family: var(--font-display);
+  }
+
+  .font-mono {
+    font-variant-numeric: tabular-nums;
   }
 }
 
