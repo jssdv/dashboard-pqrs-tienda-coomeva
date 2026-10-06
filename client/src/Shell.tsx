@@ -16,40 +16,60 @@ import {
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { useVencidos } from "./useVencidos";
 
-const navClass = ({ isActive }: { isActive: boolean }) =>
-  `flex min-h-11 cursor-pointer items-center gap-2 rounded-lg px-3 text-sm font-semibold no-underline transition-[background-color,color,box-shadow] duration-200 ease-[cubic-bezier(0.22,1,0.36,1)] focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-none ${
+const navClass = (compact: boolean) => ({ isActive }: { isActive: boolean }) =>
+  `relative flex min-h-11 cursor-pointer items-center rounded-lg text-sm font-semibold no-underline transition-[background-color,color,box-shadow] duration-200 ease-[cubic-bezier(0.22,1,0.36,1)] focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-none ${
+    compact ? "justify-center px-0" : "gap-2 px-3"
+  } ${
     isActive
       ? "bg-primary text-primary-foreground shadow-sm"
       : "text-foreground hover:bg-accent hover:text-accent-foreground"
   }`;
 
-function Nav({ onNavigate }: { onNavigate?: () => void }) {
-  const vencidos = useVencidos();
+function Nav({
+  vencidos,
+  compact = false,
+  onNavigate,
+}: {
+  vencidos: number | null;
+  compact?: boolean;
+  onNavigate?: () => void;
+}) {
+  const item = (label: string) => (compact ? { "aria-label": label, title: label } : {});
   return (
     <div className="grid gap-4">
       <Button asChild className="min-h-11 w-full">
-        <Link to="/casos/nuevo" onClick={onNavigate}>
+        <Link to="/casos/nuevo" onClick={onNavigate} {...item("Nuevo caso")}>
           <Plus aria-hidden="true" />
-          Nuevo caso
+          {compact ? null : "Nuevo caso"}
         </Link>
       </Button>
       <nav aria-label="Principal" className="grid gap-1" onClick={onNavigate}>
-        <NavLink to="/" end className={navClass}>
+        <NavLink to="/" end className={navClass(compact)} {...item("Resumen")}>
           <LayoutDashboard aria-hidden="true" />
-          Resumen
+          {compact ? null : "Resumen"}
         </NavLink>
-        <NavLink to="/casos" className={navClass}>
+        <NavLink
+          to="/casos"
+          className={navClass(compact)}
+          {...(compact
+            ? { "aria-label": vencidos ? `Casos, ${vencidos} vencidos` : "Casos", title: "Casos" }
+            : {})}
+        >
           <List aria-hidden="true" />
-          Casos
+          {compact ? null : "Casos"}
           {vencidos ? (
-            <Badge variant="destructive" className="ml-auto" aria-label={`${vencidos} vencidos`}>
+            <Badge
+              variant="destructive"
+              className={compact ? "absolute -top-1 -right-1 px-1.5 text-[0.65rem]" : "ml-auto"}
+              aria-label={`${vencidos} vencidos`}
+            >
               {vencidos}
             </Badge>
           ) : null}
         </NavLink>
-        <NavLink to="/proveedores" className={navClass}>
+        <NavLink to="/proveedores" className={navClass(compact)} {...item("Proveedores")}>
           <Store aria-hidden="true" />
-          Proveedores
+          {compact ? null : "Proveedores"}
         </NavLink>
       </nav>
     </div>
@@ -59,6 +79,7 @@ function Nav({ onNavigate }: { onNavigate?: () => void }) {
 export function Shell() {
   const [open, setOpen] = useState(false);
   const location = useLocation();
+  const vencidos = useVencidos();
 
   return (
     <TooltipProvider>
@@ -69,8 +90,11 @@ export function Shell() {
         >
           Saltar al contenido
         </a>
-        <aside className="hidden w-52 shrink-0 flex-col border-r border-border bg-card px-3 py-6 md:flex">
-          <Nav />
+        <aside className="hidden w-52 shrink-0 flex-col border-r border-border bg-card px-3 py-6 lg:flex">
+          <Nav vencidos={vencidos} />
+        </aside>
+        <aside className="hidden w-16 shrink-0 flex-col border-r border-border bg-card px-2 py-6 md:flex lg:hidden">
+          <Nav vencidos={vencidos} compact />
         </aside>
         <div className="app-canvas flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
           <div className="flex items-center justify-between px-4 pt-4 md:hidden">
@@ -87,7 +111,7 @@ export function Shell() {
                   <SheetDescription>Navegación</SheetDescription>
                 </SheetHeader>
                 <div className="px-4">
-                  <Nav onNavigate={() => setOpen(false)} />
+                  <Nav vencidos={vencidos} onNavigate={() => setOpen(false)} />
                 </div>
               </SheetContent>
             </Sheet>
