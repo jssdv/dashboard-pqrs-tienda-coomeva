@@ -638,3 +638,66 @@ it("closes the detail panel when a child route opens", async () => {
   await screen.findByText("cerrando");
   await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
 });
+
+function stubExport(opts: { ok?: boolean; status?: number; error?: string } = {}) {
+  const calls: string[] = [];
+  const fetchMock = vi.fn(async (url: string) => {
+    if (String(url).startsWith("/api/casos/exportar")) {
+      calls.push(String(url));
+      if (opts.ok === false) {
+        return { ok: false, status: opts.status ?? 503, json: async () => ({ error: opts.error ?? "falló" }) };
+      }
+      return {
+        ok: true,
+        status: 200,
+        blob: async () => new Blob(["xlsx"]),
+        headers: { get: () => 'attachment; filename="casos-2026-01-19.xlsx"' },
+      };
+    }
+    return { ok: true, status: 200, json: async () => ({ cases: [caso({ id: "a" }), caso({ id: "b", asociado: "Ana" })] }) };
+  });
+  vi.stubGlobal("fetch", fetchMock);
+  const anchors: Array<{ href: string; download: string }> = [];
+  vi.stubGlobal("URL", Object.assign(URL, { createObjectURL: () => "blob:x", revokeObjectURL: () => {} }));
+  vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(function (this: HTMLAnchorElement) {
+    anchors.push({ href: this.href, download: this.download });
+  });
+  return { calls, anchors };
+}
+
+it("exports the current filters to Excel from the page header", async () => {
+  const { calls, anchors } = stubExport();
+  render(
+    <MemoryRouter initialEntries={["/casos?estado=abiertos&q=ana&area=Tienda&pagina=2"]}>
+      <Casos />
+    </MemoryRouter>,
+  );
+  fireEvent.click(await screen.findByRole("button", { name: "Exportar Excel" }));
+  await waitFor(() => expect(anchors).toHaveLength(1));
+  expect(calls).toHaveLength(1);
+  const params = new URLSearchParams(calls[0].split("?")[1]);
+  expect(Object.fromEntries(params)).toEqual({ estado: "abiertos", q: "ana", area: "Tienda" });
+  expect(anchors[0].download).toBe("casos-2026-01-19.xlsx");
+});
+
+it("shows the server message when the export fails", async () => {
+  stubExport({ ok: false, status: 503, error: "No hay festivos cargados. El plazo no se puede calcular." });
+  render(
+    <MemoryRouter initialEntries={["/casos?plazo=vencido"]}>
+      <Casos />
+    </MemoryRouter>,
+  );
+  fireEvent.click(await screen.findByRole("button", { name: "Exportar Excel" }));
+  expect((await screen.findByRole("alert")).textContent).toContain("No hay festivos cargados");
+});
+
+it("disables the export when no case matches", async () => {
+  stubExport();
+  render(
+    <MemoryRouter initialEntries={["/casos?q=zzzz"]}>
+      <Casos />
+    </MemoryRouter>,
+  );
+  await screen.findByText("No hay casos con ese filtro.");
+  expect((screen.getByRole("button", { name: "Exportar Excel" }) as HTMLButtonElement).disabled).toBe(true);
+});

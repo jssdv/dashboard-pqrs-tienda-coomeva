@@ -66,6 +66,35 @@ export async function getCases(query: CaseQuery): Promise<PqrCase[]> {
   return (body.cases as PqrCase[]) ?? [];
 }
 
+const EXPORT_KEYS = ["cola", "area", "tipo", "mes", "plazo", "fecha", "estado", "tema", "q"] as const;
+
+export async function exportCases(source: URLSearchParams): Promise<void> {
+  const params = new URLSearchParams();
+  for (const key of EXPORT_KEYS) {
+    const value = source.get(key);
+    if (value) params.set(key, value);
+  }
+  const search = params.toString();
+  const response = await fetch(search ? `/api/casos/exportar?${search}` : "/api/casos/exportar");
+  if (!response.ok) {
+    const body = await readBody(response);
+    throw new ApiError(
+      typeof body.error === "string" ? body.error : "No se pudo exportar",
+      response.status,
+    );
+  }
+  const blob = await response.blob();
+  const name = response.headers.get("content-disposition")?.match(/filename="([^"]+)"/)?.[1] ?? "casos.xlsx";
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = name;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
+}
+
 export async function createCase(fields: CreateFields): Promise<PqrCase> {
   return postJson("/api/casos", fields);
 }

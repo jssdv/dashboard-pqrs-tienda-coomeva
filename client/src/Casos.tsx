@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
 import { Link, Outlet, useMatch, useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { ApiError, getCases } from "./api";
+import { Download } from "lucide-react";
+import { ApiError, exportCases, getCases } from "./api";
 import { CaseDetail } from "./CaseDetail";
 import { CaseFilters } from "./CaseFilters";
 import { plazoLabel, textOrDash } from "./format";
@@ -75,6 +76,8 @@ export function Casos() {
   const [message, setMessage] = useState<string | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
+  const [exporting, setExporting] = useState(false);
+  const [exportError, setExportError] = useState<string | null>(null);
   const atList = useMatch("/casos") !== null;
 
   useEffect(() => {
@@ -146,6 +149,18 @@ export function Casos() {
   const pageRows = visible.slice(startIndex, startIndex + PAGE_SIZE);
   const rangeStart = visible.length === 0 ? 0 : startIndex + 1;
   const rangeEnd = startIndex + pageRows.length;
+  async function onExport() {
+    setExporting(true);
+    setExportError(null);
+    try {
+      await exportCases(params);
+    } catch (reason) {
+      setExportError(reason instanceof Error ? reason.message : "No se pudo exportar");
+    } finally {
+      setExporting(false);
+    }
+  }
+
   const selected = cases.find((row) => row.id === selectedId) ?? null;
 
   return (
@@ -153,7 +168,24 @@ export function Casos() {
       <PageHead
         title="Casos"
         lede={loaded ? `${visible.length} ${visible.length === 1 ? "caso" : "casos"}` : undefined}
+        actions={
+          <Button
+            type="button"
+            variant="outline"
+            className="min-h-11 gap-2"
+            disabled={!loaded || visible.length === 0 || exporting}
+            onClick={onExport}
+          >
+            <Download aria-hidden="true" />
+            {exporting ? "Exportando…" : "Exportar Excel"}
+          </Button>
+        }
       />
+      {exportError ? (
+        <p role="alert" className="mb-3 rounded-lg border border-orange-300 bg-orange-50 p-3 text-sm">
+          {exportError}
+        </p>
+      ) : null}
       <CaseFilters
         q={q}
         onSearch={setQuery}
