@@ -95,3 +95,44 @@ it("Combobox closes with Escape without changing the value", () => {
   expect(screen.queryByRole("listbox", { hidden: true })).toBeNull();
   expect(onChange).not.toHaveBeenCalled();
 });
+
+it("Select without a Todos option shows the placeholder when empty", () => {
+  render(
+    <Select label="Fuente" value="" onChange={() => {}} options={ESTADOS} allLabel={null} placeholder="Selecciona…" />,
+  );
+  const button = screen.getByRole("button", { name: /Fuente/ });
+  expect(button.textContent).toContain("Selecciona…");
+  fireEvent.click(button);
+  const options = within(listbox()).getAllByRole("option", { hidden: true });
+  expect(options.map((option) => option.textContent)).toEqual(["Abiertos", "Cerrados"]);
+});
+
+it("Select marks required fields and shows the error under the field", () => {
+  render(
+    <Select label="Fuente" value="" onChange={() => {}} options={ESTADOS} allLabel={null} required error="Fuente es obligatoria" />,
+  );
+  expect(screen.getByText("Fuente es obligatoria")).toBeTruthy();
+  expect(screen.getByTitle("obligatorio")).toBeTruthy();
+});
+
+it("Combobox without Todos uses the placeholder and flags the error on the input", () => {
+  render(
+    <Combobox
+      label="Proveedor"
+      value=""
+      onChange={() => {}}
+      options={PROVEEDORES}
+      allLabel={null}
+      placeholder="Busca un proveedor"
+      required
+      error="Proveedor no está en la lista"
+    />,
+  );
+  const input = screen.getByRole("combobox", { name: /Proveedor/ }) as HTMLInputElement;
+  expect(input.placeholder).toBe("Busca un proveedor");
+  expect(input.getAttribute("aria-invalid")).toBe("true");
+  expect(screen.getByText("Proveedor no está en la lista")).toBeTruthy();
+  openList(input);
+  const options = within(listbox()).getAllByRole("option", { hidden: true });
+  expect(options.map((option) => option.textContent)).toEqual(["Tienda", "Educación / Coomeva", "Lagobo"]);
+});

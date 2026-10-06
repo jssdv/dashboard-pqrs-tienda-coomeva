@@ -2,6 +2,7 @@ import { Check, ChevronDown, X } from "lucide-react";
 import {
   Button,
   ComboBox as AriaComboBox,
+  FieldError,
   Input,
   Label,
   ListBox,
@@ -25,15 +26,21 @@ export function Combobox({
   options,
   allLabel = "Todos",
   emptyText = "Sin resultados",
+  placeholder,
+  required = false,
+  error,
 }: {
   label: string;
   value: string;
   onChange: (value: string) => void;
   options: Option[];
-  allLabel?: string;
+  allLabel?: string | null;
   emptyText?: string;
+  placeholder?: string;
+  required?: boolean;
+  error?: string;
 }) {
-  const all = [{ value: ALL_KEY, label: allLabel }, ...withCurrent(options, value)];
+  const all = [...(allLabel === null ? [] : [{ value: ALL_KEY, label: allLabel }]), ...withCurrent(options, value)];
   return (
     <AriaComboBox
       className="grid gap-1.5"
@@ -45,12 +52,25 @@ export function Combobox({
       defaultFilter={(text, input) => searchKey(text).includes(searchKey(input))}
       menuTrigger="focus"
       allowsEmptyCollection
+      isRequired={required}
+      isInvalid={Boolean(error)}
+      validationBehavior="aria"
     >
-      <Label className="text-sm font-medium">{label}</Label>
+      <Label className="text-sm font-medium">
+        {label}
+        {required ? (
+          <>
+            {" "}
+            <abbr className="text-warning no-underline" title="obligatorio">
+              *
+            </abbr>
+          </>
+        ) : null}
+      </Label>
       <div className="relative flex">
         <Input
           className={`${controlClass} pr-16`}
-          placeholder={allLabel}
+          placeholder={placeholder ?? allLabel ?? undefined}
           onFocus={(event) => event.currentTarget.select()}
         />
         {value !== "" ? (
@@ -70,6 +90,7 @@ export function Combobox({
           <ChevronDown aria-hidden="true" className="size-4" />
         </Button>
       </div>
+      <FieldError className="text-sm text-destructive">{error}</FieldError>
       <Popover offset={4}>
         <ListBox
           className={listClass}
