@@ -150,7 +150,7 @@ export function Card({
 }) {
   const Title = level === 2 ? "h2" : "h3";
   return (
-    <UiCard className="h-full border-border shadow-none">
+    <UiCard className="h-full min-w-0 border-border shadow-none">
       <CardHeader className="pb-0">
         <Title className="font-display text-lg font-semibold">{title}</Title>
       </CardHeader>

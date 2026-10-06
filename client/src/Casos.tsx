@@ -229,7 +229,7 @@ function OpenButton({ row, onOpen }: { row: PqrCase; onOpen: (id: string) => voi
     <Button
       type="button"
       variant="ghost"
-      className="min-h-11"
+      className="min-h-11 px-2"
       aria-label="Ver detalle"
       onClick={(event) => {
         event.stopPropagation();
@@ -268,16 +268,16 @@ function CaseCards({ rows, onOpen }: { rows: PqrCase[]; onOpen: (id: string) => 
 function CaseTable({ rows, onOpen }: { rows: PqrCase[]; onOpen: (id: string) => void }) {
   return (
     <div className="max-h-[calc(100dvh-18rem)] min-w-0 overflow-auto rounded-xl border border-border bg-card">
-      <table className="w-full min-w-[40rem] border-collapse text-sm">
+      <table className="w-full min-w-0 border-collapse text-sm">
         <caption className="sr-only">Casos</caption>
         <thead className="sticky top-0 z-10 bg-card">
           <tr className="border-b border-border text-left">
-            <th className="px-3 py-2 font-semibold">Fecha</th>
-            <th className="px-3 py-2 font-semibold">Proveedor</th>
-            <th className="px-3 py-2 font-semibold">Tipo</th>
-            <th className="px-3 py-2 font-semibold">Tema</th>
-            <th className="px-3 py-2 font-semibold">Plazo</th>
-            <th className="px-3 py-2">
+            <th className="px-2 py-2 lg:px-3 font-semibold">Fecha</th>
+            <th className="px-2 py-2 lg:px-3 font-semibold">Proveedor</th>
+            <th className="px-2 py-2 lg:px-3 font-semibold">Tipo</th>
+            <th className="px-2 py-2 lg:px-3 font-semibold">Tema</th>
+            <th className="px-2 py-2 lg:px-3 font-semibold">Plazo</th>
+            <th className="px-2 py-2 lg:px-3">
               <span className="sr-only">Acciones</span>
             </th>
           </tr>
@@ -289,14 +289,14 @@ function CaseTable({ rows, onOpen }: { rows: PqrCase[]; onOpen: (id: string) => 
               className="cursor-pointer border-b border-border hover:bg-muted/70"
               onClick={() => onOpen(row.id)}
             >
-              <td className="px-3 py-2 font-mono whitespace-nowrap tabular-nums">{textOrDash(row.fechaInicial)}</td>
-              <td className="px-3 py-2 break-words">{textOrDash(row.area)}</td>
-              <td className="px-3 py-2 break-words">{textOrDash(row.tipo)}</td>
-              <td className="px-3 py-2 break-words">{textOrDash(row.tema)}</td>
-              <td className="px-3 py-2">
+              <td className="px-2 py-2 lg:px-3 font-mono whitespace-nowrap tabular-nums">{textOrDash(row.fechaInicial)}</td>
+              <td className="px-2 py-2 lg:px-3 break-words">{textOrDash(row.area)}</td>
+              <td className="px-2 py-2 lg:px-3 break-words">{textOrDash(row.tipo)}</td>
+              <td className="px-2 py-2 lg:px-3 break-words">{textOrDash(row.tema)}</td>
+              <td className="px-2 py-2 lg:px-3">
                 <PlazoCell row={row} />
               </td>
-              <td className="px-3 py-1 text-right">
+              <td className="px-1 py-1 text-right">
                 <OpenButton row={row} onOpen={onOpen} />
               </td>
             </tr>

@@ -6,14 +6,16 @@ Vite (root `client/`), React 19, React Router, Tailwind 4, Recharts. Dev en 5173
 
 | Ruta | Componente | Función |
 |---|---|---|
-| `/` | `Resumen` | 4 cifras clicables (Abiertos, Vencidos, Sin fecha válida, Días promedio); Entrados y cerrados; Plazos de abiertos; Abiertos por proveedor y Temas abiertos (top 5); Cierre por tipo |
-| `/casos` | `Casos` | Buscador, Estado y Plazo visibles; Proveedor, Tipo y Tema en "Más filtros"; filtros de la URL como chips; tabla (Fecha, Proveedor, Tipo, Tema, Plazo) o tarjetas en móvil; "Ver" abre `CaseDetail` |
+| `/` | `Resumen` (título "Panel") | 4 cifras clicables (Abiertos, Vencidos, Sin fecha de inicio, Días promedio); Entrados y cerrados; Plazos de casos abiertos; Abiertos por proveedor y Temas abiertos (top 5); Tasa de cierre por tipo |
+| `/casos` | `Casos` | `CaseFilters`: buscador, Estado y Plazo (`Select`) visibles y botón "Filtros" que despliega Proveedor, Tipo y Tema (`Combobox` con búsqueda); en móvil, botón "Filtros (N)" que abre un panel inferior. Filtros de la URL como chips; tabla (Fecha, Proveedor, Tipo, Tema, Plazo) con encabezado fijo, o tarjetas en móvil; "Abrir" muestra `CaseDetail` |
 | `/casos/nuevo`, `/casos/:id/cerrar` | `NuevoCaso`, `CerrarCaso` (`CaseForm.tsx`) | Alta y cierre |
 | `/proveedores` | `Proveedores` | Tabla con casos, abiertos, vencidos y días promedio; fila expandible con `ProveedorDetalle` (desglose por tipo, línea de tiempo, renombrar); alta en línea |
 
 ## Archivos
 
-- `Shell.tsx` — sidebar de 13rem con "Nuevo caso" y contador de vencidos (`useVencidos.ts`); en móvil, barra superior con "Menú". `PageHead` (título y línea opcional) y `Card`.
+- `Shell.tsx` — sidebar completo (≥1024px), columna de iconos de 4rem (768–1023px) o barra superior con "Menú" (<768px); "Nuevo caso" y contador de vencidos (`useVencidos.ts`). `PageHead` (título y línea opcional) y `Card`.
+- `ui/` — `Select` y `Combobox` propios sobre `react-aria-components` (opción "Todos" = valor vacío; el Combobox filtra sin tildes ni mayúsculas); `ui/options.ts` con estilos y helpers.
+- `CaseFilters.tsx`, `useMinWidth.ts` — filtros de Casos y hook de media query.
 - `CaseDetail.tsx` — panel lateral con todos los campos y "Cerrar caso" (solo abiertos).
 - `charts.tsx` — `useMotion`, `ChartTip`, `Meter` y colores de gráficas (hex espejo de los tokens, porque los atributos SVG no resuelven `var()`).
 - `api.ts` — fetch (`getSummary`, `getCases`, `createCase`, `closeCase`, `getProveedores`, `createProveedor`, `renameProveedor`, `getProviderTimeline`, `ApiError`). `format.ts` — `casosHref`, `plazoLabel`, `percent`, `promedioText`, `textOrDash`.
@@ -26,4 +28,4 @@ Vite (root `client/`), React 19, React Router, Tailwind 4, Recharts. Dev en 5173
 
 ## Pruebas
 
-`client/src/screens.test.tsx`, `shell.test.tsx`, `proveedores.test.tsx`, `matchesSearch.test.ts`.
+`client/src/screens.test.tsx`, `shell.test.tsx`, `proveedores.test.tsx`, `ui/controls.test.tsx`, `matchesSearch.test.ts`.

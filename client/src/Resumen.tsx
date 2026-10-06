@@ -323,7 +323,7 @@ export function Resumen() {
           Todavía no hay casos importados. Ejecuta <code className="font-mono">npm run import</code>.
         </p>
       ) : (
-        <div className="mt-6 grid gap-6 lg:grid-cols-2">
+        <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-2">
           <Card title="Entrados y cerrados">
             {summary.flujoPorMes.length === 0 ? (
               <p className="text-sm text-muted-foreground">No hay meses con fecha válida.</p>
@@ -347,7 +347,7 @@ export function Resumen() {
             />
           </Card>
           {summary.cierrePorTipo.length > 0 ? (
-            <div className="lg:col-span-2">
+            <div className="min-w-0 lg:col-span-2">
               <Card title="Tasa de cierre por tipo">
                 <CloseTable rows={summary.cierrePorTipo} />
               </Card>
