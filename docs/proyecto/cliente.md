@@ -7,7 +7,7 @@ Vite (root `client/`), React 19, React Router, Tailwind 4, Recharts. Dev en 5173
 - **Tipografía**: Geist y Geist Mono (Google Fonts); las cifras usan `tabular-nums`.
 - **Tema**: claro, oscuro o del sistema (`theme.ts`, `ui/ThemeToggle.tsx`). La clase `dark` en `<html>` se aplica antes de pintar con un script en `client/index.html`; la elección se guarda en `localStorage` (`pqr-theme`) y todo funciona sin él. Tokens en `index.css` (`:root` y `.dark`); `--destructive` es el rojo de peligro.
 - **Gráficos**: `useChartColors()` lee las variables CSS del tema activo (los atributos SVG no resuelven `var()`); `palette.ts` asigna un color fijo a cada tipo (validado con `validate_palette.js`; en claro, aqua, amarillo y magenta tienen contraste <3:1, por eso siempre van con texto, ver `ui/TipoTag.tsx`).
-- **Movimiento**: entrada de 200 ms (`rise-in`) y animación de gráficos, apagados con `prefers-reduced-motion`.
+- **Movimiento** (`index.css`, variables `--ease-out`, `--dur-fast/base/slow` = 150/220/320 ms; solo `opacity` y `transform`): entrada escalonada `fade-up` (variable `--i`, tope 300 ms) en filas, tarjetas y chips; `grow-x` en barras; `reveal-x` en líneas pequeñas; esqueleto con brillo (`shimmer`); al recargar Casos las filas viejas se atenúan (`is-reloading`, `aria-busy`) en vez de desaparecer; cifras que cuentan hasta su valor (`useCountUp`, solo si hay `matchMedia` y no hay `prefers-reduced-motion`); cambio de tema con transición de color (`theme-switching`, 320 ms); fundido entre pantallas con View Transitions (`createBrowserRouter` + `viewTransition`, Chromium) y presión/elevación sutil en controles y tarjetas. Todo se apaga con `prefers-reduced-motion`.
 
 ## Pantallas (`App.tsx`)
 
