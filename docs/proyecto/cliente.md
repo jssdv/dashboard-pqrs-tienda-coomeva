@@ -15,7 +15,7 @@ Vite (root `client/`), React 19, React Router, Tailwind 4, Recharts. Dev en 5173
 |---|---|---|
 | `/` | `Resumen` (título "Panel") | 4 indicadores (`StatCard`) con mini gráfico y variación contra el mes anterior (solo meses completos: el mes en curso, en hora de Bogotá, se ignora): Abiertos, Entrados, Tasa de cierre y Días promedio; banda de alertas (Vencidos, Sin fecha de inicio); Entrados y cerrados con selector 6 m / 12 m / Todo; Plazos de casos abiertos (`SegmentedBar`); Abiertos por proveedor y Temas abiertos (top 8); Tasa de cierre por tipo |
 | `/casos` | `Casos` | `CaseFilters` en una tarjeta (buscador, Estado y Plazo, "Filtros"; en móvil un panel inferior); chips de filtros de la URL; tabla (Fecha, Proveedor, Tipo con `TipoTag`, Tema, Plazo con `PlazoBar`) con encabezado fijo, o tarjetas en móvil; "Abrir" muestra `CaseDetail` con `CaseTimeline` |
-| `/casos/nuevo`, `/casos/:id/cerrar` | `NuevoCaso`, `CerrarCaso` (`CaseForm.tsx`) | Alta en secciones (Datos del caso, Clasificación, Detalle; listas de `/api/catalogos`) y cierre |
+| `/casos/nuevo`, `/casos/:id/cerrar` | `NuevoCaso`, `CerrarCaso` (`CaseForm.tsx`) | Rutas hijas de `/casos`: ventanas modales (`ui/FormDialog.tsx`) sobre la lista, que sigue montada. Nuevo caso: Datos del caso y Clasificación en filas de 4 columnas y Motivo (unos 540 px, sin scroll en escritorio; listas de `/api/catalogos`). Cerrar caso: resumen del caso con barra de plazo, fecha de solución (hoy en hora de Bogotá) y texto. Ctrl/⌘ + Enter guarda, Esc o Cancelar vuelven a la lista; al guardar, la lista se recarga (`reload` por contexto del `Outlet`). En móvil ocupan toda la pantalla con pie fijo |
 | `/proveedores` | `Proveedores` | Tabla con barra de abiertos y alerta de vencidos (tarjetas en móvil); fila expandible con `ProveedorDetalle` (desglose por tipo, línea de tiempo, renombrar) |
 
 ## Marco (`Shell.tsx`)
@@ -24,7 +24,7 @@ Barra superior con migas, búsqueda (⌘K / Ctrl K), interruptor de tema y "Nuev
 
 ## Componentes (`client/src/`)
 
-- `ui/` — `Select`, `Combobox` (react-aria-components), `StatCard`, `Sparkline`, `SegmentedBar`, `PlazoBar`, `CaseTimeline`, `TipoTag`, `ThemeToggle`, `options.ts`.
+- `ui/` — `FormDialog`, `Select`, `Combobox` (react-aria-components), `StatCard`, `Sparkline`, `SegmentedBar`, `PlazoBar`, `CaseTimeline`, `TipoTag`, `ThemeToggle`, `options.ts`.
 - `charts.tsx` (`useMotion`, `ChartTip`, `Meter`, `axisTick`), `metrics.ts` (`deltaPct`, `tasaCierre`), `palette.ts`, `theme.ts`, `useChartColors.ts`, `useMinWidth.ts`.
 - `api.ts` — `getSummary`, `getCases`, `getCatalogs`, `createCase`, `closeCase`, `getProveedores`, `createProveedor`, `renameProveedor`, `getProviderTimeline`, `ApiError`. `format.ts` — `casosHref`, `plazoLabel`, `percent`, `promedioText`, `textOrDash`.
 
@@ -35,4 +35,4 @@ Barra superior con migas, búsqueda (⌘K / Ctrl K), interruptor de tema y "Nuev
 
 ## Pruebas
 
-`client/src/screens.test.tsx` (Casos), `panel.test.tsx`, `shell.test.tsx`, `commandPalette.test.tsx`, `proveedores.test.tsx`, `caseform.test.tsx`, `theme.test.tsx`, `palette.test.ts`, `metrics.test.ts`, `ui/*.test.tsx`.
+`client/src/screens.test.tsx` (Casos), `panel.test.tsx`, `shell.test.tsx`, `commandPalette.test.tsx`, `proveedores.test.tsx`, `caseform.test.tsx`, `closecase.test.tsx`, `theme.test.tsx`, `palette.test.ts`, `metrics.test.ts`, `ui/*.test.tsx`.
