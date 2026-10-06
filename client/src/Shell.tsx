@@ -172,7 +172,7 @@ export function Shell() {
               <span aria-hidden="true" className="flex-1 text-left">
                 Buscar
               </span>
-              <kbd aria-hidden="true" className="hidden rounded border border-border px-1.5 font-mono text-[0.7rem] md:inline">
+              <kbd aria-hidden="true" className="hidden rounded-sm border border-border px-1.5 font-mono text-[0.7rem] md:inline">
                 Ctrl K
               </kbd>
             </Button>

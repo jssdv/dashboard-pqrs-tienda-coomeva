@@ -71,8 +71,8 @@ export function FormDialog({
             <div className="min-h-0 flex-1 overflow-y-auto px-5 py-4">{children}</div>
             <footer className="flex flex-wrap items-center justify-between gap-3 border-t border-border bg-card px-5 py-3">
               <p className="m-0 hidden text-xs text-muted-foreground sm:block">
-                <kbd className="rounded border border-border px-1.5 font-mono">{hint}</kbd> +{" "}
-                <kbd className="rounded border border-border px-1.5 font-mono">Enter</kbd> para guardar
+                <kbd className="rounded-sm border border-border px-1.5 font-mono">{hint}</kbd> +{" "}
+                <kbd className="rounded-sm border border-border px-1.5 font-mono">Enter</kbd> para guardar
               </p>
               <div className="ml-auto flex items-center gap-2">
                 <Button type="button" variant="ghost" className="min-h-11" onClick={onClose}>

@@ -28,6 +28,10 @@ describe("editorial style rules", () => {
     expect(offenders(/rounded-(full|2xl|3xl|xl)\b|rounded-[lr]-full/)).toEqual([]);
   });
 
+  it("has no bare `rounded` (4 px) either", () => {
+    expect(offenders(/["'` ]rounded(?=["'` ])/)).toEqual([]);
+  });
+
   it("has no soft shadows on controls or cards", () => {
     expect(offenders(/\bshadow-(xs|sm)\b/)).toEqual([]);
   });
