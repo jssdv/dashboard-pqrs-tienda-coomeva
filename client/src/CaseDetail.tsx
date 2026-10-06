@@ -10,6 +10,8 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet";
 import { plazoLabel, textOrDash } from "./format";
+import { CaseTimeline } from "./ui/CaseTimeline";
+import { TipoTag } from "./ui/TipoTag";
 import type { PqrCase } from "./types";
 
 function Field({ label, value }: { label: string; value: string | null }) {
@@ -35,22 +37,37 @@ export function CaseDetail({ caso, onClose }: { caso: PqrCase | null; onClose: (
                 {textOrDash(caso.area)} · {textOrDash(caso.fechaInicial)}
               </SheetDescription>
             </SheetHeader>
-            <div className="grid gap-4 px-4">
-              {plazo ? <Badge variant={plazo.variant}>{plazo.text}</Badge> : null}
-              <dl className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                <Field label="Fecha inicial" value={caso.fechaInicial} />
-                <Field label="Fecha de solución" value={caso.fechaSolucion} />
-                <Field label="Tipo" value={caso.tipo} />
-                <Field label="Tema" value={caso.tema} />
-                <Field label="Fuente" value={caso.fuente} />
-                <Field label="ID de orden" value={caso.idOrden} />
-                <Field label="Asociado" value={caso.asociado} />
-                <Field label="Correo" value={caso.correo} />
-              </dl>
-              <dl className="grid gap-4">
-                <Field label="Motivo" value={caso.motivo} />
-                <Field label="Solución" value={caso.solucion} />
-              </dl>
+            <div className="grid gap-5 px-4 pb-2">
+              {plazo ? <Badge variant={plazo.variant} className="w-fit">{plazo.text}</Badge> : null}
+              <CaseTimeline caso={caso} />
+              <section aria-labelledby="det-caso" className="grid gap-3">
+                <h3 id="det-caso" className="text-sm font-semibold">Caso</h3>
+                <dl className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                  <Field label="Fecha inicial" value={caso.fechaInicial} />
+                  <Field label="Fecha de solución" value={caso.fechaSolucion} />
+                  <div className="min-w-0">
+                    <dt className="text-sm text-muted-foreground">Tipo</dt>
+                    <dd className="m-0"><TipoTag tipo={caso.tipo} /></dd>
+                  </div>
+                  <Field label="Tema" value={caso.tema} />
+                  <Field label="Fuente" value={caso.fuente} />
+                  <Field label="ID de orden" value={caso.idOrden} />
+                </dl>
+              </section>
+              <section aria-labelledby="det-persona" className="grid gap-3">
+                <h3 id="det-persona" className="text-sm font-semibold">Persona</h3>
+                <dl className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                  <Field label="Asociado" value={caso.asociado} />
+                  <Field label="Correo" value={caso.correo} />
+                </dl>
+              </section>
+              <section aria-labelledby="det-texto" className="grid gap-3">
+                <h3 id="det-texto" className="text-sm font-semibold">Texto</h3>
+                <dl className="grid gap-3">
+                  <Field label="Motivo" value={caso.motivo} />
+                  <Field label="Solución" value={caso.solucion} />
+                </dl>
+              </section>
             </div>
             {open ? (
               <SheetFooter>

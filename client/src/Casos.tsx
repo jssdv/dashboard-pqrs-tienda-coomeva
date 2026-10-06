@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ApiError, getCases } from "./api";
 import { CaseDetail } from "./CaseDetail";
@@ -10,6 +9,8 @@ import { matchesSearch } from "./matchesSearch";
 import type { Option } from "./ui/options";
 import { useMinWidth } from "./useMinWidth";
 import { PageHead } from "./Shell";
+import { PlazoBar } from "./ui/PlazoBar";
+import { TipoTag } from "./ui/TipoTag";
 import type { CaseQuery, PqrCase } from "./types";
 
 const PAGE_SIZE = 20;
@@ -217,11 +218,21 @@ export function Casos() {
 
 function PlazoCell({ row }: { row: PqrCase }) {
   if (!isOpen(row)) {
-    return <span className="font-mono tabular-nums">{row.diasSolucion === null ? "Cerrado" : `${row.diasSolucion} días`}</span>;
+    return (
+      <span className="font-mono text-sm tabular-nums">
+        {row.diasSolucion === null ? "Cerrado" : `${row.diasSolucion} días`}
+      </span>
+    );
   }
   const plazo = plazoLabel(row.riesgo);
-  if (plazo) return <Badge variant={plazo.variant}>{plazo.text}</Badge>;
-  return <span className="text-muted-foreground">Sin fecha válida</span>;
+  if (!plazo || !row.riesgo) return <span className="text-sm text-muted-foreground">Sin fecha de inicio</span>;
+  const TEXT = { secondary: "text-muted-foreground", warning: "text-warning-foreground", destructive: "text-destructive" } as const;
+  return (
+    <div className="grid min-w-28 gap-1">
+      <PlazoBar dias={row.riesgo.diasAbiertos} estado={row.riesgo.estado} />
+      <span className={`text-xs font-medium ${TEXT[plazo.variant]}`}>{plazo.text}</span>
+    </div>
+  );
 }
 
 function OpenButton({ row, onOpen }: { row: PqrCase; onOpen: (id: string) => void }) {
@@ -250,7 +261,7 @@ function CaseCards({ rows, onOpen }: { rows: PqrCase[]; onOpen: (id: string) => 
             <div className="min-w-0">
               <p className="m-0 break-words font-semibold">{textOrDash(row.area)}</p>
               <p className="m-0 mt-1 break-words text-sm text-muted-foreground">
-                {textOrDash(row.tipo)} · {textOrDash(row.tema)}
+                <TipoTag tipo={row.tipo} /> · {textOrDash(row.tema)}
               </p>
             </div>
             <span className="shrink-0 font-mono text-sm tabular-nums">{textOrDash(row.fechaInicial)}</span>
@@ -271,12 +282,12 @@ function CaseTable({ rows, onOpen }: { rows: PqrCase[]; onOpen: (id: string) => 
       <table className="w-full min-w-0 border-collapse text-sm">
         <caption className="sr-only">Casos</caption>
         <thead className="sticky top-0 z-10 bg-card">
-          <tr className="border-b border-border text-left">
-            <th className="px-2 py-2 lg:px-3 font-semibold">Fecha</th>
-            <th className="px-2 py-2 lg:px-3 font-semibold">Proveedor</th>
-            <th className="px-2 py-2 lg:px-3 font-semibold">Tipo</th>
-            <th className="px-2 py-2 lg:px-3 font-semibold">Tema</th>
-            <th className="px-2 py-2 lg:px-3 font-semibold">Plazo</th>
+          <tr className="border-b border-border text-left text-xs text-muted-foreground">
+            <th className="px-2 py-2 lg:px-3 font-medium">Fecha</th>
+            <th className="px-2 py-2 lg:px-3 font-medium">Proveedor</th>
+            <th className="px-2 py-2 lg:px-3 font-medium">Tipo</th>
+            <th className="px-2 py-2 lg:px-3 font-medium">Tema</th>
+            <th className="px-2 py-2 lg:px-3 font-medium">Plazo</th>
             <th className="px-2 py-2 lg:px-3">
               <span className="sr-only">Acciones</span>
             </th>
@@ -291,7 +302,9 @@ function CaseTable({ rows, onOpen }: { rows: PqrCase[]; onOpen: (id: string) => 
             >
               <td className="px-2 py-2 lg:px-3 font-mono whitespace-nowrap tabular-nums">{textOrDash(row.fechaInicial)}</td>
               <td className="px-2 py-2 lg:px-3 break-words">{textOrDash(row.area)}</td>
-              <td className="px-2 py-2 lg:px-3 break-words">{textOrDash(row.tipo)}</td>
+              <td className="px-2 py-2 lg:px-3 break-words">
+                <TipoTag tipo={row.tipo} />
+              </td>
               <td className="px-2 py-2 lg:px-3 break-words">{textOrDash(row.tema)}</td>
               <td className="px-2 py-2 lg:px-3">
                 <PlazoCell row={row} />

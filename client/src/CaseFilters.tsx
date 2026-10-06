@@ -83,7 +83,7 @@ export function CaseFilters({
   );
 
   return (
-    <div className="mb-3 grid gap-3">
+    <div data-toolbar className="mb-4 grid gap-3 rounded-xl border border-border bg-card p-3">
       <div className="flex min-w-0 flex-wrap items-end gap-3">
         {search}
         {wide ? (

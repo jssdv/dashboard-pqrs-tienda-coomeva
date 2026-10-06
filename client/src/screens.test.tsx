@@ -483,3 +483,54 @@ it("right-aligns numeric table headers and keeps dates on one line", async () =>
   expect(row.className).toContain("whitespace-nowrap");
   expect(fecha.closest("thead")?.className).toContain("sticky");
 });
+
+it("shows the type tag and a plazo bar for open cases in the table", async () => {
+  setViewport(true);
+  stubCases([
+    caso({ id: "a", tipo: "QUEJA", riesgo: { diasAbiertos: 3, diasParaVencer: 7, estado: "en-plazo" } }),
+  ]);
+  render(
+    <MemoryRouter>
+      <Casos />
+    </MemoryRouter>,
+  );
+  const row = (await screen.findByText("QUEJA")).closest("tr") as HTMLElement;
+  expect(row.querySelector("[data-dot]")).toBeTruthy();
+  expect(within(row).getByRole("img", { name: "3 días hábiles de 10" })).toBeTruthy();
+  expect(within(row).getByText("En plazo · faltan 7")).toBeTruthy();
+});
+
+it("puts the toolbar in a bordered card", async () => {
+  stubCases([caso({ id: "a" })]);
+  render(
+    <MemoryRouter>
+      <Casos />
+    </MemoryRouter>,
+  );
+  const search = await screen.findByRole("textbox", { name: "Buscar" });
+  expect(search.closest("[data-toolbar]")?.className).toContain("border");
+});
+
+it("groups the case detail in sections and shows the timeline", async () => {
+  stubCases([
+    caso({
+      id: "a",
+      idOrden: "ORD-9",
+      asociado: "Ana Ruiz",
+      motivo: "No llegó",
+      riesgo: { diasAbiertos: 6, diasParaVencer: 4, estado: "por-vencer" },
+    }),
+  ]);
+  render(
+    <MemoryRouter>
+      <Casos />
+    </MemoryRouter>,
+  );
+  fireEvent.click(await screen.findByRole("button", { name: "Ver detalle" }));
+  const panel = await screen.findByRole("dialog");
+  for (const name of ["Caso", "Persona", "Texto"]) {
+    expect(within(panel).getByRole("heading", { name })).toBeTruthy();
+  }
+  expect(within(panel).getByRole("region", { name: "Línea de tiempo" }).textContent).toContain("6 días hábiles");
+  expect(within(panel).getByText("Ana Ruiz")).toBeTruthy();
+});
