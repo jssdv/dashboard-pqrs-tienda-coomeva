@@ -701,3 +701,41 @@ it("disables the export when no case matches", async () => {
   await screen.findByText("No hay casos con ese filtro.");
   expect((screen.getByRole("button", { name: "Exportar Excel" }) as HTMLButtonElement).disabled).toBe(true);
 });
+
+it("has no library icons on the buttons of the list header and toolbar", async () => {
+  setViewport(true);
+  stubCases([caso({ id: "a" })]);
+  render(
+    <MemoryRouter>
+      <Casos />
+    </MemoryRouter>,
+  );
+  const exportar = await screen.findByRole("button", { name: "Exportar Excel" });
+  expect(exportar.querySelector("svg")).toBeNull();
+  expect(screen.getByRole("button", { name: "Filtros" }).querySelector("svg")).toBeNull();
+});
+
+it("draws active filter chips as square tags with a custom cross", async () => {
+  stubCases([caso({ id: "a", area: "Tienda", fechaSolucion: "2026-02-01", diasSolucion: 2 })]);
+  render(
+    <MemoryRouter initialEntries={["/casos?area=Tienda"]}>
+      <Casos />
+    </MemoryRouter>,
+  );
+  const remove = await screen.findByRole("button", { name: "Quitar filtro Proveedor Tienda" });
+  expect(remove.querySelector("svg")?.getAttribute("stroke-linecap")).toBe("square");
+  expect(remove.closest("span")?.className).not.toMatch(/rounded-(full|xl|lg)/);
+});
+
+it("sets table headers in mono small caps", async () => {
+  setViewport(true);
+  stubCases([caso({ id: "a" })]);
+  render(
+    <MemoryRouter>
+      <Casos />
+    </MemoryRouter>,
+  );
+  const header = await screen.findByRole("columnheader", { name: "Fecha" });
+  expect(header.closest("tr")?.className).toContain("font-mono");
+  expect(header.closest("tr")?.className).toContain("uppercase");
+});

@@ -61,6 +61,12 @@ describe("editorial style rules", () => {
       /CommandPalette\.tsx$/,
       /Resumen\.tsx$/,
       /ui\/StatCard\.tsx$/,
+      /Casos\.tsx$/,
+      /CaseFilters\.tsx$/,
+      /CaseDetail\.tsx$/,
+      /Proveedores\.tsx$/,
+      /ProveedorDetalle\.tsx$/,
+      /CaseForm\.tsx$/,
     ];
     const hits = FILES.filter((path) => migrated.some((rule) => rule.test(path))).filter((path) =>
       /lucide-react/.test(readFileSync(path, "utf8")),

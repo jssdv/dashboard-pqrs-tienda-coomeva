@@ -98,3 +98,12 @@ it("CaseTimeline for an open case without holidays shows dates only", () => {
   expect(region.textContent).toContain("2026-01-05");
   expect(region.textContent).not.toMatch(/NaN|undefined|null/);
 });
+
+it("PlazoBar and CaseTimeline have no rounded ends", () => {
+  render(<PlazoBar dias={4} estado="en-plazo" />);
+  expect(document.querySelector("[role=img]")?.className).not.toContain("rounded");
+  expect((document.querySelector("[data-fill]") as HTMLElement).className).not.toContain("rounded");
+  cleanup();
+  render(<CaseTimeline caso={caso({ riesgo: { diasAbiertos: 6, diasParaVencer: 4, estado: "por-vencer" } })} />);
+  expect(document.querySelector("section")?.innerHTML).not.toMatch(/rounded-full/);
+});

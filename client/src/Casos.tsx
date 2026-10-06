@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link, Outlet, useMatch, useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Download } from "lucide-react";
+import { Mark } from "./ui/Mark";
 import { ApiError, exportCases, getCases } from "./api";
 import { CaseDetail } from "./CaseDetail";
 import { CaseFilters } from "./CaseFilters";
@@ -177,7 +177,6 @@ export function Casos() {
             disabled={!loaded || visible.length === 0 || exporting}
             onClick={onExport}
           >
-            <Download aria-hidden="true" />
             {exporting ? "Exportando…" : "Exportar Excel"}
           </Button>
         }
@@ -213,7 +212,7 @@ export function Casos() {
                 className="grid size-8 cursor-pointer place-items-center text-muted-foreground hover:bg-muted"
                 onClick={() => setFilter(chip.key, "")}
               >
-                <span aria-hidden="true">×</span>
+                <Mark name="cross" className="size-3" />
               </button>
             </span>
           ))}
@@ -332,12 +331,12 @@ function CaseTable({ rows, onOpen }: { rows: PqrCase[]; onOpen: (id: string) => 
       <table className="w-full min-w-0 border-collapse text-sm">
         <caption className="sr-only">Casos</caption>
         <thead className="sticky top-0 z-10 bg-card">
-          <tr className="border-b border-border text-left text-xs text-muted-foreground">
-            <th className="px-2 py-2 lg:px-3 font-medium">Fecha</th>
-            <th className="px-2 py-2 lg:px-3 font-medium">Proveedor</th>
-            <th className="px-2 py-2 lg:px-3 font-medium">Tipo</th>
-            <th className="px-2 py-2 lg:px-3 font-medium">Tema</th>
-            <th className="px-2 py-2 lg:px-3 font-medium">Plazo</th>
+          <tr className="border-b border-border text-left font-mono text-[0.7rem] tracking-widest text-muted-foreground uppercase">
+            <th className="px-2 py-2 font-medium lg:px-3">Fecha</th>
+            <th className="px-2 py-2 font-medium lg:px-3">Proveedor</th>
+            <th className="px-2 py-2 font-medium lg:px-3">Tipo</th>
+            <th className="px-2 py-2 font-medium lg:px-3">Tema</th>
+            <th className="px-2 py-2 font-medium lg:px-3">Plazo</th>
             <th className="px-2 py-2 lg:px-3">
               <span className="sr-only">Acciones</span>
             </th>

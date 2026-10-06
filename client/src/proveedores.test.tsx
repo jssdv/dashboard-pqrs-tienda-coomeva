@@ -180,3 +180,14 @@ it("shows the type breakdown in the detail with type tags and bars", async () =>
   expect(section.querySelector("[data-dot]")).toBeTruthy();
   expect(section.querySelector("[data-bar]")).toBeTruthy();
 });
+
+it("sets the provider table headers in mono small caps and marks overdue with a square", async () => {
+  stubApi();
+  renderPage();
+  await screen.findByRole("button", { name: "Tienda" });
+  const header = screen.getByRole("columnheader", { name: "Vencidos" });
+  expect(header.closest("tr")?.className).toContain("font-mono");
+  expect(header.closest("tr")?.className).toContain("uppercase");
+  const mark = screen.getByRole("link", { name: "1 vencidos" }).querySelector("span");
+  expect(mark?.className).not.toContain("rounded");
+});

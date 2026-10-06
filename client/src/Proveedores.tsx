@@ -95,7 +95,7 @@ export function Proveedores() {
           <table className="w-full min-w-[34rem] border-collapse text-sm">
             <caption className="sr-only">Proveedores</caption>
             <thead className="sticky top-0 z-10 bg-card">
-              <tr className="border-b border-border text-left text-xs text-muted-foreground">
+              <tr className="border-b border-border text-left font-mono text-[0.7rem] tracking-widest text-muted-foreground uppercase">
                 <th scope="col" className="px-4 py-3 font-medium">Proveedor</th>
                 <th scope="col" className="px-3 py-3 text-right font-medium">Casos</th>
                 <th scope="col" className="px-3 py-3 text-right font-medium">Abiertos</th>

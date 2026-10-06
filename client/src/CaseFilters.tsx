@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { SlidersHorizontal } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -77,7 +76,6 @@ export function CaseFilters({
       aria-expanded={wide ? expanded : sheet}
       onClick={() => (wide ? setExpanded(!expanded) : setSheet(true))}
     >
-      <SlidersHorizontal aria-hidden="true" />
       {label}
     </Button>
   );
