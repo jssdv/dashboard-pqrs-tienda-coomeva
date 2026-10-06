@@ -4,6 +4,7 @@ Vite (root `client/`), React 19, React Router, Tailwind 4, Recharts. Dev en 5173
 
 ## Sistema visual
 
+- **Dirección "editorial técnico"**: esquinas rectas (tarjetas, tablas, ventanas, barras y etiquetas a 0 px; controles y teclas a 2 px, vía `--radius-*` en `index.css`), filetes finos, sin sombras salvo en menús y ventanas flotantes, fondo plano y foco con anillo nítido de 2 px con separación. **Sin librería de iconos** (`lucide-react` se quitó): navegación con numerales mono (`01 Panel`), variaciones con signo (`+20 %`), botones de texto, y `ui/Mark.tsx` (`src/components/ui/mark.tsx`) con 3 marcas dibujadas a medida (chevron, cruz, flecha) de trazo con extremos rectos. Encabezados de página con etiqueta mono (`PANEL · fecha`) y filete inferior; encabezados de tabla en versalitas mono; tarjetas con filete superior de 2 px; alertas con barra izquierda gruesa. `client/src/style.test.ts` vigila que no vuelvan píldoras, sombras suaves, halos, blur ni iconos de librería.
 - **Tipografía**: Geist y Geist Mono (Google Fonts); las cifras usan `tabular-nums`.
 - **Tema**: claro, oscuro o del sistema (`theme.ts`, `ui/ThemeToggle.tsx`). La clase `dark` en `<html>` se aplica antes de pintar con un script en `client/index.html`; la elección se guarda en `localStorage` (`pqr-theme`) y todo funciona sin él. Tokens en `index.css` (`:root` y `.dark`); `--destructive` es el rojo de peligro.
 - **Gráficos**: `useChartColors()` lee las variables CSS del tema activo (los atributos SVG no resuelven `var()`); `palette.ts` asigna un color fijo a cada tipo (validado con `validate_palette.js`; en claro, aqua, amarillo y magenta tienen contraste <3:1, por eso siempre van con texto, ver `ui/TipoTag.tsx`).
@@ -30,8 +31,8 @@ Barra superior con migas, búsqueda (⌘K / Ctrl K), interruptor de tema y "Nuev
 
 ## Componentes compartidos (`src/`)
 
-- `components/ui/` — shadcn: badge (incluye `destructive`), button, card, input, label, separator, sheet, skeleton, tabs, textarea, tooltip.
-- `components/base/`, `components/foundations/` — Untitled UI (sin uso aparente en pantallas).
+- `components/ui/` — shadcn: `mark`, badge (incluye `destructive`; etiquetas rectas con borde), button, card, input, label, separator, sheet, skeleton, tabs, textarea, tooltip.
+- `components/base/`, `components/foundations/` — Untitled UI (código sin uso en pantallas; todavía importa `@untitledui/icons`, que no entra en el bundle).
 
 ## Pruebas
 
