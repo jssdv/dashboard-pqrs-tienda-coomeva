@@ -13,7 +13,7 @@ Vite (root `client/`), React 19, React Router, Tailwind 4, Recharts. Dev en 5173
 
 | Ruta | Componente | Función |
 |---|---|---|
-| `/` | `Resumen` (título "Panel") | 4 indicadores (`StatCard`) con mini gráfico y variación contra el mes anterior: Abiertos, Entrados, Tasa de cierre y Días promedio; banda de alertas (Vencidos, Sin fecha de inicio); Entrados y cerrados con selector 6 m / 12 m / Todo; Plazos de casos abiertos (`SegmentedBar`); Abiertos por proveedor y Temas abiertos (top 8); Tasa de cierre por tipo |
+| `/` | `Resumen` (título "Panel") | 4 indicadores (`StatCard`) con mini gráfico y variación contra el mes anterior (solo meses completos: el mes en curso, en hora de Bogotá, se ignora): Abiertos, Entrados, Tasa de cierre y Días promedio; banda de alertas (Vencidos, Sin fecha de inicio); Entrados y cerrados con selector 6 m / 12 m / Todo; Plazos de casos abiertos (`SegmentedBar`); Abiertos por proveedor y Temas abiertos (top 8); Tasa de cierre por tipo |
 | `/casos` | `Casos` | `CaseFilters` en una tarjeta (buscador, Estado y Plazo, "Filtros"; en móvil un panel inferior); chips de filtros de la URL; tabla (Fecha, Proveedor, Tipo con `TipoTag`, Tema, Plazo con `PlazoBar`) con encabezado fijo, o tarjetas en móvil; "Abrir" muestra `CaseDetail` con `CaseTimeline` |
 | `/casos/nuevo`, `/casos/:id/cerrar` | `NuevoCaso`, `CerrarCaso` (`CaseForm.tsx`) | Alta en secciones (Datos del caso, Clasificación, Detalle; listas de `/api/catalogos`) y cierre |
 | `/proveedores` | `Proveedores` | Tabla con barra de abiertos y alerta de vencidos (tarjetas en móvil); fila expandible con `ProveedorDetalle` (desglose por tipo, línea de tiempo, renombrar) |

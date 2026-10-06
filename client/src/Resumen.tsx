@@ -16,7 +16,7 @@ import {
 import { ApiError, getSummary } from "./api";
 import { axisTick, ChartTip, Meter, useMotion } from "./charts";
 import { casosHref, percent, promedioText } from "./format";
-import { deltaPct, tasaCierre } from "./metrics";
+import { bogotaMonth, completeMonths, deltaPct, tasaCierre } from "./metrics";
 import { Card, PageHead } from "./Shell";
 import { SegmentedBar } from "./ui/SegmentedBar";
 import { StatCard } from "./ui/StatCard";
@@ -352,7 +352,7 @@ export function Resumen() {
   }
   if (!summary) return <ResumenSkeleton />;
 
-  const serie = summary.serieMensual;
+  const serie = completeMonths(summary.serieMensual, bogotaMonth());
   const { last, prev } = lastTwo(serie);
   const last12 = serie.slice(-12);
   const colaMissing = Boolean(summary.colaError) || summary.colaVencida === null;

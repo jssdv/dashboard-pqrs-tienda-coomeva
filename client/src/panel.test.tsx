@@ -9,6 +9,7 @@ import type { DashboardSummary, MonthPoint } from "./types";
 afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();
+  vi.useRealTimers();
 });
 
 function summary(over: Partial<DashboardSummary> = {}): DashboardSummary {
@@ -181,4 +182,21 @@ it("labels the close rate by threshold in text, not only color", async () => {
 it("shows the import hint when there are no cases", async () => {
   show({ total: 0, abiertos: 0 });
   expect(await screen.findByText(/Todavía no hay casos importados/)).toBeTruthy();
+});
+
+it("compares complete months only, ignoring the month in progress", async () => {
+  vi.useFakeTimers({ toFake: ["Date"] });
+  vi.setSystemTime(new Date("2026-09-15T15:00:00Z"));
+  show({
+    serieMensual: [
+      { mes: "2026-07", entrados: 10, cerrados: 8, abiertosAlCierre: 50, diasPromedio: 12 },
+      { mes: "2026-08", entrados: 12, cerrados: 9, abiertosAlCierre: 53, diasPromedio: 10 },
+      { mes: "2026-09", entrados: 1, cerrados: 0, abiertosAlCierre: 54, diasPromedio: null },
+    ],
+  });
+  await screen.findByRole("heading", { level: 1, name: "Panel" });
+  expect(card("Entrados").textContent).toContain("2026-08");
+  expect(card("Entrados").textContent).toContain("20 % vs mes anterior");
+  expect(card("Tasa de cierre").textContent).toContain("2026-08");
+  expect(card("Días promedio").textContent).toContain("17 % vs mes anterior");
 });
