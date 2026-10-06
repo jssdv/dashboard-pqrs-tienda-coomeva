@@ -37,7 +37,7 @@ FECHA INICIAL, FECHA SOLUCION, AREA, ID ORDEN, ASOCIADO, CORREO, FUENTE, TIPO PQ
 
 ## Alta de caso (`validateCreate` / `caseFromCreate`)
 
-Obligatorios: fechaInicial, área, idOrden, asociado, correo (formato válido), fuente, tipo, tema, motivo. Área/fuente/tipo/tema guardan original + valor oficial del diccionario. El proveedor se registra en `proveedores`.
+Obligatorios: fechaInicial, área, idOrden, asociado, correo (formato válido), fuente, tipo, tema, motivo. Área, fuente, tipo y tema deben coincidir con las listas que salen de la base cargada (`validateCreate(raw, catalogs)`; error "<Campo> no está en la lista"). Área/fuente/tipo/tema guardan original + valor oficial del diccionario. El proveedor se registra en `proveedores`.
 
 ## Cierre (`validateClose` / `applyClose`)
 

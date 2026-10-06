@@ -8,7 +8,7 @@ Vite (root `client/`), React 19, React Router, Tailwind 4, Recharts. Dev en 5173
 |---|---|---|
 | `/` | `Resumen` (título "Panel") | 4 cifras clicables (Abiertos, Vencidos, Sin fecha de inicio, Días promedio); Entrados y cerrados; Plazos de casos abiertos; Abiertos por proveedor y Temas abiertos (top 5); Tasa de cierre por tipo |
 | `/casos` | `Casos` | `CaseFilters`: buscador, Estado y Plazo (`Select`) visibles y botón "Filtros" que despliega Proveedor, Tipo y Tema (`Combobox` con búsqueda); en móvil, botón "Filtros (N)" que abre un panel inferior. Filtros de la URL como chips; tabla (Fecha, Proveedor, Tipo, Tema, Plazo) con encabezado fijo, o tarjetas en móvil; "Abrir" muestra `CaseDetail` |
-| `/casos/nuevo`, `/casos/:id/cerrar` | `NuevoCaso`, `CerrarCaso` (`CaseForm.tsx`) | Alta y cierre |
+| `/casos/nuevo`, `/casos/:id/cerrar` | `NuevoCaso`, `CerrarCaso` (`CaseForm.tsx`) | Alta (Fuente y Tipo con `Select`; Proveedor y Tema con `Combobox`; listas de `/api/catalogos`, sin "Todos"; aviso si no hay datos cargados) y cierre |
 | `/proveedores` | `Proveedores` | Tabla con casos, abiertos, vencidos y días promedio; fila expandible con `ProveedorDetalle` (desglose por tipo, línea de tiempo, renombrar); alta en línea |
 
 ## Archivos
