@@ -9,7 +9,7 @@ import { bogotaToday, openQueue } from "../domain/openQueue.js";
 import { providerTimeline } from "../domain/providerTimeline.js";
 import { riskOf, type PlazoEstado, type Riesgo } from "../domain/risk.js";
 import { summarize } from "../domain/summary.js";
-import type { PqrCase } from "../domain/types.js";
+import type { CatalogField, PqrCase } from "../domain/types.js";
 import { ensureHolidayYears } from "../holidays/nationalHolidays.js";
 import type { CaseRepository } from "../store/repository.js";
 
@@ -72,6 +72,24 @@ async function readJson(req: IncomingMessage): Promise<Record<string, string>> {
     fields[key] = value == null ? "" : String(value);
   }
   return fields;
+}
+
+function catalogsOf(repository: CaseRepository): Record<CatalogField, string[]> {
+  const collect = (field: "fuente" | "tipo" | "tema") =>
+    [
+      ...new Set(
+        repository
+          .list()
+          .map((row) => row[field]?.trim())
+          .filter((value): value is string => Boolean(value)),
+      ),
+    ].sort((a, b) => a.localeCompare(b, "es"));
+  return {
+    area: [...new Set(repository.listProveedores())].sort((a, b) => a.localeCompare(b, "es")),
+    fuente: collect("fuente"),
+    tipo: collect("tipo"),
+    tema: collect("tema"),
+  };
 }
 
 const PLAZOS: readonly PlazoEstado[] = ["en-plazo", "por-vencer", "vencido"];
@@ -196,6 +214,10 @@ export function createSummaryServer(
         json(res, 200, summarize(repository.list(), clock()));
         return;
       }
+      if (req.method === "GET" && url.pathname === "/api/catalogos") {
+        json(res, 200, catalogsOf(repository));
+        return;
+      }
       if (req.method === "GET" && url.pathname === "/api/proveedores") {
         const { holidays, today: hoy } = clock();
         const groups = new Map<string, PqrCase[]>();
@@ -282,7 +304,7 @@ export function createSummaryServer(
           json(res, 400, { errors: [{ field: "form", message: "El cuerpo no es JSON válido" }] });
           return;
         }
-        const result = validateCreate(raw);
+        const result = validateCreate(raw, catalogsOf(repository));
         if (!result.ok) {
           json(res, 400, { errors: result.errors });
           return;

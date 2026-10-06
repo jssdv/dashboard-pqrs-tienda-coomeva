@@ -344,6 +344,79 @@ describe("GET /api/casos fecha=invalida", () => {
   });
 });
 
+describe("GET /api/catalogos and catalog validation on create", () => {
+  const base = () => [
+    caso({ id: "1", sheetYear: 2026, rowNumber: 2, area: "Tienda", fuente: "Correo Tienda", tipo: "RECLAMO", tema: "BOLETERIA" }),
+    caso({ id: "2", sheetYear: 2026, rowNumber: 3, area: "Tienda", fuente: "Llamada", tipo: "QUEJA", tema: "BOLETERIA" }),
+    caso({ id: "3", sheetYear: 2026, rowNumber: 4, area: null, fuente: null, tipo: "RECLAMO", tema: "  " }),
+  ];
+  const withProveedores = (repo: CaseRepository, names: string[]): CaseRepository => ({
+    ...repo,
+    listProveedores: () => names,
+  });
+
+  it("returns distinct sorted official values without empties", async () => {
+    const server = createSummaryServer(withProveedores(memoryRepo(base()), ["Zeta", "Tienda"]));
+    const port = await listen(server);
+    try {
+      const body = await (await fetch(`http://127.0.0.1:${port}/api/catalogos`)).json();
+      expect(body).toEqual({
+        area: ["Tienda", "Zeta"],
+        fuente: ["Correo Tienda", "Llamada"],
+        tipo: ["QUEJA", "RECLAMO"],
+        tema: ["BOLETERIA"],
+      });
+    } finally {
+      await new Promise((resolve) => server.close(resolve));
+    }
+  });
+
+  it("returns empty lists when nothing is loaded", async () => {
+    const server = createSummaryServer(memoryRepo([]));
+    const port = await listen(server);
+    try {
+      const body = await (await fetch(`http://127.0.0.1:${port}/api/catalogos`)).json();
+      expect(body).toEqual({ area: [], fuente: [], tipo: [], tema: [] });
+    } finally {
+      await new Promise((resolve) => server.close(resolve));
+    }
+  });
+
+  it("rejects a create whose Fuente is not in the loaded list", async () => {
+    const repo = withProveedores(memoryRepo(base()), ["Tienda"]);
+    const server = createSummaryServer(repo, { dictionary });
+    const port = await listen(server);
+    try {
+      const response = await fetch(
+        `http://127.0.0.1:${port}/api/casos`,
+        jsonPost({ ...validCreate, area: "Tienda", fuente: "Telegrama", tipo: "RECLAMO", tema: "BOLETERIA" }),
+      );
+      expect(response.status).toBe(400);
+      expect((await response.json()).errors).toEqual([{ field: "fuente", message: "Fuente no está en la lista" }]);
+      expect(repo.list()).toHaveLength(3);
+    } finally {
+      await new Promise((resolve) => server.close(resolve));
+    }
+  });
+
+  it("creates the case storing the list's canonical values", async () => {
+    const repo = withProveedores(memoryRepo(base()), ["Tienda"]);
+    const server = createSummaryServer(repo, { dictionary });
+    const port = await listen(server);
+    try {
+      const response = await fetch(
+        `http://127.0.0.1:${port}/api/casos`,
+        jsonPost({ ...validCreate, area: "tienda", fuente: "correo tienda", tipo: "reclamo", tema: "boleteria" }),
+      );
+      expect(response.status).toBe(201);
+      const body = await response.json();
+      expect(body).toMatchObject({ area: "Tienda", fuente: "Correo Tienda", tipo: "RECLAMO", tema: "BOLETERIA" });
+    } finally {
+      await new Promise((resolve) => server.close(resolve));
+    }
+  });
+});
+
 describe("POST /api/casos", () => {
   it("returns 400 with the field list and does not insert", async () => {
     const repo = memoryRepo([]);
