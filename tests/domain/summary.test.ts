@@ -300,3 +300,11 @@ describe("summarize sinFechaValida", () => {
     expect(summarize([]).sinFechaValida).toBe(0);
   });
 });
+
+describe("summarize serieMensual", () => {
+  it("includes the monthly series", () => {
+    expect(summarize([]).serieMensual).toEqual([]);
+    const result = summarize([caso({ id: "a", sheetYear: 2026, rowNumber: 2, fechaSolucion: null, diasSolucion: null })]);
+    expect(result.serieMensual[0]).toMatchObject({ mes: "2026-01", entrados: 1 });
+  });
+});

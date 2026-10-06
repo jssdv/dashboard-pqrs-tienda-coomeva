@@ -34,6 +34,14 @@ export interface MatrixRow {
   celdas: MatrixCell[];
 }
 
+export interface MonthPoint {
+  mes: string;
+  entrados: number;
+  cerrados: number;
+  abiertosAlCierre: number;
+  diasPromedio: number | null;
+}
+
 export interface DashboardSummary {
   total: number;
   abiertos: number;
@@ -54,6 +62,7 @@ export interface DashboardSummary {
   colaError: string | null;
   cierrePorTipo: CloseRate[];
   sinFechaValida: number;
+  serieMensual: MonthPoint[];
   matrizProveedorTipo: MatrixRow[];
 }
 

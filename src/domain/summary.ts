@@ -1,4 +1,5 @@
 import { closeRates, type CloseRate } from "./closeRate.js";
+import { monthSeries, type MonthPoint } from "./monthSeries.js";
 import { bogotaToday, openQueue } from "./openQueue.js";
 import { providerTypeMatrix, type MatrixRow } from "./providerTypeMatrix.js";
 import { riskOf } from "./risk.js";
@@ -40,6 +41,7 @@ export interface DashboardSummary {
   colaError: string | null;
   cierrePorTipo: CloseRate[];
   sinFechaValida: number;
+  serieMensual: MonthPoint[];
   matrizProveedorTipo: MatrixRow[];
 }
 
@@ -165,6 +167,7 @@ export function summarize(
     colaVencida,
     colaError,
     cierrePorTipo: closeRates(cases),
+    serieMensual: monthSeries(cases),
     sinFechaValida: abiertosCasos.filter(
       (row) => row.fechaInicial === null || row.fechaInicialInvalida,
     ).length,

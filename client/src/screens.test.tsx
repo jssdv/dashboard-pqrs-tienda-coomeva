@@ -34,6 +34,7 @@ function summary(over: Partial<DashboardSummary> = {}): DashboardSummary {
     colaError: null,
     cierrePorTipo: [],
     sinFechaValida: 0,
+    serieMensual: [],
     matrizProveedorTipo: [],
     ...over,
   };
