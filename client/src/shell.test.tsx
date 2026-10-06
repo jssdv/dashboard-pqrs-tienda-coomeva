@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { cleanup, render, screen, within } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, expect, it, vi } from "vitest";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { PageHead, Shell } from "./Shell";
@@ -33,13 +33,41 @@ function stubSummary(colaVencida: number | null, ok = true) {
   );
 }
 
-it("puts the Nuevo caso action in the sidebar and drops the brand block", () => {
+it("keeps Nuevo caso in the top bar and drops the brand text from the sidebar", () => {
   stubSummary(null);
   renderShell();
-  const aside = document.querySelector("aside") as HTMLElement;
-  const link = Array.from(aside.querySelectorAll("a")).find((a) => a.textContent === "Nuevo caso");
+  const bar = document.querySelector("header[data-topbar]") as HTMLElement;
+  const link = Array.from(bar.querySelectorAll("a")).find((a) => a.textContent?.includes("Nuevo caso"));
   expect(link?.getAttribute("href")).toBe("/casos/nuevo");
-  expect(aside.textContent).not.toContain("Tienda Coomeva");
+  expect(document.querySelector("aside")?.textContent).not.toContain("Tienda Coomeva");
+});
+
+it("shows breadcrumbs for the current route", () => {
+  stubSummary(null);
+  renderShell();
+  const crumbs = screen.getByRole("navigation", { name: "Ruta" });
+  expect(crumbs.textContent).toContain("PQRS");
+  expect(crumbs.textContent).toContain("Panel");
+});
+
+it("shows today's date in the sidebar footer", () => {
+  stubSummary(null);
+  renderShell();
+  expect(document.querySelector("aside")?.textContent).toMatch(/Datos al /);
+});
+
+it("toggles the theme from the top bar", () => {
+  stubSummary(null);
+  localStorage.setItem("pqr-theme", "light");
+  renderShell();
+  fireEvent.click(screen.getByRole("button", { name: /Cambiar tema/ }));
+  expect(localStorage.getItem("pqr-theme")).toBe("dark");
+  expect(document.documentElement.classList.contains("dark")).toBe(true);
+});
+
+it("renders actions passed to PageHead", () => {
+  render(<PageHead title="Casos" actions={<button type="button">Acción</button>} />);
+  expect(screen.getByRole("button", { name: "Acción" })).toBeTruthy();
 });
 
 it("shows the overdue count next to Casos when there are overdue cases", async () => {
@@ -88,7 +116,7 @@ it("names every rail link for assistive tech and keeps the overdue counter", asy
   stubSummary(63);
   renderShell();
   const rail = document.querySelector("aside.lg\\:hidden") as HTMLElement;
-  for (const name of ["Panel", "Casos", "Proveedores", "Nuevo caso"]) {
+  for (const name of ["Panel", "Casos", "Proveedores"]) {
     const link = Array.from(rail.querySelectorAll("a")).find((a) => a.getAttribute("aria-label")?.startsWith(name));
     expect(link, name).toBeTruthy();
     expect(link?.getAttribute("title")).toBeTruthy();
