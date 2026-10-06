@@ -739,3 +739,18 @@ it("sets table headers in mono small caps", async () => {
   expect(header.closest("tr")?.className).toContain("font-mono");
   expect(header.closest("tr")?.className).toContain("uppercase");
 });
+
+it("renders the filter lists inside the mobile filter sheet", async () => {
+  setViewport(false);
+  recordingFetch([caso({ id: "a", area: "Tienda" })]);
+  render(
+    <MemoryRouter>
+      <Casos />
+    </MemoryRouter>,
+  );
+  fireEvent.click(await screen.findByRole("button", { name: "Filtros" }));
+  const dialog = await screen.findByRole("dialog");
+  const input = within(dialog).getByRole("combobox", { name: "Proveedor" });
+  act(() => input.focus());
+  expect(within(dialog).getByRole("listbox", { hidden: true })).toBeTruthy();
+});

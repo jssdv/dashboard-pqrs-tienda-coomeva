@@ -202,3 +202,37 @@ it("autofocuses the first field and shows the shortcut hint", async () => {
   await waitFor(() => expect(document.activeElement).toBe(screen.getByLabelText(/Fecha inicial/)));
   expect(screen.getByText(/Ctrl|⌘/)).toBeTruthy();
 });
+
+it("renders open lists inside the dialog so the modal scroll lock does not block them", async () => {
+  stubApi();
+  renderForm();
+  const dialog = await screen.findByRole("dialog", { name: "Nuevo caso" });
+  const input = screen.getByRole("combobox", { name: /Tema/ });
+  fireEvent.click(screen.getByRole("button", { name: /Fuente/ }));
+  expect(within(dialog).getByRole("listbox", { hidden: true })).toBeTruthy();
+  fireEvent.keyDown(screen.getByRole("listbox", { hidden: true }), { key: "Escape" });
+  await waitFor(() => expect(screen.queryByRole("listbox", { hidden: true })).toBeNull());
+  act(() => input.focus());
+  expect(within(dialog).getByRole("listbox", { hidden: true })).toBeTruthy();
+});
+
+it("closes only the open list with Escape, then the dialog with a second Escape", async () => {
+  stubApi();
+  renderForm();
+  await screen.findByRole("dialog", { name: "Nuevo caso" });
+  fireEvent.click(screen.getByRole("button", { name: /Fuente/ }));
+  const list = screen.getByRole("listbox", { hidden: true });
+  fireEvent.keyDown(list, { key: "Escape" });
+  await waitFor(() => expect(screen.queryByRole("listbox", { hidden: true })).toBeNull());
+  expect(screen.getByRole("dialog", { name: "Nuevo caso" })).toBeTruthy();
+  expect(screen.getByTestId("where").textContent).toBe("/casos/nuevo");
+  fireEvent.keyDown(screen.getByRole("dialog"), { key: "Escape" });
+  await waitFor(() => expect(screen.getByTestId("where").textContent).toBe("/casos"));
+});
+
+it("does not clip the dialog so a long list can extend past its edge", async () => {
+  stubApi();
+  renderForm();
+  const dialog = await screen.findByRole("dialog", { name: "Nuevo caso" });
+  expect(dialog.className).not.toContain("overflow-hidden");
+});

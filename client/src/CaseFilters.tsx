@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { UNSAFE_PortalProvider } from "react-aria";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -48,6 +49,7 @@ export function CaseFilters({
   const wide = useMinWidth("(min-width: 768px)");
   const [expanded, setExpanded] = useState(false);
   const [sheet, setSheet] = useState(false);
+  const [sheetNode, setSheetNode] = useState<HTMLElement | null>(null);
   const label = activeCount > 0 ? `Filtros (${activeCount})` : "Filtros";
 
   const estado = <Select label="Estado" value={values.estado} onChange={(v) => onChange("estado", v)} options={ESTADOS} />;
@@ -104,7 +106,15 @@ export function CaseFilters({
       ) : null}
       {!wide ? (
         <Sheet open={sheet} onOpenChange={setSheet}>
-          <SheetContent side="bottom" className="max-h-[85dvh] overflow-y-auto">
+          <SheetContent
+            ref={setSheetNode}
+            side="bottom"
+            className="max-h-[85dvh] overflow-y-auto"
+            onEscapeKeyDown={(event) => {
+              if (sheetNode?.querySelector("[role=listbox]")) event.preventDefault();
+            }}
+          >
+            <UNSAFE_PortalProvider getContainer={() => sheetNode}>
             <SheetHeader>
               <SheetTitle>Filtros</SheetTitle>
               <SheetDescription>Los cambios se aplican al instante.</SheetDescription>
@@ -123,6 +133,7 @@ export function CaseFilters({
                 </Button>
               </SheetClose>
             </SheetFooter>
+            </UNSAFE_PortalProvider>
           </SheetContent>
         </Sheet>
       ) : null}

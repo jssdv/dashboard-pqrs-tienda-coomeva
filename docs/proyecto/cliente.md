@@ -25,7 +25,7 @@ Barra superior con migas, búsqueda (⌘K / Ctrl K), interruptor de tema y "Nuev
 
 ## Componentes (`client/src/`)
 
-- `ui/` — `FormDialog`, `Select`, `Combobox` (react-aria-components; sus popovers llevan `pointer-events-auto` porque un diálogo modal de Radix deja el `body` sin eventos), `StatCard`, `Sparkline`, `SegmentedBar`, `PlazoBar`, `CaseTimeline`, `TipoTag`, `ThemeToggle`, `options.ts`.
+- `ui/` — `FormDialog`, `Select`, `Combobox` (react-aria-components; sus popovers llevan `pointer-events-auto` porque un diálogo modal de Radix deja el `body` sin eventos, y dentro de `FormDialog` y del panel de filtros se dibujan dentro de la propia ventana con `UNSAFE_PortalProvider`, para que el bloqueo de scroll del modal no impida desplazar listas largas; con una lista abierta, Esc cierra solo la lista), `StatCard`, `Sparkline`, `SegmentedBar`, `PlazoBar`, `CaseTimeline`, `TipoTag`, `ThemeToggle`, `options.ts`.
 - `charts.tsx` (`useMotion`, `ChartTip`, `Meter`, `axisTick`), `metrics.ts` (`deltaPct`, `tasaCierre`), `palette.ts`, `theme.ts`, `useChartColors.ts`, `useMinWidth.ts`.
 - `api.ts` — `getSummary`, `getCases`, `getCatalogs`, `createCase`, `closeCase`, `getProveedores`, `createProveedor`, `renameProveedor`, `getProviderTimeline`, `ApiError`. `format.ts` — `casosHref`, `plazoLabel`, `percent`, `promedioText`, `textOrDash`.
 
