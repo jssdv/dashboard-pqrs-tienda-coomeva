@@ -18,6 +18,7 @@ import { getProviderTimeline, type ProveedorRow } from "./api";
 import { axisTick, ChartTip, useMotion } from "./charts";
 import { useChartColors } from "./useChartColors";
 import { casosHref, promedioText } from "./format";
+import { TipoTag } from "./ui/TipoTag";
 import type { MatrixRow, TimelinePoint } from "./types";
 
 function TimelineTooltip({
@@ -123,6 +124,7 @@ export function ProveedorDetalle({
   const [nombre, setNombre] = useState(row.nombre);
   useEffect(() => setNombre(row.nombre), [row.nombre]);
   const celdas = (tipos?.celdas ?? []).filter((cell) => cell.total > 0);
+  const maxTotal = Math.max(1, ...celdas.map((cell) => cell.total));
 
   function submit(event: FormEvent) {
     event.preventDefault();
@@ -138,14 +140,23 @@ export function ProveedorDetalle({
         ) : (
           <ul className="grid gap-1">
             {celdas.map((cell) => (
-              <li key={cell.tipo} className="flex items-center justify-between gap-3">
-                <span>{cell.tipo}</span>
-                <Link
-                  className="inline-flex min-h-11 items-center font-mono text-primary"
-                  to={casosHref({ area: row.nombre, tipo: cell.tipo })}
-                >
-                  {cell.abiertos > 0 ? `${cell.total} · ${cell.abiertos} abiertos` : String(cell.total)}
-                </Link>
+              <li key={cell.tipo} className="grid gap-1">
+                <div className="flex items-center justify-between gap-3">
+                  <TipoTag tipo={cell.tipo} />
+                  <Link
+                    className="inline-flex min-h-11 items-center font-mono text-primary"
+                    to={casosHref({ area: row.nombre, tipo: cell.tipo })}
+                  >
+                    {cell.abiertos > 0 ? `${cell.total} · ${cell.abiertos} abiertos` : String(cell.total)}
+                  </Link>
+                </div>
+                <div className="h-1.5 overflow-hidden rounded-full bg-muted">
+                  <div
+                    data-bar
+                    className="h-full rounded-full bg-primary/70"
+                    style={{ width: `${Math.round((cell.total / maxTotal) * 100)}%` }}
+                  />
+                </div>
               </li>
             ))}
           </ul>

@@ -132,3 +132,15 @@ it("explains when the lists cannot be loaded", async () => {
     expect((screen.getByRole("button", { name: "Guardar caso" }) as HTMLButtonElement).disabled).toBe(true),
   );
 });
+
+it("groups the fields in titled sections", async () => {
+  stubApi();
+  renderForm();
+  await screen.findByRole("combobox", { name: /Proveedor/ });
+  for (const name of ["Datos del caso", "Clasificación", "Detalle"]) {
+    expect(screen.getByRole("heading", { level: 2, name })).toBeTruthy();
+  }
+  const clasificacion = screen.getByRole("heading", { level: 2, name: "Clasificación" }).closest("section") as HTMLElement;
+  expect(within(clasificacion).getByRole("combobox", { name: /Proveedor/ })).toBeTruthy();
+  expect(within(clasificacion).getByRole("button", { name: /Fuente/ })).toBeTruthy();
+});

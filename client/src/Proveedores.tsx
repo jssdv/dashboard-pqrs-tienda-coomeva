@@ -25,6 +25,7 @@ export function Proveedores() {
   const [pending, setPending] = useState(false);
   const [selected, setSelected] = useState<string | null>(null);
   const wide = useMinWidth("(min-width: 768px)");
+  const maxAbiertos = Math.max(1, ...rows.map((row) => row.abiertos));
 
   const load = useCallback(async () => {
     const [proveedores, summary] = await Promise.allSettled([getProveedores(), getSummary()]);
@@ -93,12 +94,12 @@ export function Proveedores() {
           <table className="w-full min-w-[34rem] border-collapse text-sm">
             <caption className="sr-only">Proveedores</caption>
             <thead className="sticky top-0 z-10 bg-card">
-              <tr className="border-b border-border text-left">
-                <th scope="col" className="px-4 py-3 font-semibold">Proveedor</th>
-                <th scope="col" className="px-3 py-3 text-right font-semibold">Casos</th>
-                <th scope="col" className="px-3 py-3 text-right font-semibold">Abiertos</th>
-                <th scope="col" className="px-3 py-3 text-right font-semibold">Vencidos</th>
-                <th scope="col" className="px-4 py-3 text-right font-semibold">Días promedio</th>
+              <tr className="border-b border-border text-left text-xs text-muted-foreground">
+                <th scope="col" className="px-4 py-3 font-medium">Proveedor</th>
+                <th scope="col" className="px-3 py-3 text-right font-medium">Casos</th>
+                <th scope="col" className="px-3 py-3 text-right font-medium">Abiertos</th>
+                <th scope="col" className="px-3 py-3 text-right font-medium">Vencidos</th>
+                <th scope="col" className="px-4 py-3 text-right font-medium">Días promedio</th>
               </tr>
             </thead>
             <tbody>
@@ -118,15 +119,28 @@ export function Proveedores() {
                         </button>
                       </th>
                       <td className="px-3 py-3 text-right font-mono tabular-nums">{row.casos}</td>
-                      <td className="px-3 py-3 text-right font-mono tabular-nums">{row.abiertos}</td>
+                      <td className="px-3 py-3">
+                        <div className="flex items-center justify-end gap-2">
+                          <div className="h-1.5 w-16 overflow-hidden rounded-full bg-muted">
+                            <div
+                              data-bar
+                              className="h-full rounded-full bg-primary"
+                              style={{ width: `${Math.round((row.abiertos / maxAbiertos) * 100)}%` }}
+                            />
+                          </div>
+                          <span className="w-8 text-right font-mono tabular-nums">{row.abiertos}</span>
+                        </div>
+                      </td>
                       <td className="px-3 py-3 text-right font-mono tabular-nums">
                         {row.vencidos === null || row.vencidos === 0 ? (
                           textOrDash(row.vencidos === 0 ? 0 : null)
                         ) : (
                           <Link
-                            className="text-warning-foreground"
+                            aria-label={`${row.vencidos} vencidos`}
+                            className="inline-flex items-center gap-1.5 text-destructive no-underline"
                             to={casosHref({ area: row.nombre, plazo: "vencido" })}
                           >
+                            <span aria-hidden="true" className="size-1.5 rounded-full bg-destructive" />
                             {row.vencidos}
                           </Link>
                         )}

@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { MemoryRouter } from "react-router-dom";
 import { Proveedores } from "./Proveedores";
@@ -141,4 +141,42 @@ it("renders each provider as a card on narrow screens, dashing nulls", async () 
   expect(card.textContent).toContain("—");
   expect(card.textContent).not.toContain("null");
   expect(document.querySelector("table")).toBeNull();
+});
+
+it("draws a bar for Abiertos proportional to the largest provider", async () => {
+  stubApi({
+    proveedores: [
+      { nombre: "Grande", casos: 20, abiertos: 10, vencidos: 3, diasPromedio: 5 },
+      { nombre: "Chico", casos: 8, abiertos: 5, vencidos: 0, diasPromedio: 4 },
+    ],
+  });
+  renderPage();
+  const big = (await screen.findByRole("button", { name: "Grande" })).closest("tr") as HTMLElement;
+  const small = screen.getByRole("button", { name: "Chico" }).closest("tr") as HTMLElement;
+  expect((big.querySelector("[data-bar]") as HTMLElement).style.width).toBe("100%");
+  expect((small.querySelector("[data-bar]") as HTMLElement).style.width).toBe("50%");
+});
+
+it("flags providers with overdue cases with an accessible alert link", async () => {
+  stubApi({
+    proveedores: [
+      { nombre: "Grande", casos: 20, abiertos: 10, vencidos: 3, diasPromedio: 5 },
+      { nombre: "Chico", casos: 8, abiertos: 5, vencidos: 0, diasPromedio: 4 },
+    ],
+  });
+  renderPage();
+  await screen.findByRole("button", { name: "Grande" });
+  const link = screen.getByRole("link", { name: "3 vencidos" });
+  expect(link.getAttribute("href")).toBe("/casos?area=Grande&plazo=vencido");
+  expect(screen.queryByRole("link", { name: "0 vencidos" })).toBeNull();
+});
+
+it("shows the type breakdown in the detail with type tags and bars", async () => {
+  stubApi();
+  renderPage();
+  fireEvent.click(await screen.findByRole("button", { name: "Tienda" }));
+  const section = await screen.findByRole("region", { name: "Por tipo" });
+  expect(within(section).getByText("RECLAMO")).toBeTruthy();
+  expect(section.querySelector("[data-dot]")).toBeTruthy();
+  expect(section.querySelector("[data-bar]")).toBeTruthy();
 });

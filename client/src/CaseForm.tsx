@@ -38,6 +38,12 @@ const CREATE_FIELDS: Array<{ name: keyof CreateFields; label: string; type: stri
   { name: "motivo", label: "Motivo", type: "textarea" },
 ];
 
+const SECTIONS: Array<{ title: string; names: Array<keyof CreateFields> }> = [
+  { title: "Datos del caso", names: ["fechaInicial", "idOrden", "asociado", "correo"] },
+  { title: "Clasificación", names: ["area", "fuente", "tipo", "tema"] },
+  { title: "Detalle", names: ["motivo"] },
+];
+
 function hasData(catalogs: Catalogs): boolean {
   return [catalogs.area, catalogs.fuente, catalogs.tipo, catalogs.tema].some((list) => list.length > 0);
 }
@@ -96,41 +102,48 @@ export function NuevoCaso() {
               </p>
             ) : null}
             <ErrorSummary errors={errors} />
-            {CREATE_FIELDS.map((field) => {
-              const onChange = (value: string) => setFields((current) => ({ ...current, [field.name]: value }));
-              if (field.list) {
-                const options = (catalogs?.[field.name as keyof Catalogs] ?? []).map((value) => ({ value, label: value }));
-                const shared = {
-                  label: field.label,
-                  value: fields[field.name],
-                  onChange,
-                  options,
-                  allLabel: null,
-                  required: true,
-                  error: fieldMessage(errors, field.name) || undefined,
-                };
-                return (
-                  <div key={field.name} id={field.name} className="mt-4">
-                    {field.list === "select" ? (
-                      <Select {...shared} placeholder="Selecciona…" />
-                    ) : (
-                      <Combobox {...shared} placeholder="Busca o selecciona…" />
-                    )}
-                  </div>
-                );
-              }
-              return (
-                <Field
-                  key={field.name}
-                  id={field.name}
-                  label={field.label}
-                  type={field.type}
-                  value={fields[field.name]}
-                  error={fieldMessage(errors, field.name)}
-                  onChange={onChange}
-                />
-              );
-            })}
+            {SECTIONS.map((section) => (
+              <section key={section.title} aria-labelledby={`sec-${section.title}`} className="mt-6 first:mt-0">
+                <h2 id={`sec-${section.title}`} className="border-b border-border pb-2 font-display text-base font-semibold tracking-tight">
+                  {section.title}
+                </h2>
+                {CREATE_FIELDS.filter((field) => section.names.includes(field.name)).map((field) => {
+                  const onChange = (value: string) => setFields((current) => ({ ...current, [field.name]: value }));
+                  if (field.list) {
+                    const options = (catalogs?.[field.name as keyof Catalogs] ?? []).map((value) => ({ value, label: value }));
+                    const shared = {
+                      label: field.label,
+                      value: fields[field.name],
+                      onChange,
+                      options,
+                      allLabel: null,
+                      required: true,
+                      error: fieldMessage(errors, field.name) || undefined,
+                    };
+                    return (
+                      <div key={field.name} id={field.name} className="mt-4">
+                        {field.list === "select" ? (
+                          <Select {...shared} placeholder="Selecciona…" />
+                        ) : (
+                          <Combobox {...shared} placeholder="Busca o selecciona…" />
+                        )}
+                      </div>
+                    );
+                  }
+                  return (
+                    <Field
+                      key={field.name}
+                      id={field.name}
+                      label={field.label}
+                      type={field.type}
+                      value={fields[field.name]}
+                      error={fieldMessage(errors, field.name)}
+                      onChange={onChange}
+                    />
+                  );
+                })}
+              </section>
+            ))}
             <Button className="mt-5 min-h-11" type="submit" disabled={pending || !ready}>
               {pending ? "Guardando…" : "Guardar caso"}
             </Button>
