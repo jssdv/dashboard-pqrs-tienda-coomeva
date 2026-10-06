@@ -49,6 +49,13 @@ it("Combobox finds options ignoring accents and case", () => {
   expect(options.map((option) => option.textContent)).toEqual(["Educación / Coomeva"]);
 });
 
+it("Combobox starts empty with Todos as placeholder so typing is not appended to it", () => {
+  render(<Combobox label="Proveedor" value="" onChange={() => {}} options={PROVEEDORES} />);
+  const input = screen.getByRole("combobox", { name: "Proveedor" }) as HTMLInputElement;
+  expect(input.value).toBe("");
+  expect(input.placeholder).toBe("Todos");
+});
+
 it("Combobox emits the chosen value", () => {
   const onChange = vi.fn();
   render(<Combobox label="Proveedor" value="" onChange={onChange} options={PROVEEDORES} />);

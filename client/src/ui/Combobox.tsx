@@ -37,7 +37,7 @@ export function Combobox({
   return (
     <AriaComboBox
       className="grid gap-1.5"
-      selectedKey={value === "" ? ALL_KEY : value}
+      selectedKey={value === "" ? null : value}
       onSelectionChange={(key) => {
         if (key === null) return;
         onChange(key === ALL_KEY ? "" : String(key));
@@ -48,7 +48,11 @@ export function Combobox({
     >
       <Label className="text-sm font-medium">{label}</Label>
       <div className="relative flex">
-        <Input className={`${controlClass} pr-16`} />
+        <Input
+          className={`${controlClass} pr-16`}
+          placeholder={allLabel}
+          onFocus={(event) => event.currentTarget.select()}
+        />
         {value !== "" ? (
           <button
             type="button"
