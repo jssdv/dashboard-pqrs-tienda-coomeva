@@ -248,7 +248,7 @@ export function CerrarCaso() {
 function CaseSummary({ caso }: { caso: PqrCase }) {
   const riesgo = caso.riesgo;
   return (
-    <section aria-label="Resumen del caso" className="grid gap-3 rounded-xl border border-border bg-muted/40 p-3">
+    <section aria-label="Resumen del caso" className="grid gap-3 border border-border bg-muted/40 p-3">
       <dl className="m-0 grid grid-cols-2 gap-3 text-sm sm:grid-cols-4">
         <div className="min-w-0">
           <dt className="text-xs text-muted-foreground">Orden</dt>

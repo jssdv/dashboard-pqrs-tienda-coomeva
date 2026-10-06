@@ -19,11 +19,11 @@ import { ThemeToggle } from "./ui/ThemeToggle";
 import { useVencidos } from "./useVencidos";
 
 const navClass = (compact: boolean) => ({ isActive }: { isActive: boolean }) =>
-  `relative flex min-h-11 cursor-pointer items-center rounded-lg text-sm font-semibold no-underline transition-[background-color,color,box-shadow] duration-200 ease-[cubic-bezier(0.22,1,0.36,1)] focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-none ${
+  `relative flex min-h-11 cursor-pointer items-center rounded-lg text-sm font-semibold no-underline transition-[background-color,color,box-shadow] duration-200 ease-[cubic-bezier(0.22,1,0.36,1)] focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background focus-visible:outline-none ${
     compact ? "justify-center px-0" : "gap-2 px-3"
   } ${
     isActive
-      ? "bg-primary text-primary-foreground shadow-sm"
+      ? "bg-primary text-primary-foreground"
       : "text-foreground hover:bg-accent hover:text-accent-foreground"
   }`;
 
@@ -152,10 +152,10 @@ export function Shell() {
         <aside className="hidden w-16 shrink-0 flex-col border-r border-border bg-card px-2 py-5 md:flex lg:hidden">
           <Nav vencidos={vencidos} compact />
         </aside>
-        <div className="app-canvas flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
+        <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
           <header
             data-topbar
-            className="flex min-h-14 shrink-0 items-center gap-2 border-b border-border bg-background/80 px-4 backdrop-blur md:px-8"
+            className="flex min-h-14 shrink-0 items-center gap-2 border-b border-border bg-background/80 px-4 md:px-8"
           >
             <nav aria-label="Ruta" className="flex min-w-0 flex-1 items-center gap-1.5 text-sm text-muted-foreground">
               <span className="font-display font-semibold text-primary md:text-muted-foreground md:font-normal">PQRS</span>
@@ -258,4 +258,4 @@ export function Card({
 }
 
 export const fieldClass =
-  "flex min-h-11 w-full rounded-lg border border-input bg-card px-3 text-base text-foreground shadow-xs transition-[color,box-shadow] duration-200 outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 md:text-sm";
+  "flex min-h-11 w-full rounded-lg border border-input bg-card px-3 text-base text-foreground transition-[color,box-shadow] duration-200 outline-none focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background md:text-sm";

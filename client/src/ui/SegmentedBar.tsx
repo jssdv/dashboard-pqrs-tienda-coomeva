@@ -23,14 +23,14 @@ export function SegmentedBar({ segments }: { segments: Segment[] }) {
       <div
         role="img"
         aria-label={summary || "Sin casos"}
-        className="flex h-3 w-full gap-0.5 overflow-hidden rounded-full bg-muted"
+        className="flex h-3 w-full gap-0.5 overflow-hidden bg-muted"
       >
         {shown.map((segment, index) => (
           <div
             key={segment.key}
             data-segment={segment.key}
             style={{ flexGrow: segment.count, flexBasis: 0, "--i": index } as React.CSSProperties}
-            className={`${BG[segment.tone]} grow-x min-w-1 first:rounded-l-full last:rounded-r-full`}
+            className={`${BG[segment.tone]} grow-x min-w-1`}
           />
         ))}
       </div>
@@ -38,7 +38,7 @@ export function SegmentedBar({ segments }: { segments: Segment[] }) {
         {segments.map((segment) => {
           const row = (
             <>
-              <span aria-hidden="true" className={`size-2.5 shrink-0 rounded-full ${BG[segment.tone]}`} />
+              <span aria-hidden="true" className={`size-2.5 shrink-0 ${BG[segment.tone]}`} />
               <span className="min-w-0 flex-1 truncate">{segment.label}</span>
               <span className="font-mono tabular-nums">{segment.count}</span>
             </>

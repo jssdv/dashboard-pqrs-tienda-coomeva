@@ -75,7 +75,7 @@ export function Proveedores() {
         lede={rows.length > 0 ? `${rows.length} ${rows.length === 1 ? "proveedor" : "proveedores"}` : undefined}
       />
       {error ? (
-        <p role="alert" className="mb-4 rounded-xl border border-orange-300 bg-orange-50 p-3">
+        <p role="alert" className="mb-4 border border-orange-300 bg-orange-50 p-3">
           {error}
         </p>
       ) : null}
@@ -90,7 +90,7 @@ export function Proveedores() {
       </form>
       {rows.length === 0 && !error ? <p className="text-muted-foreground">Todavía no hay proveedores.</p> : null}
       {rows.length > 0 && wide ? (
-        <div className="max-h-[calc(100dvh-20rem)] overflow-auto rounded-xl border border-border bg-card">
+        <div className="max-h-[calc(100dvh-20rem)] overflow-auto border border-border bg-card">
           <table className="w-full min-w-[34rem] border-collapse text-sm">
             <caption className="sr-only">Proveedores</caption>
             <thead className="sticky top-0 z-10 bg-card">
@@ -121,10 +121,10 @@ export function Proveedores() {
                       <td className="px-3 py-3 text-right font-mono tabular-nums">{row.casos}</td>
                       <td className="px-3 py-3">
                         <div className="flex items-center justify-end gap-2">
-                          <div className="h-1.5 w-16 overflow-hidden rounded-full bg-muted">
+                          <div className="h-1.5 w-16 overflow-hidden bg-muted">
                             <div
                               data-bar
-                              className="h-full rounded-full bg-primary"
+                              className="h-full bg-primary"
                               style={{ width: `${Math.round((row.abiertos / maxAbiertos) * 100)}%` }}
                             />
                           </div>
@@ -140,7 +140,7 @@ export function Proveedores() {
                             className="inline-flex items-center gap-1.5 text-destructive no-underline"
                             to={casosHref({ area: row.nombre, plazo: "vencido" })}
                           >
-                            <span aria-hidden="true" className="size-1.5 rounded-full bg-destructive" />
+                            <span aria-hidden="true" className="size-1.5 bg-destructive" />
                             {row.vencidos}
                           </Link>
                         )}
@@ -172,7 +172,7 @@ export function Proveedores() {
           {rows.map((row) => {
             const open = selected === row.nombre;
             return (
-              <li key={row.nombre} className="rounded-xl border border-border bg-card p-4">
+              <li key={row.nombre} className="border border-border bg-card p-4">
                 <button
                   type="button"
                   aria-expanded={open}

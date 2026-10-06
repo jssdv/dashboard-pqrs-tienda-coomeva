@@ -72,7 +72,7 @@ function RangeToggle({ value, onChange }: { value: string; onChange: (key: strin
           aria-checked={value === range.key}
           onClick={() => onChange(range.key)}
           className={`min-h-9 cursor-pointer rounded-md px-3 font-medium transition-colors ${
-            value === range.key ? "bg-card text-foreground shadow-xs" : "text-muted-foreground hover:text-foreground"
+            value === range.key ? "bg-card text-foreground" : "text-muted-foreground hover:text-foreground"
           }`}
         >
           {range.label}
@@ -152,7 +152,7 @@ function FlowChart({ rows }: { rows: Array<{ mes: string; entrados: number; cerr
         </li>
         {peaks.length > 0 ? (
           <li className="inline-flex items-center gap-2">
-            <span className="size-2 rounded-full bg-primary ring-2 ring-card" />
+            <span className="size-2 bg-primary ring-2 ring-card" />
             Mes con alta demanda
           </li>
         ) : null}
@@ -294,7 +294,7 @@ function AlertCard({
       <span className="font-mono text-2xl font-semibold tabular-nums">{value}</span>
     </>
   );
-  const cls = "fade-up lift flex min-h-16 items-center gap-3 rounded-xl border border-border bg-card p-4 text-foreground no-underline";
+  const cls = "fade-up lift flex min-h-16 items-center gap-3 border border-border bg-card p-4 text-foreground no-underline";
   return href ? (
     <Link to={href} style={{ "--i": index } as React.CSSProperties} className={cls}>
       {body}
@@ -313,7 +313,7 @@ function ResumenSkeleton() {
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4" aria-busy="true">
         <p className="sr-only">Cargando…</p>
         {Array.from({ length: 4 }, (_, index) => (
-          <Skeleton key={index} className="h-36 rounded-xl" />
+          <Skeleton key={index} className="h-36" />
         ))}
       </div>
     </>
@@ -354,7 +354,7 @@ export function Resumen() {
   }, [summary, range]);
 
   if (error) {
-    return <p className="rounded-xl border border-border bg-card p-4">{error}</p>;
+    return <p className="border border-border bg-card p-4">{error}</p>;
   }
   if (!summary) return <ResumenSkeleton />;
 
@@ -434,7 +434,7 @@ export function Resumen() {
         />
       </div>
       {summary.total === 0 ? (
-        <p className="mt-6 rounded-xl border border-border bg-card p-6">
+        <p className="mt-6 border border-border bg-card p-6">
           Todavía no hay casos importados. Ejecuta <code className="font-mono">npm run import</code>.
         </p>
       ) : (

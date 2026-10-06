@@ -203,13 +203,13 @@ export function Casos() {
           {chips.map((chip) => (
             <span
               key={chip.key}
-              className="fade-up inline-flex min-h-8 items-center gap-1 rounded-full border border-border bg-card pr-1 pl-3 text-sm"
+              className="fade-up inline-flex min-h-8 items-center gap-1 border border-border bg-card pr-1 pl-3 text-sm"
             >
               {chip.text}
               <button
                 type="button"
                 aria-label={`Quitar filtro ${chip.text}`}
-                className="grid size-8 cursor-pointer place-items-center rounded-full text-muted-foreground hover:bg-muted"
+                className="grid size-8 cursor-pointer place-items-center text-muted-foreground hover:bg-muted"
                 onClick={() => setFilter(chip.key, "")}
               >
                 <span aria-hidden="true">×</span>
@@ -230,10 +230,10 @@ export function Casos() {
         </div>
       ) : null}
       {status === "error" ? (
-        <p className="rounded-xl border border-border bg-card p-4">{message}</p>
+        <p className="border border-border bg-card p-4">{message}</p>
       ) : null}
       {loaded && status !== "error" && visible.length === 0 ? (
-        <p className="rounded-xl border border-border bg-card p-4">No hay casos con ese filtro.</p>
+        <p className="border border-border bg-card p-4">No hay casos con ese filtro.</p>
       ) : null}
       {loaded && status !== "error" && visible.length > 0 ? (
         <div aria-busy={status === "loading"} className={status === "loading" ? "is-reloading" : "is-reloading-done"}>
@@ -304,7 +304,7 @@ function CaseCards({ rows, onOpen }: { rows: PqrCase[]; onOpen: (id: string) => 
         <li
           key={row.id}
           style={{ "--i": index } as React.CSSProperties}
-          className="fade-up min-w-0 rounded-xl border border-border bg-card p-4"
+          className="fade-up min-w-0 border border-border bg-card p-4"
         >
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">
@@ -327,7 +327,7 @@ function CaseCards({ rows, onOpen }: { rows: PqrCase[]; onOpen: (id: string) => 
 
 function CaseTable({ rows, onOpen }: { rows: PqrCase[]; onOpen: (id: string) => void }) {
   return (
-    <div className="max-h-[calc(100dvh-18rem)] min-w-0 overflow-auto rounded-xl border border-border bg-card">
+    <div className="max-h-[calc(100dvh-18rem)] min-w-0 overflow-auto border border-border bg-card">
       <table className="w-full min-w-0 border-collapse text-sm">
         <caption className="sr-only">Casos</caption>
         <thead className="sticky top-0 z-10 bg-card">

@@ -15,7 +15,7 @@ export function searchKey(text: string): string {
 }
 
 export const controlClass =
-  "flex min-h-11 w-full items-center rounded-lg border border-input bg-card px-3 text-base text-foreground shadow-xs outline-none transition-[color,box-shadow] duration-200 focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 data-[focus-visible]:ring-[3px] data-[focus-visible]:ring-ring/50 md:text-sm";
+  "flex min-h-11 w-full items-center rounded-lg border border-input bg-card px-3 text-base text-foreground outline-none transition-[color,box-shadow] duration-200 focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background data-[focus-visible]:ring-2 data-[focus-visible]:ring-ring data-[focus-visible]:ring-offset-2 data-[focus-visible]:ring-offset-background md:text-sm";
 
 export const listClass =
   "max-h-[min(20rem,50dvh)] w-[var(--trigger-width)] min-w-44 overflow-auto rounded-lg border border-border bg-card p-1 text-sm shadow-md outline-none";

@@ -54,7 +54,7 @@ export function StatCard({
           {href ? (
             <Link
               to={href}
-              className="rounded-sm text-inherit no-underline outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"
+              className="rounded-sm text-inherit no-underline outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
             >
               <CountUp value={value} />
             </Link>

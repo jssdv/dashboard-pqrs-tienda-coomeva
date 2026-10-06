@@ -9,7 +9,7 @@ export function TipoTag({ tipo }: { tipo: string | null }) {
       <span
         data-dot
         aria-hidden="true"
-        className="size-2 shrink-0 rounded-full"
+        className="size-2 shrink-0"
         style={{ backgroundColor: tipoColor(tipo, resolved) }}
       />
       <span>{tipo}</span>

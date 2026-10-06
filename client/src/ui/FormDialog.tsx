@@ -36,7 +36,7 @@ export function FormDialog({
   return (
     <Dialog.Root open onOpenChange={(open) => (open ? undefined : onClose())}>
       <Dialog.Portal>
-        <Dialog.Overlay className="fixed inset-0 z-50 bg-black/40 backdrop-blur-[2px] duration-150 data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:animate-in data-[state=open]:fade-in-0" />
+        <Dialog.Overlay className="fixed inset-0 z-50 bg-black/40 duration-150 data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:animate-in data-[state=open]:fade-in-0" />
         <Dialog.Content
           ref={content}
           aria-describedby={undefined}
@@ -53,7 +53,7 @@ export function FormDialog({
               form.current?.requestSubmit();
             }
           }}
-          className={`fixed top-1/2 left-1/2 z-50 flex max-h-[calc(100dvh-2rem)] ${WIDTH[width]} -translate-x-1/2 -translate-y-1/2 flex-col overflow-hidden rounded-xl border border-border bg-card shadow-2xl outline-none duration-200 data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95 data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95 max-sm:top-0 max-sm:h-dvh max-sm:max-h-none max-sm:w-full max-sm:translate-y-0 max-sm:rounded-none`}
+          className={`fixed top-1/2 left-1/2 z-50 flex max-h-[calc(100dvh-2rem)] ${WIDTH[width]} -translate-x-1/2 -translate-y-1/2 flex-col overflow-hidden border border-border bg-card shadow-2xl outline-none duration-200 data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95 data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95 max-sm:top-0 max-sm:h-dvh max-sm:max-h-none max-sm:w-full max-sm:translate-y-0 max-sm:rounded-none`}
         >
           <header className="flex items-start justify-between gap-4 border-b border-border px-5 py-4">
             <div className="min-w-0">

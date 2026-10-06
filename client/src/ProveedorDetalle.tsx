@@ -152,10 +152,10 @@ export function ProveedorDetalle({
                     {cell.abiertos > 0 ? `${cell.total} · ${cell.abiertos} abiertos` : String(cell.total)}
                   </Link>
                 </div>
-                <div className="h-1.5 overflow-hidden rounded-full bg-muted">
+                <div className="h-1.5 overflow-hidden bg-muted">
                   <div
                     data-bar
-                    className="h-full rounded-full bg-primary/70"
+                    className="h-full bg-primary/70"
                     style={{ width: `${Math.round((cell.total / maxTotal) * 100)}%` }}
                   />
                 </div>
