@@ -92,7 +92,8 @@ function Timeline({ nombre }: { nombre: string }) {
             strokeWidth={2}
             dot={false}
             isAnimationActive={motion}
-            animationDuration={240}
+            animationDuration={700}
+            animationEasing="ease-out"
           />
           <Line
             type="monotone"
@@ -103,7 +104,8 @@ function Timeline({ nombre }: { nombre: string }) {
             strokeDasharray="4 4"
             dot={false}
             isAnimationActive={motion}
-            animationDuration={240}
+            animationDuration={700}
+            animationEasing="ease-out"
           />
           <Legend />
         </ComposedChart>

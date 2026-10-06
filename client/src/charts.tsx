@@ -27,7 +27,7 @@ export function Meter({ value, max }: { value: number; max: number }) {
   return (
     <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-muted">
       <div
-        className="h-full w-full origin-left bg-primary"
+        className="grow-x h-full w-full origin-left bg-primary"
         style={{ transform: `scaleX(${max === 0 ? 0 : value / max})` }}
       />
     </div>

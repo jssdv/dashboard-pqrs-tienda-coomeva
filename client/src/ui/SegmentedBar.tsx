@@ -25,12 +25,12 @@ export function SegmentedBar({ segments }: { segments: Segment[] }) {
         aria-label={summary || "Sin casos"}
         className="flex h-3 w-full gap-0.5 overflow-hidden rounded-full bg-muted"
       >
-        {shown.map((segment) => (
+        {shown.map((segment, index) => (
           <div
             key={segment.key}
             data-segment={segment.key}
-            style={{ flexGrow: segment.count, flexBasis: 0 }}
-            className={`${BG[segment.tone]} min-w-1 first:rounded-l-full last:rounded-r-full`}
+            style={{ flexGrow: segment.count, flexBasis: 0, "--i": index } as React.CSSProperties}
+            className={`${BG[segment.tone]} grow-x min-w-1 first:rounded-l-full last:rounded-r-full`}
           />
         ))}
       </div>

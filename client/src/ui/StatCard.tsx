@@ -1,6 +1,7 @@
 import { ArrowDown, ArrowUp } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Card as UiCard, CardContent } from "@/components/ui/card";
+import { CountUp } from "./CountUp";
 import { Sparkline } from "./Sparkline";
 
 export interface Delta {
@@ -25,6 +26,7 @@ export function StatCard({
   seriesLabel,
   kind = "line",
   href,
+  index = 0,
 }: {
   label: string;
   value: string;
@@ -34,10 +36,15 @@ export function StatCard({
   seriesLabel?: string;
   kind?: "line" | "bar";
   href?: string;
+  index?: number;
 }) {
   const t = delta ? tone(delta) : "neutral";
   return (
-    <UiCard data-stat className="min-w-0 border-border shadow-none">
+    <UiCard
+      data-stat
+      style={{ "--i": index } as React.CSSProperties}
+      className="fade-up min-w-0 border-border shadow-none"
+    >
       <CardContent className="flex h-full flex-col gap-2 p-5">
         <div className="flex items-baseline justify-between gap-2">
           <h3 className="text-sm font-medium text-muted-foreground">{label}</h3>
@@ -49,10 +56,10 @@ export function StatCard({
               to={href}
               className="rounded-sm text-inherit no-underline outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"
             >
-              {value}
+              <CountUp value={value} />
             </Link>
           ) : (
-            value
+            <CountUp value={value} />
           )}
         </p>
         {delta ? (

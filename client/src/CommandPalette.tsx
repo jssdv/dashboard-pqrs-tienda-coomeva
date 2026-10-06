@@ -53,7 +53,7 @@ export function CommandPalette({
   const entries = useMemo(() => {
     const go = (to: string) => () => {
       onOpenChange(false);
-      navigate(to);
+      navigate(to, { viewTransition: true });
     };
     const base: Entry[] = [
       { id: "go-panel", group: "Ir a", label: "Panel", icon: LayoutDashboard, run: go("/") },
@@ -115,14 +115,14 @@ export function CommandPalette({
   return (
     <Dialog.Root open={open} onOpenChange={onOpenChange}>
       <Dialog.Portal>
-        <Dialog.Overlay className="fixed inset-0 z-50 bg-black/40 backdrop-blur-[2px] data-[state=open]:animate-in data-[state=open]:fade-in-0" />
+        <Dialog.Overlay className="fixed inset-0 z-50 bg-black/40 backdrop-blur-[2px] duration-150 data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:animate-in data-[state=open]:fade-in-0" />
         <Dialog.Content
           aria-describedby={undefined}
           onCloseAutoFocus={(event) => {
             event.preventDefault();
             returnFocusTo?.current?.focus();
           }}
-          className="fixed top-[12dvh] left-1/2 z-50 w-[min(36rem,calc(100vw-2rem))] -translate-x-1/2 overflow-hidden rounded-xl border border-border bg-card shadow-2xl outline-none"
+          className="fixed top-[12dvh] left-1/2 z-50 w-[min(36rem,calc(100vw-2rem))] -translate-x-1/2 overflow-hidden rounded-xl border border-border bg-card shadow-2xl outline-none duration-150 data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95 data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95"
         >
           <Dialog.Title className="sr-only">Buscar</Dialog.Title>
           <div className="flex items-center gap-2 border-b border-border px-4">
@@ -161,7 +161,7 @@ export function CommandPalette({
                       aria-selected={index === active}
                       onMouseMove={() => setActive(index)}
                       onClick={entry.run}
-                      className={`flex min-h-11 cursor-pointer items-center gap-3 rounded-lg px-3 text-sm ${
+                      className={`flex min-h-11 cursor-pointer items-center gap-3 rounded-lg px-3 text-sm transition-colors duration-100 ${
                         index === active ? "bg-accent text-accent-foreground" : ""
                       }`}
                     >

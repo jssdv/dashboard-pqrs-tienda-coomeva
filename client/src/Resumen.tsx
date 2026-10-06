@@ -121,7 +121,8 @@ function FlowChart({ rows }: { rows: Array<{ mes: string; entrados: number; cerr
               strokeWidth={2}
               fill="url(#entrados-fill)"
               isAnimationActive={motion}
-              animationDuration={240}
+              animationDuration={700}
+              animationEasing="ease-out"
             />
             <Line
               type="monotone"
@@ -131,7 +132,8 @@ function FlowChart({ rows }: { rows: Array<{ mes: string; entrados: number; cerr
               strokeDasharray="4 4"
               dot={false}
               isAnimationActive={motion}
-              animationDuration={240}
+              animationDuration={700}
+              animationEasing="ease-out"
             />
             {peaks.map((row) => (
               <ReferenceDot key={row.mes} x={row.mes} y={row.entrados} r={4} fill={colors.primary} stroke={colors.surface} strokeWidth={2} />
@@ -261,6 +263,7 @@ function CloseTable({ rows }: { rows: DashboardSummary["cierrePorTipo"] }) {
 }
 
 function AlertCard({
+  index,
   tone,
   icon: Icon,
   label,
@@ -268,6 +271,7 @@ function AlertCard({
   href,
   note,
 }: {
+  index: number;
   tone: "danger" | "warn";
   icon: typeof AlertTriangle;
   label: string;
@@ -290,13 +294,15 @@ function AlertCard({
       <span className="font-mono text-2xl font-semibold tabular-nums">{value}</span>
     </>
   );
-  const cls = "flex min-h-16 items-center gap-3 rounded-xl border border-border bg-card p-4 text-foreground no-underline";
+  const cls = "fade-up lift flex min-h-16 items-center gap-3 rounded-xl border border-border bg-card p-4 text-foreground no-underline";
   return href ? (
-    <Link to={href} className={`${cls} transition-colors hover:border-primary/40`}>
+    <Link to={href} style={{ "--i": index } as React.CSSProperties} className={cls}>
       {body}
     </Link>
   ) : (
-    <div className={cls}>{body}</div>
+    <div style={{ "--i": index } as React.CSSProperties} className={cls}>
+      {body}
+    </div>
   );
 }
 
@@ -368,6 +374,7 @@ export function Resumen() {
       />
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4" aria-label="Indicadores">
         <StatCard
+          index={0}
           label="Abiertos"
           value={String(summary.abiertos)}
           href={casosHref({ estado: "abiertos" })}
@@ -376,6 +383,7 @@ export function Resumen() {
           seriesLabel="Pendientes a fin de mes, últimos 12 meses"
         />
         <StatCard
+          index={1}
           label="Entrados"
           caption={monthCaption}
           value={last ? String(last.entrados) : "—"}
@@ -385,6 +393,7 @@ export function Resumen() {
           kind="bar"
         />
         <StatCard
+          index={2}
           label="Tasa de cierre"
           caption={monthCaption}
           value={tasaLast === null ? "—" : percent(tasaLast)}
@@ -396,6 +405,7 @@ export function Resumen() {
           seriesLabel="Tasa de cierre por mes, últimos 12 meses"
         />
         <StatCard
+          index={3}
           label="Días promedio"
           value={promedioText(summary.dias.promedio)}
           delta={{ pct: deltaPct(last?.diasPromedio ?? null, prev?.diasPromedio ?? null), good: "down" }}
@@ -405,6 +415,7 @@ export function Resumen() {
       </div>
       <div role="region" aria-label="Alertas" className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
         <AlertCard
+          index={4}
           tone="danger"
           icon={AlertTriangle}
           label="Vencidos"
@@ -413,6 +424,7 @@ export function Resumen() {
           href={colaMissing ? undefined : casosHref({ plazo: "vencido" })}
         />
         <AlertCard
+          index={5}
           tone="warn"
           icon={CalendarX}
           label="Sin fecha de inicio"
@@ -427,23 +439,23 @@ export function Resumen() {
         </p>
       ) : (
         <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-2">
-          <Card title="Entrados y cerrados" action={<RangeToggle value={range} onChange={setRange} />}>
+          <Card index={6} title="Entrados y cerrados" action={<RangeToggle value={range} onChange={setRange} />}>
             {flow.length === 0 ? (
               <p className="text-sm text-muted-foreground">No hay meses con fecha válida.</p>
             ) : (
               <FlowChart rows={flow} />
             )}
           </Card>
-          <Card title="Plazos de casos abiertos">
+          <Card index={7} title="Plazos de casos abiertos">
             <Plazos summary={summary} />
           </Card>
-          <Card title="Abiertos por proveedor">
+          <Card index={8} title="Abiertos por proveedor">
             <RankedList
               buckets={summary.abiertosPorArea}
               hrefFor={(key) => casosHref({ estado: "abiertos", area: key })}
             />
           </Card>
-          <Card title="Temas abiertos">
+          <Card index={9} title="Temas abiertos">
             <RankedList
               buckets={summary.abiertosPorTema}
               hrefFor={(key) => casosHref({ estado: "abiertos", tema: key })}
@@ -451,7 +463,7 @@ export function Resumen() {
           </Card>
           {summary.cierrePorTipo.length > 0 ? (
             <div className="min-w-0 lg:col-span-2">
-              <Card title="Tasa de cierre por tipo">
+              <Card index={10} title="Tasa de cierre por tipo">
                 <CloseTable rows={summary.cierrePorTipo} />
               </Card>
             </div>

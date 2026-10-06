@@ -534,3 +534,64 @@ it("groups the case detail in sections and shows the timeline", async () => {
   expect(within(panel).getByRole("region", { name: "Línea de tiempo" }).textContent).toContain("6 días hábiles");
   expect(within(panel).getByText("Ana Ruiz")).toBeTruthy();
 });
+
+function deferredFetch(cases: PqrCase[][]) {
+  const resolvers: Array<() => void> = [];
+  const fetchMock = vi.fn(
+    () =>
+      new Promise((resolve) => {
+        const batch = cases[Math.min(resolvers.length, cases.length - 1)];
+        resolvers.push(() => resolve({ ok: true, status: 200, json: async () => ({ cases: batch }) }));
+      }),
+  );
+  vi.stubGlobal("fetch", fetchMock);
+  return { resolvers, fetchMock };
+}
+
+it("shows skeletons with an accessible status on the first load", async () => {
+  const { resolvers } = deferredFetch([[caso({ id: "a" })]]);
+  render(
+    <MemoryRouter>
+      <Casos />
+    </MemoryRouter>,
+  );
+  expect(screen.getByRole("status").textContent).toContain("Cargando");
+  expect(document.querySelectorAll("[data-slot='skeleton']").length).toBeGreaterThan(0);
+  await act(async () => resolvers[0]());
+  await screen.findByRole("button", { name: "Ver detalle" });
+  expect(screen.queryByRole("status")).toBeNull();
+});
+
+it("keeps the current rows in place and marks them busy while a filter reloads", async () => {
+  setViewport(true);
+  const { resolvers } = deferredFetch([[caso({ id: "old", area: "Vieja" })], [caso({ id: "new", area: "Nueva" })]]);
+  render(
+    <MemoryRouter>
+      <Casos />
+    </MemoryRouter>,
+  );
+  await act(async () => resolvers[0]());
+  await screen.findByText("Vieja");
+  choose(screen.getByRole("button", { name: /Plazo/ }), "Vencido");
+  await waitFor(() => expect(resolvers).toHaveLength(2));
+  expect(screen.getByText("Vieja")).toBeTruthy();
+  expect(screen.getByText("Vieja").closest("[aria-busy='true']")).toBeTruthy();
+  await act(async () => resolvers[1]());
+  await screen.findByText("Nueva");
+  expect(screen.queryByText("Vieja")).toBeNull();
+  expect(document.querySelector("[aria-busy='true']")).toBeNull();
+});
+
+it("staggers the entrance of rows with an index variable", async () => {
+  setViewport(true);
+  stubCases([caso({ id: "a" }), caso({ id: "b" }), caso({ id: "c" })]);
+  render(
+    <MemoryRouter>
+      <Casos />
+    </MemoryRouter>,
+  );
+  await screen.findAllByRole("button", { name: "Ver detalle" });
+  const rows = Array.from(document.querySelectorAll("tbody tr")) as HTMLElement[];
+  expect(rows.map((row) => row.style.getPropertyValue("--i"))).toEqual(["0", "1", "2"]);
+  expect(rows[0].className).toContain("fade-up");
+});

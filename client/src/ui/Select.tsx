@@ -9,7 +9,7 @@ import {
   Select as AriaSelect,
   SelectValue,
 } from "react-aria-components";
-import { ALL_KEY, controlClass, itemClass, listClass, withCurrent, type Option } from "./options";
+import { ALL_KEY, controlClass, itemClass, listClass, popoverClass, withCurrent, type Option } from "./options";
 
 export function Select({
   label,
@@ -57,7 +57,7 @@ export function Select({
         <ChevronDown aria-hidden="true" className="size-4 shrink-0 text-muted-foreground" />
       </Button>
       <FieldError className="text-sm text-destructive">{error}</FieldError>
-      <Popover offset={4}>
+      <Popover offset={4} className={popoverClass}>
         <ListBox className={listClass} items={all}>
           {(item) => (
             <ListBoxItem id={item.value} textValue={item.label} className={itemClass}>

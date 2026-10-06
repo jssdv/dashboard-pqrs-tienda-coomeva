@@ -52,21 +52,27 @@ export function Sparkline({
                 rx={1.5}
                 fill="currentColor"
                 opacity={index === values.length - 1 ? 1 : 0.45}
+                className="fade-up"
+                style={{ "--i": index } as React.CSSProperties}
               />
             ),
           )
-        : segments.map((d, index) => (
-            <path
-              key={index}
-              d={d}
-              fill="none"
-              stroke="currentColor"
-              strokeWidth={1.75}
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              vectorEffect="non-scaling-stroke"
-            />
-          ))}
+        : (
+            <g className="reveal-x">
+              {segments.map((d, index) => (
+                <path
+                  key={index}
+                  d={d}
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth={1.75}
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  vectorEffect="non-scaling-stroke"
+                />
+              ))}
+            </g>
+          )}
       {kind === "line" && numeric.length === 1 ? (
         <circle cx={x(values.findIndex((value) => value !== null))} cy={y(numeric[0])} r={2} fill="currentColor" />
       ) : null}

@@ -14,6 +14,7 @@ import {
   controlClass,
   itemClass,
   listClass,
+  popoverClass,
   searchKey,
   withCurrent,
   type Option,
@@ -91,7 +92,7 @@ export function Combobox({
         </Button>
       </div>
       <FieldError className="text-sm text-destructive">{error}</FieldError>
-      <Popover offset={4}>
+      <Popover offset={4} className={popoverClass}>
         <ListBox
           className={listClass}
           items={all}

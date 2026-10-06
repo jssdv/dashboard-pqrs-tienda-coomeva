@@ -40,12 +40,13 @@ function Nav({
   return (
     <div className="grid gap-4">
       <nav aria-label="Principal" className="grid gap-1" onClick={onNavigate}>
-        <NavLink to="/" end className={navClass(compact)} {...item("Panel")}>
+        <NavLink to="/" end viewTransition className={navClass(compact)} {...item("Panel")}>
           <LayoutDashboard aria-hidden="true" />
           {compact ? null : "Panel"}
         </NavLink>
         <NavLink
           to="/casos"
+          viewTransition
           className={navClass(compact)}
           {...(compact
             ? { "aria-label": vencidos ? `Casos, ${vencidos} vencidos` : "Casos", title: "Casos" }
@@ -69,7 +70,7 @@ function Nav({
             </>
           )}
         </NavLink>
-        <NavLink to="/proveedores" className={navClass(compact)} {...item("Proveedores")}>
+        <NavLink to="/proveedores" viewTransition className={navClass(compact)} {...item("Proveedores")}>
           <Store aria-hidden="true" />
           {compact ? null : "Proveedores"}
         </NavLink>
@@ -183,7 +184,7 @@ export function Shell() {
             </Button>
             <ThemeToggle />
             <Button asChild className="hidden min-h-11 md:inline-flex">
-              <Link to="/casos/nuevo">Nuevo caso</Link>
+              <Link to="/casos/nuevo" viewTransition>Nuevo caso</Link>
             </Button>
             <div className="md:hidden">
               <Sheet open={open} onOpenChange={setOpen}>
@@ -236,15 +237,17 @@ export function Card({
   children,
   level = 2,
   action,
+  index = 0,
 }: {
   title: string;
   children: ReactNode;
   level?: 2 | 3;
   action?: ReactNode;
+  index?: number;
 }) {
   const Title = level === 2 ? "h2" : "h3";
   return (
-    <UiCard className="h-full min-w-0 border-border shadow-none">
+    <UiCard style={{ "--i": index } as React.CSSProperties} className="fade-up h-full min-w-0 border-border shadow-none">
       <CardHeader className="flex flex-row items-center justify-between gap-3 pb-0">
         <Title className="font-display text-base font-semibold tracking-tight">{title}</Title>
         {action}

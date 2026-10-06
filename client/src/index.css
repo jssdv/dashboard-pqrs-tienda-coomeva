@@ -114,6 +114,14 @@
   }
 }
 
+/* Motion: short, purposeful, only opacity/transform. One easing, three durations. */
+:root {
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --dur-fast: 150ms;
+  --dur-base: 220ms;
+  --dur-slow: 320ms;
+}
+
 @keyframes rise-in {
   from {
     opacity: 0;
@@ -125,8 +133,118 @@
   }
 }
 
+@keyframes fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+}
+
+@keyframes grow-x {
+  from {
+    transform: scaleX(0);
+  }
+}
+
+@keyframes reveal-x {
+  from {
+    clip-path: inset(0 100% 0 0);
+  }
+  to {
+    clip-path: inset(0 0 0 0);
+  }
+}
+
+@keyframes shimmer {
+  from {
+    background-position: 200% 0;
+  }
+  to {
+    background-position: -200% 0;
+  }
+}
+
 .rise-in {
-  animation: rise-in 220ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation: rise-in var(--dur-base) var(--ease-out) both;
+}
+
+/* Staggered entrance: set --i on each item; the delay is capped so long lists stay snappy. */
+.fade-up {
+  animation: fade-up var(--dur-base) var(--ease-out) backwards;
+  animation-delay: min(calc(var(--i, 0) * 20ms), 300ms);
+}
+
+.grow-x {
+  transform-origin: left center;
+  animation: grow-x var(--dur-slow) var(--ease-out) backwards;
+  animation-delay: min(calc(var(--i, 0) * 40ms), 300ms);
+}
+
+.reveal-x {
+  animation: reveal-x 700ms var(--ease-out) backwards;
+}
+
+.shimmer {
+  background-image: linear-gradient(90deg, var(--muted) 25%, color-mix(in srgb, var(--muted), var(--card) 60%) 50%, var(--muted) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.4s linear infinite;
+}
+
+/* Reloading content keeps its place and dims instead of collapsing. */
+.is-reloading {
+  opacity: 0.55;
+  transition: opacity var(--dur-fast) var(--ease-out);
+  pointer-events: none;
+}
+
+.is-reloading-done {
+  transition: opacity var(--dur-base) var(--ease-out);
+}
+
+/* Press feedback and gentle lift. */
+button:not(:disabled):active,
+a[data-slot="button"]:active {
+  transform: scale(0.98);
+}
+
+button,
+a[data-slot="button"] {
+  transition-property: color, background-color, border-color, box-shadow, transform, opacity;
+  transition-duration: var(--dur-fast);
+  transition-timing-function: var(--ease-out);
+}
+
+[data-stat],
+.lift {
+  transition: transform var(--dur-base) var(--ease-out), border-color var(--dur-base) var(--ease-out),
+    box-shadow var(--dur-base) var(--ease-out);
+}
+
+[data-stat]:hover,
+.lift:hover {
+  transform: translateY(-1px);
+  border-color: color-mix(in srgb, var(--primary) 35%, var(--border));
+}
+
+tbody tr {
+  transition: background-color var(--dur-fast) var(--ease-out);
+}
+
+/* Smooth color change while switching theme (class set for ~300ms by theme.ts). */
+html.theme-switching,
+html.theme-switching *,
+html.theme-switching *::before,
+html.theme-switching *::after {
+  transition: background-color var(--dur-slow) var(--ease-out), color var(--dur-slow) var(--ease-out),
+    border-color var(--dur-slow) var(--ease-out), fill var(--dur-slow) var(--ease-out),
+    stroke var(--dur-slow) var(--ease-out) !important;
+}
+
+/* Route change cross-fade (View Transitions API, where supported). */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation-duration: var(--dur-base);
+  animation-timing-function: var(--ease-out);
 }
 
 .app-canvas {
@@ -145,9 +263,26 @@
     scroll-behavior: auto !important;
   }
 
-  .rise-in {
+  .rise-in,
+  .fade-up,
+  .grow-x,
+  .reveal-x {
     animation: none;
-    opacity: 1;
+  }
+
+  .shimmer {
+    animation: none;
+  }
+
+  html.theme-switching,
+  html.theme-switching * {
+    transition: none !important;
+  }
+
+  button:not(:disabled):active,
+  a[data-slot="button"]:active,
+  [data-stat]:hover,
+  .lift:hover {
     transform: none;
   }
 }

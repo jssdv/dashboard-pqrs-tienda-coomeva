@@ -56,6 +56,9 @@ export function useTheme(): {
   }, []);
 
   const setMode = useCallback((next: ThemeMode) => {
+    const root = document.documentElement;
+    root.classList.add("theme-switching");
+    setTimeout(() => root.classList.remove("theme-switching"), 320);
     try {
       localStorage.setItem(THEME_KEY, next);
     } catch {

@@ -21,7 +21,7 @@ export function PlazoBar({
       aria-label={`${dias} días hábiles de 10`}
       className="relative h-1.5 w-full min-w-16 overflow-hidden rounded-full bg-muted"
     >
-      <div data-fill className={`h-full rounded-full ${FILL[estado]}`} style={{ width: `${pct}%` }} />
+      <div data-fill className={`grow-x h-full rounded-full ${FILL[estado]}`} style={{ width: `${pct}%` }} />
       <span data-tick aria-hidden="true" className="absolute inset-y-0 left-1/2 w-px bg-card/80" />
       <span data-tick aria-hidden="true" className="absolute inset-y-0 right-0 w-px bg-card/80" />
     </div>

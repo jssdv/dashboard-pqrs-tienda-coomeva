@@ -12,7 +12,7 @@ function stubSystem(dark: boolean) {
 }
 
 beforeEach(() => {
-  document.documentElement.classList.remove("dark");
+  document.documentElement.classList.remove("dark", "theme-switching");
   localStorage.clear();
   stubSystem(false);
 });
@@ -65,4 +65,17 @@ it("keeps working when localStorage throws", () => {
   expect(result.current.mode).toBe("system");
   act(() => result.current.setMode("dark"));
   expect(result.current.resolved).toBe("dark");
+});
+
+it("setMode marks the page as switching for about 300 ms, but the first apply does not", () => {
+  vi.useFakeTimers();
+  const { result } = renderHook(() => useTheme());
+  expect(document.documentElement.classList.contains("theme-switching")).toBe(false);
+  act(() => result.current.setMode("dark"));
+  expect(document.documentElement.classList.contains("theme-switching")).toBe(true);
+  act(() => {
+    vi.advanceTimersByTime(400);
+  });
+  expect(document.documentElement.classList.contains("theme-switching")).toBe(false);
+  vi.useRealTimers();
 });

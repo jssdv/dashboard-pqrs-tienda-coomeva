@@ -21,4 +21,7 @@ export const listClass =
   "max-h-[min(20rem,50dvh)] w-[var(--trigger-width)] min-w-44 overflow-auto rounded-lg border border-border bg-card p-1 text-sm shadow-md outline-none";
 
 export const itemClass =
-  "flex min-h-11 cursor-pointer items-center justify-between gap-2 rounded-md px-3 outline-none data-[focused]:bg-accent data-[hovered]:bg-accent data-[selected]:font-semibold md:min-h-9";
+  "flex min-h-11 cursor-pointer items-center justify-between gap-2 rounded-md px-3 outline-none transition-colors duration-100 data-[focused]:bg-accent data-[hovered]:bg-accent data-[selected]:font-semibold md:min-h-9";
+
+export const popoverClass =
+  "data-[entering]:animate-in data-[entering]:fade-in-0 data-[entering]:zoom-in-95 data-[exiting]:animate-out data-[exiting]:fade-out-0 data-[exiting]:zoom-out-95 duration-150";

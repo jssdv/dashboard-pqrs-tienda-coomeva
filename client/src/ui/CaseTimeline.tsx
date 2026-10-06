@@ -21,7 +21,7 @@ export function CaseTimeline({ caso }: { caso: PqrCase }) {
         <>
           <div className="relative mt-4 mb-6 h-2 rounded-full bg-muted">
             {dias !== null ? (
-              <div data-fill className={`h-full rounded-full ${FILL[estado]}`} style={{ width: `${pct}%` }} />
+              <div data-fill className={`grow-x h-full rounded-full ${FILL[estado]}`} style={{ width: `${pct}%` }} />
             ) : null}
             <span aria-hidden="true" className="absolute top-1/2 left-0 size-3 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-card bg-foreground" />
             {dias !== null ? (

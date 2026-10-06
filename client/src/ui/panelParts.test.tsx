@@ -1,14 +1,19 @@
 // @vitest-environment jsdom
 
 import { cleanup, render, screen, within } from "@testing-library/react";
-import { afterEach, expect, it } from "vitest";
+import { act } from "@testing-library/react";
+import { afterEach, expect, it, vi } from "vitest";
 import { MemoryRouter } from "react-router-dom";
 import { Sparkline } from "./Sparkline";
 import { SegmentedBar } from "./SegmentedBar";
 import { StatCard } from "./StatCard";
 import { TipoTag } from "./TipoTag";
 
-afterEach(cleanup);
+afterEach(() => {
+  cleanup();
+  vi.useRealTimers();
+  vi.unstubAllGlobals();
+});
 
 const wrap = (node: React.ReactNode) => render(<MemoryRouter>{node}</MemoryRouter>);
 
@@ -79,4 +84,51 @@ it("TipoTag shows the text next to its color dot and a neutral dot for unknown t
   expect((document.querySelector("[data-dot]") as HTMLElement).style.backgroundColor).toBe("rgb(235, 104, 52)");
   rerender(<TipoTag tipo={null} />);
   expect(screen.getByText("—")).toBeTruthy();
+});
+
+it("StatCard staggers its entrance by index", () => {
+  wrap(<StatCard label="Abiertos" value="245" index={2} />);
+  const card = screen.getByRole("heading", { name: "Abiertos" }).closest("[data-stat]") as HTMLElement;
+  expect(card.className).toContain("fade-up");
+  expect(card.style.getPropertyValue("--i")).toBe("2");
+});
+
+it("StatCard counts up to its value when motion is allowed", () => {
+  vi.useFakeTimers();
+  vi.stubGlobal(
+    "matchMedia",
+    vi.fn(() => ({ matches: false, addEventListener: () => {}, removeEventListener: () => {} })),
+  );
+  wrap(<StatCard label="Tasa" value="89.6%" />);
+  const card = screen.getByRole("heading", { name: "Tasa" }).closest("[data-stat]") as HTMLElement;
+  expect(within(card).getByText("0.0%")).toBeTruthy();
+  act(() => {
+    vi.advanceTimersByTime(800);
+  });
+  expect(within(card).getByText("89.6%")).toBeTruthy();
+});
+
+it("StatCard shows non-numeric values as they are", () => {
+  wrap(<StatCard label="Entrados" value="—" />);
+  expect(screen.getByText("—")).toBeTruthy();
+});
+
+it("Sparkline reveals its line and staggers its bars", () => {
+  const { rerender } = render(<Sparkline values={[1, 2, 3]} label="Línea" />);
+  expect(screen.getByRole("img", { name: "Línea" }).querySelector("g.reveal-x")).toBeTruthy();
+  rerender(<Sparkline values={[1, 2, 3]} label="Barras" kind="bar" />);
+  const rects = Array.from(screen.getByRole("img", { name: "Barras" }).querySelectorAll("rect"));
+  expect(rects.map((rect) => rect.getAttribute("style") ?? "")).toEqual(
+    expect.arrayContaining([expect.stringContaining("--i")]),
+  );
+  expect(rects[0].getAttribute("class")).toContain("fade-up");
+});
+
+it("SegmentedBar segments and PlazoBar fill grow from the left", async () => {
+  wrap(<SegmentedBar segments={[{ key: "a", label: "A", count: 2, tone: "ok" }]} />);
+  expect(document.querySelector("[data-segment]")?.className).toContain("grow-x");
+  cleanup();
+  const { PlazoBar } = await import("./PlazoBar");
+  render(<PlazoBar dias={4} estado="en-plazo" />);
+  expect((document.querySelector("[data-fill]") as HTMLElement).className).toContain("grow-x");
 });
