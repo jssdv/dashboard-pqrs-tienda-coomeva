@@ -1,5 +1,5 @@
 import * as React from "react"
-import { XIcon } from "lucide-react"
+import { Mark } from "./mark"
 import { cn } from "cn"
 import { Dialog as SheetPrimitive } from "radix-ui"
 
@@ -73,7 +73,7 @@ function SheetContent({
         {children}
         {showCloseButton ? (
           <SheetPrimitive.Close className="absolute top-3 right-3 inline-flex size-11 cursor-pointer items-center justify-center rounded-lg text-foreground transition-colors duration-200 hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background focus-visible:outline-none">
-            <XIcon />
+            <Mark name="cross" className="size-3.5" />
             <span className="sr-only">Cerrar menú</span>
           </SheetPrimitive.Close>
         ) : null}

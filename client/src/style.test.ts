@@ -49,4 +49,18 @@ describe("editorial style rules", () => {
     expect(offenders(/app-canvas/)).toEqual([]);
     expect(offenders(/ring-\[3px\]/)).toEqual([]);
   });
+
+  it("uses no library icons in the controls migrated so far", () => {
+    const migrated = [
+      /ui\/Select\.tsx$/,
+      /ui\/Combobox\.tsx$/,
+      /ui\/ThemeToggle\.tsx$/,
+      /ui\/FormDialog\.tsx$/,
+      /ui\/sheet\.tsx$/,
+    ];
+    const hits = FILES.filter((path) => migrated.some((rule) => rule.test(path))).filter((path) =>
+      /lucide-react/.test(readFileSync(path, "utf8")),
+    );
+    expect(hits.map((path) => relative(ROOT, path))).toEqual([]);
+  });
 });

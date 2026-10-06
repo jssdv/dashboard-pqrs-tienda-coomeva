@@ -1,7 +1,7 @@
 import { useRef, type FormEvent, type ReactNode } from "react";
-import { X } from "lucide-react";
 import { Dialog } from "radix-ui";
 import { Button } from "@/components/ui/button";
+import { Mark } from "./Mark";
 
 const WIDTH = {
   lg: "w-[min(58rem,calc(100vw-2rem))]",
@@ -64,7 +64,7 @@ export function FormDialog({
               aria-label="Cerrar ventana"
               className="grid size-10 shrink-0 cursor-pointer place-items-center rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground"
             >
-              <X aria-hidden="true" className="size-4" />
+              <Mark name="cross" className="size-3.5" />
             </Dialog.Close>
           </header>
           <form ref={form} onSubmit={onSubmit} noValidate className="flex min-h-0 flex-1 flex-col">

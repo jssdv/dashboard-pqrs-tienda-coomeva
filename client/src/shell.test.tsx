@@ -57,6 +57,13 @@ it("shows today's date in the sidebar footer", () => {
   expect(document.querySelector("aside")?.textContent).toMatch(/Datos al /);
 });
 
+it("shows the theme as text next to the toggle", () => {
+  stubSummary(null);
+  localStorage.setItem("pqr-theme", "light");
+  renderShell();
+  expect(screen.getByRole("button", { name: /Cambiar tema/ }).textContent).toContain("Claro");
+});
+
 it("toggles the theme from the top bar", () => {
   stubSummary(null);
   localStorage.setItem("pqr-theme", "light");

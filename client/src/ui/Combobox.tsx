@@ -1,4 +1,3 @@
-import { Check, ChevronDown, X } from "lucide-react";
 import {
   Button,
   ComboBox as AriaComboBox,
@@ -9,6 +8,7 @@ import {
   ListBoxItem,
   Popover,
 } from "react-aria-components";
+import { Mark } from "./Mark";
 import {
   ALL_KEY,
   controlClass,
@@ -81,14 +81,14 @@ export function Combobox({
             className="absolute top-0 right-8 grid h-full w-8 cursor-pointer place-items-center text-muted-foreground hover:text-foreground"
             onClick={() => onChange("")}
           >
-            <X aria-hidden="true" className="size-4" />
+            <Mark name="cross" className="size-3" />
           </button>
         ) : null}
         <Button
           aria-label={`Mostrar opciones de ${label}`}
           className="absolute top-0 right-0 grid h-full w-8 cursor-pointer place-items-center text-muted-foreground"
         >
-          <ChevronDown aria-hidden="true" className="size-4" />
+          <Mark name="chevron" className="size-3" />
         </Button>
       </div>
       <FieldError className="text-sm text-destructive">{error}</FieldError>
@@ -100,10 +100,9 @@ export function Combobox({
         >
           {(item) => (
             <ListBoxItem id={item.value} textValue={item.label} className={itemClass}>
-              {({ isSelected }) => (
+              {() => (
                 <>
                   <span className="truncate">{item.label}</span>
-                  {isSelected ? <Check aria-hidden="true" className="size-4 shrink-0 text-primary" /> : null}
                 </>
               )}
             </ListBoxItem>

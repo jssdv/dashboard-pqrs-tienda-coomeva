@@ -1,4 +1,3 @@
-import { Check, ChevronDown } from "lucide-react";
 import {
   Button,
   FieldError,
@@ -9,6 +8,7 @@ import {
   Select as AriaSelect,
   SelectValue,
 } from "react-aria-components";
+import { Mark } from "./Mark";
 import { ALL_KEY, controlClass, itemClass, listClass, popoverClass, withCurrent, type Option } from "./options";
 
 export function Select({
@@ -54,17 +54,16 @@ export function Select({
       </Label>
       <Button className={`${controlClass} cursor-pointer justify-between gap-2`}>
         <SelectValue className="truncate" />
-        <ChevronDown aria-hidden="true" className="size-4 shrink-0 text-muted-foreground" />
+        <Mark name="chevron" className="size-3 text-muted-foreground" />
       </Button>
       <FieldError className="text-sm text-destructive">{error}</FieldError>
       <Popover offset={4} className={popoverClass}>
         <ListBox className={listClass} items={all}>
           {(item) => (
             <ListBoxItem id={item.value} textValue={item.label} className={itemClass}>
-              {({ isSelected }) => (
+              {() => (
                 <>
                   <span className="truncate">{item.label}</span>
-                  {isSelected ? <Check aria-hidden="true" className="size-4 shrink-0 text-primary" /> : null}
                 </>
               )}
             </ListBoxItem>

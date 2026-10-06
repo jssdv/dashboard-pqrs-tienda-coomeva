@@ -21,7 +21,7 @@ export const listClass =
   "max-h-[min(20rem,50dvh)] w-[var(--trigger-width)] min-w-44 overflow-auto rounded-lg border border-border bg-card p-1 text-sm shadow-md outline-none";
 
 export const itemClass =
-  "flex min-h-11 cursor-pointer items-center justify-between gap-2 rounded-md px-3 outline-none transition-colors duration-100 data-[focused]:bg-accent data-[hovered]:bg-accent data-[selected]:font-semibold md:min-h-9";
+  "flex min-h-11 cursor-pointer items-center justify-between gap-2 border-l-2 border-transparent px-3 outline-none transition-colors duration-100 data-[focused]:bg-accent data-[hovered]:bg-accent data-[selected]:border-primary data-[selected]:font-semibold md:min-h-9";
 
 // Popovers are portaled to <body>, where a modal Radix Dialog/Sheet sets pointer-events: none.
 export const popoverClass =

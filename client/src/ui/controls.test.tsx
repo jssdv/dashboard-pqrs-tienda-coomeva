@@ -143,3 +143,24 @@ it("lists stay clickable inside a modal dialog (popover re-enables pointer event
   const popover = listbox().closest("[data-trigger]") as HTMLElement;
   expect(popover.className).toContain("pointer-events-auto");
 });
+
+it("marks the chosen option with a data-selected edge instead of a check icon", () => {
+  render(<Select label="Estado" value="cerrados" onChange={() => {}} options={ESTADOS} />);
+  fireEvent.click(screen.getByRole("button", { name: /Estado/ }));
+  const chosen = within(listbox()).getByRole("option", { name: "Cerrados", hidden: true });
+  expect(chosen.hasAttribute("data-selected")).toBe(true);
+  expect(chosen.querySelector("svg")).toBeNull();
+  expect(chosen.className).toContain("border-l-2");
+});
+
+it("draws the open-list chevron with the custom mark, not a library icon", () => {
+  render(<Select label="Estado" value="" onChange={() => {}} options={ESTADOS} />);
+  const svg = screen.getByRole("button", { name: /Estado/ }).querySelector("svg") as SVGElement;
+  expect(svg.getAttribute("stroke-linecap")).toBe("square");
+});
+
+it("Combobox clear button uses the cross mark", () => {
+  render(<Combobox label="Proveedor" value="Tienda" onChange={() => {}} options={PROVEEDORES} />);
+  const clear = screen.getByRole("button", { name: "Limpiar Proveedor" });
+  expect(clear.querySelector("svg")?.getAttribute("stroke-linecap")).toBe("square");
+});
