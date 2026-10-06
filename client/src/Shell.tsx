@@ -1,5 +1,4 @@
 import type { ReactNode } from "react";
-import { LayoutDashboard, List, Search, Store } from "lucide-react";
 import { Link, NavLink, Outlet, useLocation } from "react-router-dom";
 import { useEffect, useRef, useState } from "react";
 import { Badge } from "@/components/ui/badge";
@@ -19,13 +18,15 @@ import { ThemeToggle } from "./ui/ThemeToggle";
 import { useVencidos } from "./useVencidos";
 
 const navClass = (compact: boolean) => ({ isActive }: { isActive: boolean }) =>
-  `relative flex min-h-11 cursor-pointer items-center rounded-lg text-sm font-semibold no-underline transition-[background-color,color,box-shadow] duration-200 ease-[cubic-bezier(0.22,1,0.36,1)] focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background focus-visible:outline-none ${
-    compact ? "justify-center px-0" : "gap-2 px-3"
+  `relative flex min-h-11 cursor-pointer items-center border-l-2 text-sm no-underline transition-colors duration-150 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background focus-visible:outline-none ${
+    compact ? "justify-center px-0" : "gap-3 px-3"
   } ${
     isActive
-      ? "bg-primary text-primary-foreground"
-      : "text-foreground hover:bg-accent hover:text-accent-foreground"
+      ? "border-primary bg-accent/60 font-semibold text-foreground"
+      : "border-transparent text-muted-foreground hover:bg-accent/40 hover:text-foreground"
   }`;
+
+const NUM = "font-mono text-xs tabular-nums text-muted-foreground";
 
 function Nav({
   vencidos,
@@ -39,9 +40,9 @@ function Nav({
   const item = (label: string) => (compact ? { "aria-label": label, title: label } : {});
   return (
     <div className="grid gap-4">
-      <nav aria-label="Principal" className="grid gap-1" onClick={onNavigate}>
+      <nav aria-label="Principal" className="grid gap-px" onClick={onNavigate}>
         <NavLink to="/" end viewTransition className={navClass(compact)} {...item("Panel")}>
-          <LayoutDashboard aria-hidden="true" />
+          <span className={NUM}>01</span>
           {compact ? null : "Panel"}
         </NavLink>
         <NavLink
@@ -52,26 +53,20 @@ function Nav({
             ? { "aria-label": vencidos ? `Casos, ${vencidos} vencidos` : "Casos", title: "Casos" }
             : {})}
         >
-          {({ isActive }) => (
-            <>
-              <List aria-hidden="true" />
-              {compact ? null : "Casos"}
-              {vencidos ? (
-                <Badge
-                  variant="destructive"
-                  className={`${compact ? "absolute -top-1 -right-1 px-1.5 text-[0.65rem]" : "ml-auto"} ${
-                    isActive ? "bg-primary-foreground text-destructive" : ""
-                  }`}
-                  aria-label={`${vencidos} vencidos`}
-                >
-                  {vencidos}
-                </Badge>
-              ) : null}
-            </>
-          )}
+          <span className={NUM}>02</span>
+          {compact ? null : "Casos"}
+          {vencidos ? (
+            <Badge
+              variant="destructive"
+              className={compact ? "absolute top-0.5 right-0.5 px-1 text-[0.6rem]" : "ml-auto"}
+              aria-label={`${vencidos} vencidos`}
+            >
+              {vencidos}
+            </Badge>
+          ) : null}
         </NavLink>
         <NavLink to="/proveedores" viewTransition className={navClass(compact)} {...item("Proveedores")}>
-          <Store aria-hidden="true" />
+          <span className={NUM}>03</span>
           {compact ? null : "Proveedores"}
         </NavLink>
       </nav>
@@ -139,7 +134,7 @@ export function Shell() {
         </a>
         <aside className="hidden w-52 shrink-0 flex-col border-r border-border bg-card px-3 py-5 lg:flex">
           <div className="mb-6 flex items-center gap-2 px-3">
-            <span className="grid size-8 place-items-center rounded-lg bg-primary font-display text-xs font-bold text-primary-foreground">
+            <span className="grid size-8 place-items-center bg-primary font-display text-xs font-bold text-primary-foreground">
               PQ
             </span>
             <span className="font-display text-base font-semibold tracking-tight">PQRS</span>
@@ -174,9 +169,8 @@ export function Shell() {
               className="min-h-11 gap-2 text-muted-foreground md:w-56 md:justify-start"
               onClick={() => openSearch(searchButton.current)}
             >
-              <Search aria-hidden="true" />
-              <span aria-hidden="true" className="hidden flex-1 text-left md:inline">
-                Buscar…
+              <span aria-hidden="true" className="flex-1 text-left">
+                Buscar
               </span>
               <kbd aria-hidden="true" className="hidden rounded border border-border px-1.5 font-mono text-[0.7rem] md:inline">
                 Ctrl K
@@ -220,10 +214,29 @@ export function Shell() {
   );
 }
 
-export function PageHead({ title, lede, actions }: { title: string; lede?: string; actions?: ReactNode }) {
+function longDate(): string {
+  return new Intl.DateTimeFormat("es-CO", { day: "2-digit", month: "short", year: "numeric" }).format(new Date());
+}
+
+export function PageHead({
+  title,
+  lede,
+  actions,
+  section,
+}: {
+  title: string;
+  lede?: string;
+  actions?: ReactNode;
+  section?: string;
+}) {
   return (
-    <header className="mb-6 flex flex-wrap items-end justify-between gap-3">
+    <header className="mb-6 flex flex-wrap items-end justify-between gap-3 border-b border-border pb-4">
       <div className="min-w-0">
+        {section ? (
+          <p data-testid="kicker" className="m-0 mb-1 font-mono text-[0.7rem] tracking-widest text-muted-foreground uppercase">
+            {section} · {longDate()}
+          </p>
+        ) : null}
         <h1 className="font-display text-[1.75rem] leading-tight font-semibold tracking-tight">{title}</h1>
         {lede ? <p className="mt-1 max-w-2xl text-muted-foreground">{lede}</p> : null}
       </div>

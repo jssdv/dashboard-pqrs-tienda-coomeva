@@ -166,6 +166,7 @@ export function Casos() {
   return (
     <>
       <PageHead
+        section="Casos"
         title="Casos"
         lede={loaded ? `${visible.length} ${visible.length === 1 ? "caso" : "casos"}` : undefined}
         actions={

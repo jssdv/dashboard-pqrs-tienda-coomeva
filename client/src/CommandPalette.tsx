@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useRef, useState, type RefObject } from "react";
-import { CornerDownLeft, FileText, LayoutDashboard, List, Plus, Search, Store, SunMoon } from "lucide-react";
 import { Dialog } from "radix-ui";
 import { useNavigate } from "react-router-dom";
 import { getCases } from "./api";
@@ -13,7 +12,6 @@ interface Entry {
   group: "Ir a" | "Acciones" | "Casos";
   label: string;
   hint?: string;
-  icon: typeof Search;
   run: () => void;
 }
 
@@ -56,15 +54,14 @@ export function CommandPalette({
       navigate(to, { viewTransition });
     };
     const base: Entry[] = [
-      { id: "go-panel", group: "Ir a", label: "Panel", icon: LayoutDashboard, run: go("/") },
-      { id: "go-casos", group: "Ir a", label: "Casos", icon: List, run: go("/casos") },
-      { id: "go-proveedores", group: "Ir a", label: "Proveedores", icon: Store, run: go("/proveedores") },
-      { id: "act-nuevo", group: "Acciones", label: "Nuevo caso", icon: Plus, run: go("/casos/nuevo", false) },
+      { id: "go-panel", group: "Ir a", label: "Panel", run: go("/") },
+      { id: "go-casos", group: "Ir a", label: "Casos", run: go("/casos") },
+      { id: "go-proveedores", group: "Ir a", label: "Proveedores", run: go("/proveedores") },
+      { id: "act-nuevo", group: "Acciones", label: "Nuevo caso", run: go("/casos/nuevo", false) },
       {
         id: "act-tema",
         group: "Acciones",
         label: "Cambiar tema",
-        icon: SunMoon,
         run: () => {
           setMode(NEXT_THEME[mode]);
           onOpenChange(false);
@@ -85,7 +82,6 @@ export function CommandPalette({
                 group: "Casos" as const,
                 label: [row.idOrden, row.asociado, row.area].filter(Boolean).join(" · ") || row.id,
                 hint: row.fechaInicial ?? undefined,
-                icon: FileText,
                 run: go(`/casos?q=${encodeURIComponent(term)}`),
               };
             })
@@ -126,7 +122,6 @@ export function CommandPalette({
         >
           <Dialog.Title className="sr-only">Buscar</Dialog.Title>
           <div className="flex items-center gap-2 border-b border-border px-4">
-            <Search aria-hidden="true" className="size-4 shrink-0 text-muted-foreground" />
             <input
               role="combobox"
               aria-label="Buscar"
@@ -147,12 +142,11 @@ export function CommandPalette({
             ) : null}
             {groups.map(({ group, items }) => (
               <div key={group} role="group" aria-label={group} className="mb-1">
-                <p aria-hidden="true" className="px-3 pt-2 pb-1 text-xs font-medium text-muted-foreground">
+                <p aria-hidden="true" className="px-3 pt-2 pb-1 font-mono text-[0.65rem] tracking-widest text-muted-foreground uppercase">
                   {group}
                 </p>
                 {items.map((entry) => {
                   const index = entries.indexOf(entry);
-                  const Icon = entry.icon;
                   return (
                     <div
                       key={entry.id}
@@ -161,15 +155,16 @@ export function CommandPalette({
                       aria-selected={index === active}
                       onMouseMove={() => setActive(index)}
                       onClick={entry.run}
-                      className={`flex min-h-11 cursor-pointer items-center gap-3 rounded-lg px-3 text-sm transition-colors duration-100 ${
-                        index === active ? "bg-accent text-accent-foreground" : ""
+                      className={`flex min-h-11 cursor-pointer items-center gap-3 border-l-2 px-3 text-sm transition-colors duration-100 ${
+                        index === active ? "border-primary bg-accent text-accent-foreground" : "border-transparent"
                       }`}
                     >
-                      <Icon aria-hidden="true" className="size-4 shrink-0 text-muted-foreground" />
                       <span className="min-w-0 flex-1 truncate">{entry.label}</span>
                       {entry.hint ? <span className="font-mono text-xs text-muted-foreground">{entry.hint}</span> : null}
                       {index === active ? (
-                        <CornerDownLeft aria-hidden="true" className="size-3.5 text-muted-foreground" />
+                        <span aria-hidden="true" className="font-mono text-xs text-muted-foreground">
+                          ↵
+                        </span>
                       ) : null}
                     </div>
                   );

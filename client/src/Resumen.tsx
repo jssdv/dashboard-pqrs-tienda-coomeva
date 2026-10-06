@@ -369,6 +369,7 @@ export function Resumen() {
   return (
     <>
       <PageHead
+        section="Panel"
         title="Panel"
         lede={colaMissing ? `${summary.abiertos} abiertos` : `${summary.abiertos} abiertos · ${summary.colaVencida} vencidos`}
       />

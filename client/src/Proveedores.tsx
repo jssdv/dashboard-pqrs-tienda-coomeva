@@ -71,6 +71,7 @@ export function Proveedores() {
   return (
     <>
       <PageHead
+        section="Proveedores"
         title="Proveedores"
         lede={rows.length > 0 ? `${rows.length} ${rows.length === 1 ? "proveedor" : "proveedores"}` : undefined}
       />

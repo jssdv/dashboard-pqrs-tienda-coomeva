@@ -57,6 +57,8 @@ describe("editorial style rules", () => {
       /ui\/ThemeToggle\.tsx$/,
       /ui\/FormDialog\.tsx$/,
       /ui\/sheet\.tsx$/,
+      /Shell\.tsx$/,
+      /CommandPalette\.tsx$/,
     ];
     const hits = FILES.filter((path) => migrated.some((rule) => rule.test(path))).filter((path) =>
       /lucide-react/.test(readFileSync(path, "utf8")),

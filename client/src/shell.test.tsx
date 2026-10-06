@@ -117,7 +117,7 @@ it("renders a full sidebar from lg and an icon rail between md and lg", () => {
   expect(full.className).toContain("hidden");
   expect(rail.className).toContain("md:flex");
   expect(full.textContent).toContain("Casos");
-  expect(rail.textContent).toBe("");
+  expect(rail.textContent).toBe("010203");
 });
 
 it("names every rail link for assistive tech and keeps the overdue counter", async () => {
@@ -163,4 +163,37 @@ it("does not remount a screen when a child dialog route opens over it", () => {
   fireEvent.click(screen.getByRole("button", { name: "abrir" }));
   expect(screen.getByText("ventana")).toBeTruthy();
   expect(mounts).toHaveBeenCalledTimes(1);
+});
+
+it("numbers the sidebar entries instead of using icons and marks the current one", () => {
+  stubSummary(null);
+  renderShell();
+  const full = document.querySelector("aside.lg\\:flex") as HTMLElement;
+  const links = Array.from(full.querySelectorAll("nav a"));
+  expect(links.map((link) => link.textContent)).toEqual(["01Panel", "02Casos", "03Proveedores"]);
+  const current = links.find((link) => link.getAttribute("aria-current") === "page");
+  expect(current?.textContent).toContain("Panel");
+  expect(current?.className).toContain("border-primary");
+});
+
+it("has no drawn icons in the sidebar or the top bar", () => {
+  stubSummary(null);
+  renderShell();
+  expect(document.querySelector("aside svg, header[data-topbar] svg")).toBeNull();
+});
+
+it("shows Buscar and its shortcut as text in the top bar", () => {
+  stubSummary(null);
+  renderShell();
+  const button = screen.getByRole("button", { name: "Buscar" });
+  expect(button.textContent).toContain("Buscar");
+  expect(button.textContent).toContain("Ctrl K");
+});
+
+it("PageHead shows a mono kicker with the section and the date, over a hairline", () => {
+  render(<PageHead title="Casos" section="Casos" />);
+  const kicker = screen.getByTestId("kicker");
+  expect(kicker.textContent).toMatch(/^CASOS · /i);
+  expect(kicker.className).toContain("font-mono");
+  expect(screen.getByRole("heading", { name: "Casos" }).closest("header")?.className).toContain("border-b");
 });

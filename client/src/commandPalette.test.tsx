@@ -92,7 +92,7 @@ it("filters go-to and action entries as you type", async () => {
   const input = await screen.findByRole("combobox", { name: "Buscar" });
   fireEvent.change(input, { target: { value: "prove" } });
   const options = within(screen.getByRole("listbox")).getAllByRole("option");
-  expect(options.map((option) => option.textContent)).toEqual(["Proveedores"]);
+  expect(options.map((option) => option.textContent?.replace("↵", ""))).toEqual(["Proveedores"]);
   fireEvent.change(input, { target: { value: "nuevo" } });
   expect(within(screen.getByRole("listbox")).getAllByRole("option")[0].textContent).toContain("Nuevo caso");
 });
@@ -131,4 +131,27 @@ it("says Sin resultados when nothing matches", async () => {
   const input = await screen.findByRole("combobox", { name: "Buscar" });
   fireEvent.change(input, { target: { value: "zzzzzz" } });
   expect(await screen.findByText("Sin resultados")).toBeTruthy();
+});
+
+it("has no icons in the palette and marks the active row with a text Enter hint", async () => {
+  stubApi();
+  renderApp();
+  fireEvent.keyDown(document, { key: "k", ctrlKey: true });
+  const input = await screen.findByRole("combobox", { name: "Buscar" });
+  const dialog = screen.getByRole("dialog");
+  expect(dialog.querySelector("svg")).toBeNull();
+  const active = within(screen.getByRole("listbox")).getAllByRole("option")[0];
+  expect(active.textContent).toContain("↵");
+  fireEvent.keyDown(input, { key: "ArrowDown" });
+  expect(within(screen.getByRole("listbox")).getAllByRole("option")[1].textContent).toContain("↵");
+});
+
+it("labels the groups in mono small caps", async () => {
+  stubApi();
+  renderApp();
+  fireEvent.keyDown(document, { key: "k", ctrlKey: true });
+  await screen.findByRole("combobox", { name: "Buscar" });
+  const group = screen.getByRole("group", { name: "Ir a" });
+  expect(group.querySelector("p")?.className).toContain("font-mono");
+  expect(group.querySelector("p")?.className).toContain("uppercase");
 });
