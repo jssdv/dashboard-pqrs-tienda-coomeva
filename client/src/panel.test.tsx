@@ -200,3 +200,19 @@ it("compares complete months only, ignoring the month in progress", async () => 
   expect(card("Tasa de cierre").textContent).toContain("2026-08");
   expect(card("Días promedio").textContent).toContain("17 % vs mes anterior");
 });
+
+it("draws the alert band as bordered blocks with no icon", async () => {
+  show({ serieMensual: SERIE });
+  const band = await screen.findByRole("region", { name: "Alertas" });
+  expect(band.querySelector("svg")).toBeNull();
+  const vencidos = within(band).getByRole("link", { name: /Vencidos/ });
+  expect(vencidos.className).toContain("border-l-4");
+});
+
+it("uses a flat fill for the flow chart and a square range selector", async () => {
+  show({ serieMensual: longSerie(8) });
+  await screen.findByRole("heading", { level: 2, name: "Entrados y cerrados" });
+  expect(document.querySelector("linearGradient")).toBeNull();
+  const radio = screen.getByRole("radio", { name: "12 m" });
+  expect(radio.className).not.toMatch(/rounded-(lg|md|xl|full)/);
+});

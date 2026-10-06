@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useState } from "react";
-import { AlertTriangle, CalendarX } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
@@ -63,7 +62,7 @@ function FlowTooltip({
 
 function RangeToggle({ value, onChange }: { value: string; onChange: (key: string) => void }) {
   return (
-    <div role="radiogroup" aria-label="Rango" className="inline-flex rounded-lg border border-border bg-muted p-0.5 text-sm">
+    <div role="radiogroup" aria-label="Rango" className="inline-flex divide-x divide-border border border-border text-sm">
       {RANGES.map((range) => (
         <button
           key={range.key}
@@ -71,8 +70,8 @@ function RangeToggle({ value, onChange }: { value: string; onChange: (key: strin
           role="radio"
           aria-checked={value === range.key}
           onClick={() => onChange(range.key)}
-          className={`min-h-9 cursor-pointer rounded-md px-3 font-medium transition-colors ${
-            value === range.key ? "bg-card text-foreground" : "text-muted-foreground hover:text-foreground"
+          className={`min-h-9 cursor-pointer px-3 font-mono text-xs font-medium transition-colors ${
+            value === range.key ? "bg-foreground text-background" : "text-muted-foreground hover:text-foreground"
           }`}
         >
           {range.label}
@@ -104,12 +103,6 @@ function FlowChart({ rows }: { rows: Array<{ mes: string; entrados: number; cerr
               if (mes) navigate(casosHref({ mes: String(mes) }));
             }}
           >
-            <defs>
-              <linearGradient id="entrados-fill" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor={colors.primary} stopOpacity={0.25} />
-                <stop offset="100%" stopColor={colors.primary} stopOpacity={0} />
-              </linearGradient>
-            </defs>
             <CartesianGrid stroke={colors.grid} vertical={false} strokeDasharray="4 4" />
             <XAxis dataKey="mes" minTickGap={28} tick={axisTick(colors)} axisLine={false} tickLine={false} />
             <YAxis width={32} allowDecimals={false} tick={axisTick(colors)} axisLine={false} tickLine={false} />
@@ -119,7 +112,8 @@ function FlowChart({ rows }: { rows: Array<{ mes: string; entrados: number; cerr
               dataKey="entrados"
               stroke={colors.primary}
               strokeWidth={2}
-              fill="url(#entrados-fill)"
+              fill={colors.primary}
+              fillOpacity={0.12}
               isAnimationActive={motion}
               animationDuration={700}
               animationEasing="ease-out"
@@ -265,7 +259,6 @@ function CloseTable({ rows }: { rows: DashboardSummary["cierrePorTipo"] }) {
 function AlertCard({
   index,
   tone,
-  icon: Icon,
   label,
   value,
   href,
@@ -273,7 +266,6 @@ function AlertCard({
 }: {
   index: number;
   tone: "danger" | "warn";
-  icon: typeof AlertTriangle;
   label: string;
   value: string;
   href?: string;
@@ -281,20 +273,15 @@ function AlertCard({
 }) {
   const body = (
     <>
-      <span
-        aria-hidden="true"
-        className={`grid size-10 shrink-0 place-items-center rounded-lg ${tone === "danger" ? "bg-destructive/10 text-destructive" : "bg-warning/15 text-warning-foreground"}`}
-      >
-        <Icon className="size-5" />
-      </span>
       <span className="min-w-0 flex-1">
-        <span className="block text-sm font-medium">{label}</span>
+        <span className="block font-mono text-[0.7rem] tracking-widest uppercase">{label}</span>
         <span className="block text-xs text-muted-foreground">{note}</span>
       </span>
-      <span className="font-mono text-2xl font-semibold tabular-nums">{value}</span>
+      <span className="font-mono text-3xl font-semibold tabular-nums">{value}</span>
     </>
   );
-  const cls = "fade-up lift flex min-h-16 items-center gap-3 border border-border bg-card p-4 text-foreground no-underline";
+  const edge = tone === "danger" ? "border-l-destructive" : "border-l-warning";
+  const cls = `fade-up lift flex min-h-16 items-center gap-3 border border-l-4 border-border ${edge} bg-card p-4 text-foreground no-underline`;
   return href ? (
     <Link to={href} style={{ "--i": index } as React.CSSProperties} className={cls}>
       {body}
@@ -418,7 +405,6 @@ export function Resumen() {
         <AlertCard
           index={4}
           tone="danger"
-          icon={AlertTriangle}
           label="Vencidos"
           note="Más de 10 días hábiles abiertos"
           value={colaMissing ? "Sin festivos" : String(summary.colaVencida)}
@@ -427,7 +413,6 @@ export function Resumen() {
         <AlertCard
           index={5}
           tone="warn"
-          icon={CalendarX}
           label="Sin fecha de inicio"
           note="Abiertos que no se pueden medir"
           value={String(summary.sinFechaValida)}

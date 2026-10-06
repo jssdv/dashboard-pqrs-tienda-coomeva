@@ -49,7 +49,6 @@ export function Sparkline({
                 y={y(value)}
                 width={barWidth}
                 height={Math.max(1, height - 2 - y(value))}
-                rx={1.5}
                 fill="currentColor"
                 opacity={index === values.length - 1 ? 1 : 0.45}
                 className="fade-up"

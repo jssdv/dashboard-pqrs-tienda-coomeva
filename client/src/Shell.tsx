@@ -260,7 +260,7 @@ export function Card({
 }) {
   const Title = level === 2 ? "h2" : "h3";
   return (
-    <UiCard style={{ "--i": index } as React.CSSProperties} className="fade-up h-full min-w-0 border-border shadow-none">
+    <UiCard style={{ "--i": index } as React.CSSProperties} className="fade-up h-full min-w-0 border-t-2 border-t-foreground shadow-none">
       <CardHeader className="flex flex-row items-center justify-between gap-3 pb-0">
         <Title className="font-display text-base font-semibold tracking-tight">{title}</Title>
         {action}

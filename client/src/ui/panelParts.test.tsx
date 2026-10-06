@@ -132,3 +132,30 @@ it("SegmentedBar segments and PlazoBar fill grow from the left", async () => {
   render(<PlazoBar dias={4} estado="en-plazo" />);
   expect((document.querySelector("[data-fill]") as HTMLElement).className).toContain("grow-x");
 });
+
+it("StatCard writes the change with a sign instead of an arrow icon", () => {
+  const { rerender } = wrap(<StatCard label="A" value="1" delta={{ pct: 20, good: "up" }} />);
+  let tone = document.querySelector("[data-tone]") as HTMLElement;
+  expect(tone.textContent).toContain("+20 % vs mes anterior");
+  expect(tone.querySelector("svg")).toBeNull();
+  rerender(
+    <MemoryRouter>
+      <StatCard label="A" value="1" delta={{ pct: -6.4, good: "up" }} />
+    </MemoryRouter>,
+  );
+  tone = document.querySelector("[data-tone]") as HTMLElement;
+  expect(tone.textContent).toContain("−6 % vs mes anterior");
+});
+
+it("StatCard label is a mono caption and the card has a top rule", () => {
+  wrap(<StatCard label="Abiertos" value="1" />);
+  const heading = screen.getByRole("heading", { name: "Abiertos" });
+  expect(heading.className).toContain("font-mono");
+  expect(heading.className).toContain("uppercase");
+  expect((heading.closest("[data-stat]") as HTMLElement).className).toContain("border-t-2");
+});
+
+it("Sparkline bars have square ends", () => {
+  render(<Sparkline values={[1, 2]} label="B" kind="bar" />);
+  expect(screen.getByRole("img", { name: "B" }).querySelector("rect")?.getAttribute("rx")).toBeNull();
+});

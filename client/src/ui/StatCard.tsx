@@ -1,4 +1,3 @@
-import { ArrowDown, ArrowUp } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Card as UiCard, CardContent } from "@/components/ui/card";
 import { CountUp } from "./CountUp";
@@ -43,11 +42,11 @@ export function StatCard({
     <UiCard
       data-stat
       style={{ "--i": index } as React.CSSProperties}
-      className="fade-up min-w-0 border-border shadow-none"
+      className="fade-up min-w-0 border-t-2 border-t-foreground shadow-none"
     >
       <CardContent className="flex h-full flex-col gap-2 p-5">
         <div className="flex items-baseline justify-between gap-2">
-          <h3 className="text-sm font-medium text-muted-foreground">{label}</h3>
+          <h3 className="font-mono text-[0.7rem] font-medium tracking-widest text-muted-foreground uppercase">{label}</h3>
           {caption ? <span className="font-mono text-xs text-muted-foreground">{caption}</span> : null}
         </div>
         <p className="font-mono text-3xl font-semibold tracking-tight tabular-nums">
@@ -68,9 +67,11 @@ export function StatCard({
               <span>— vs mes anterior</span>
             ) : (
               <>
-                {delta.pct >= 0 ? <ArrowUp aria-hidden="true" className="size-3" /> : <ArrowDown aria-hidden="true" className="size-3" />}
                 <span className="sr-only">{delta.pct >= 0 ? "sube " : "baja "}</span>
-                <span>{Math.round(Math.abs(delta.pct))} % vs mes anterior</span>
+                <span>
+                  {delta.pct >= 0 ? "+" : "−"}
+                  {Math.round(Math.abs(delta.pct))} % vs mes anterior
+                </span>
               </>
             )}
           </p>
