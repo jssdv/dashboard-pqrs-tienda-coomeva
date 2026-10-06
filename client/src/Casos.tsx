@@ -2,32 +2,17 @@ import { useEffect, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { ApiError, getCases } from "./api";
 import { CaseDetail } from "./CaseDetail";
+import { CaseFilters } from "./CaseFilters";
 import { plazoLabel, textOrDash } from "./format";
 import { matchesSearch } from "./matchesSearch";
-import { fieldClass, PageHead } from "./Shell";
+import type { Option } from "./ui/options";
+import { useMinWidth } from "./useMinWidth";
+import { PageHead } from "./Shell";
 import type { CaseQuery, PqrCase } from "./types";
 
 const PAGE_SIZE = 20;
-
-function useMinWidth(query: string) {
-  const [matches, setMatches] = useState(() => {
-    if (typeof window.matchMedia !== "function") return false;
-    return window.matchMedia(query).matches;
-  });
-  useEffect(() => {
-    if (typeof window.matchMedia !== "function") return;
-    const media = window.matchMedia(query);
-    const apply = () => setMatches(media.matches);
-    apply();
-    media.addEventListener("change", apply);
-    return () => media.removeEventListener("change", apply);
-  }, [query]);
-  return matches;
-}
 
 function queryFrom(params: URLSearchParams): CaseQuery {
   return {
@@ -49,10 +34,11 @@ function isOpen(row: PqrCase): boolean {
   return row.fechaSolucion === null || row.fechaSolucion === "";
 }
 
-function optionValues(values: (string | null)[], selected?: string): string[] {
+function toOptions(values: (string | null)[]): Option[] {
   const set = new Set(values.filter((value): value is string => Boolean(value)));
-  if (selected) set.add(selected);
-  return [...set].sort((left, right) => left.localeCompare(right, "es"));
+  return [...set]
+    .sort((left, right) => left.localeCompare(right, "es"))
+    .map((value) => ({ value, label: value }));
 }
 
 
@@ -86,7 +72,10 @@ export function Casos() {
   const [message, setMessage] = useState<string | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const chips = chipsFrom(params);
-  const filtersActive = Boolean(estado || query.plazo || chips.length > 0 || q.trim());
+  const activeCount = [estado, query.plazo, query.area, query.tipo, tema, query.cola, query.mes, query.fecha].filter(
+    Boolean,
+  ).length;
+  const filtersActive = Boolean(activeCount > 0 || q.trim());
 
   useEffect(() => {
     let cancelled = false;
@@ -152,111 +141,18 @@ export function Casos() {
   return (
     <>
       <PageHead title="Casos" />
-      <div className="mb-3 flex min-w-0 flex-wrap items-end gap-3">
-        <div className="grid min-w-[12rem] flex-1 gap-1.5">
-          <Label htmlFor="buscar">Buscar</Label>
-          <Input
-            id="buscar"
-            placeholder="Orden, asociado o correo"
-            value={q}
-            onChange={(event) => setQuery(event.target.value)}
-          />
-        </div>
-        <div className="grid gap-1.5">
-          <Label htmlFor="filtro-estado">Estado</Label>
-          <select
-            id="filtro-estado"
-            className={`${fieldClass} w-auto min-w-32`}
-            value={estado === "abiertos" || estado === "cerrados" ? estado : ""}
-            onChange={(event) => setFilter("estado", event.target.value)}
-          >
-            <option value="">Todos</option>
-            <option value="abiertos">Abiertos</option>
-            <option value="cerrados">Cerrados</option>
-          </select>
-        </div>
-        <div className="grid gap-1.5">
-          <Label htmlFor="filtro-plazo">Plazo</Label>
-          <select
-            id="filtro-plazo"
-            className={`${fieldClass} w-auto min-w-32`}
-            value={query.plazo ?? ""}
-            onChange={(event) => setFilter("plazo", event.target.value)}
-          >
-            <option value="">Todos</option>
-            <option value="en-plazo">En plazo</option>
-            <option value="por-vencer">Por vencer</option>
-            <option value="vencido">Vencido</option>
-          </select>
-        </div>
-        <Button asChild variant="secondary" className="min-h-11 md:hidden">
-          <Link to="/casos/nuevo">Nuevo caso</Link>
-        </Button>
-      </div>
-      <details className="mb-3">
-        <summary className="flex min-h-11 w-fit cursor-pointer items-center font-semibold text-primary">
-          Más filtros
-        </summary>
-        <div className="mt-1 flex flex-wrap gap-3">
-          <div className="grid gap-1.5">
-            <Label htmlFor="filtro-area">Proveedor</Label>
-            <select
-              id="filtro-area"
-              className={`${fieldClass} w-auto min-w-36`}
-              value={query.area ?? ""}
-              onChange={(event) => setFilter("area", event.target.value)}
-            >
-              <option value="">Todos</option>
-              {optionValues(
-                cases.map((row) => row.area),
-                query.area,
-              ).map((area) => (
-                <option key={area} value={area}>
-                  {area}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div className="grid gap-1.5">
-            <Label htmlFor="filtro-tipo">Tipo</Label>
-            <select
-              id="filtro-tipo"
-              className={`${fieldClass} w-auto min-w-36`}
-              value={query.tipo ?? ""}
-              onChange={(event) => setFilter("tipo", event.target.value)}
-            >
-              <option value="">Todos</option>
-              {optionValues(
-                cases.map((row) => row.tipo),
-                query.tipo,
-              ).map((tipo) => (
-                <option key={tipo} value={tipo}>
-                  {tipo}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div className="grid gap-1.5">
-            <Label htmlFor="filtro-tema">Tema</Label>
-            <select
-              id="filtro-tema"
-              className={`${fieldClass} w-auto min-w-36`}
-              value={tema}
-              onChange={(event) => setFilter("tema", event.target.value)}
-            >
-              <option value="">Todos</option>
-              {optionValues(
-                cases.map((row) => row.tema),
-                tema,
-              ).map((item) => (
-                <option key={item} value={item}>
-                  {item}
-                </option>
-              ))}
-            </select>
-          </div>
-        </div>
-      </details>
+      <CaseFilters
+        q={q}
+        onSearch={setQuery}
+        values={{ estado: estado === "abiertos" || estado === "cerrados" ? estado : "", plazo: query.plazo ?? "", area: query.area ?? "", tipo: query.tipo ?? "", tema }}
+        options={{
+          areas: toOptions(cases.map((row) => row.area)),
+          tipos: toOptions(cases.map((row) => row.tipo)),
+          temas: toOptions(cases.map((row) => row.tema)),
+        }}
+        onChange={setFilter}
+        activeCount={activeCount}
+      />
       {chips.length > 0 || filtersActive ? (
         <div className="mb-4 flex flex-wrap items-center gap-2">
           {chips.map((chip) => (

@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, expect, it, vi } from "vitest";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { Casos } from "./Casos";
@@ -449,20 +449,6 @@ it("labels the plazo of each case and dashes the closed ones", async () => {
   expect(screen.getAllByText(/^(Vencido ·|Vence hoy|En plazo ·|Por vencer ·)/)).toHaveLength(3);
 });
 
-it("sends plazo to the API when the Plazo filter changes", async () => {
-  const fetchMock = vi.fn(async () => ({ ok: true, status: 200, json: async () => ({ cases: [] }) }));
-  vi.stubGlobal("fetch", fetchMock);
-  render(
-    <MemoryRouter>
-      <Casos />
-    </MemoryRouter>,
-  );
-  await screen.findByText("No hay casos con ese filtro.");
-  fireEvent.change(screen.getByLabelText("Plazo"), { target: { value: "por-vencer" } });
-  await screen.findByText("No hay casos con ese filtro.");
-  expect(fetchMock).toHaveBeenLastCalledWith("/api/casos?plazo=por-vencer");
-});
-
 it("shows hidden filters from the url as removable chips", async () => {
   stubCases([caso({ id: "a", area: "Tienda", fechaSolucion: "2026-02-01", diasSolucion: 2 })]);
   render(
@@ -475,22 +461,6 @@ it("shows hidden filters from the url as removable chips", async () => {
   fireEvent.click(screen.getByRole("button", { name: "Quitar filtro Proveedor Tienda" }));
   await waitFor(() => expect(screen.queryByText("Proveedor Tienda")).toBeNull());
   expect(screen.getByText("Sin fecha válida")).toBeTruthy();
-});
-
-it("keeps only Estado and Plazo visible and puts the rest under Más filtros", async () => {
-  stubCases([caso({ id: "a" })]);
-  render(
-    <MemoryRouter>
-      <Casos />
-    </MemoryRouter>,
-  );
-  await screen.findByRole("textbox", { name: "Buscar" });
-  expect(screen.getByLabelText("Estado")).toBeTruthy();
-  expect(screen.getByLabelText("Plazo")).toBeTruthy();
-  const more = screen.getByText("Más filtros").closest("details") as HTMLElement;
-  expect(within(more).getByLabelText("Proveedor")).toBeTruthy();
-  expect(within(more).getByLabelText("Tipo")).toBeTruthy();
-  expect(within(more).getByLabelText("Tema")).toBeTruthy();
 });
 
 it("shows the days of closed cases and no Asociado column in the table", async () => {
@@ -507,4 +477,98 @@ it("shows the days of closed cases and no Asociado column in the table", async (
   expect(await screen.findByRole("columnheader", { name: "Plazo" })).toBeTruthy();
   expect(screen.queryByRole("columnheader", { name: "Asociado" })).toBeNull();
   expect(screen.getByText("4 días")).toBeTruthy();
+});
+
+function setViewport(wide: boolean) {
+  vi.stubGlobal(
+    "matchMedia",
+    vi.fn(() => ({ matches: wide, addEventListener: () => {}, removeEventListener: () => {} })),
+  );
+}
+
+function recordingFetch(cases: PqrCase[]) {
+  const fetchMock = vi.fn(async () => ({ ok: true, status: 200, json: async () => ({ cases }) }));
+  vi.stubGlobal("fetch", fetchMock);
+  return fetchMock;
+}
+
+const choose = (button: HTMLElement, option: string) => {
+  fireEvent.click(button);
+  fireEvent.click(within(screen.getByRole("listbox", { hidden: true })).getByRole("option", { name: option, hidden: true }));
+};
+
+it("filters by plazo with the inline Plazo select on wide screens", async () => {
+  setViewport(true);
+  const fetchMock = recordingFetch([caso({ id: "a" })]);
+  render(
+    <MemoryRouter>
+      <Casos />
+    </MemoryRouter>,
+  );
+  await screen.findByRole("textbox", { name: "Buscar" });
+  choose(screen.getByRole("button", { name: /Plazo/ }), "Por vencer");
+  await waitFor(() => expect(fetchMock).toHaveBeenLastCalledWith("/api/casos?plazo=por-vencer"));
+});
+
+it("opens Filtros on wide screens and filters by provider with the searchable combobox", async () => {
+  setViewport(true);
+  const fetchMock = recordingFetch([
+    caso({ id: "a", area: "Tienda" }),
+    caso({ id: "b", area: "Educación / Coomeva" }),
+  ]);
+  render(
+    <MemoryRouter>
+      <Casos />
+    </MemoryRouter>,
+  );
+  await screen.findByRole("textbox", { name: "Buscar" });
+  expect(screen.queryByRole("combobox", { name: "Proveedor" })).toBeNull();
+  fireEvent.click(screen.getByRole("button", { name: "Filtros" }));
+  const input = screen.getByRole("combobox", { name: "Proveedor" });
+  act(() => input.focus());
+  fireEvent.change(input, { target: { value: "educacion" } });
+  fireEvent.click(within(screen.getByRole("listbox", { hidden: true })).getByRole("option", { name: "Educación / Coomeva", hidden: true }));
+  await waitFor(() =>
+    expect(fetchMock).toHaveBeenLastCalledWith(`/api/casos?area=${encodeURIComponent("Educación / Coomeva").replace(/%20/g, "+")}`),
+  );
+  expect(screen.getByText("Proveedor Educación / Coomeva")).toBeTruthy();
+});
+
+it("shows the active filter count and a bottom sheet with all controls on narrow screens", async () => {
+  setViewport(false);
+  recordingFetch([caso({ id: "a", area: "Tienda" })]);
+  render(
+    <MemoryRouter initialEntries={["/casos?plazo=vencido&area=Tienda"]}>
+      <Casos />
+    </MemoryRouter>,
+  );
+  const button = await screen.findByRole("button", { name: "Filtros (2)" });
+  expect(screen.queryByRole("combobox", { name: "Proveedor" })).toBeNull();
+  fireEvent.click(button);
+  const dialog = await screen.findByRole("dialog");
+  for (const name of ["Estado", "Plazo"]) {
+    expect(within(dialog).getByRole("button", { name: new RegExp(name) })).toBeTruthy();
+  }
+  for (const name of ["Proveedor", "Tipo", "Tema"]) {
+    expect(within(dialog).getByRole("combobox", { name })).toBeTruthy();
+  }
+  fireEvent.click(within(dialog).getByRole("button", { name: "Listo" }));
+  await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+});
+
+it("keeps a url provider that is not in the list selected and lets you clear it", async () => {
+  setViewport(true);
+  const fetchMock = recordingFetch([caso({ id: "a", area: "Tienda" })]);
+  render(
+    <MemoryRouter initialEntries={["/casos?area=Inexistente"]}>
+      <Casos />
+    </MemoryRouter>,
+  );
+  await screen.findByRole("textbox", { name: "Buscar" });
+  fireEvent.click(screen.getByRole("button", { name: "Filtros (1)" }));
+  const input = screen.getByRole("combobox", { name: "Proveedor" }) as HTMLInputElement;
+  expect(input.value).toBe("Inexistente");
+  fireEvent.click(screen.getByRole("button", { name: "Limpiar Proveedor" }));
+  await waitFor(() => expect(fetchMock).toHaveBeenLastCalledWith("/api/casos"));
+  expect(screen.queryByText("Proveedor Inexistente")).toBeNull();
 });
