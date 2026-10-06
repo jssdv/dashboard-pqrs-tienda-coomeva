@@ -61,6 +61,64 @@ describe("validateCreate", () => {
   });
 });
 
+describe("validateCreate with catalogs", () => {
+  const catalogs = {
+    area: ["Electrojaponesa", "Tienda Coomeva"],
+    fuente: ["Correo Tienda", "Llamada"],
+    tipo: ["RECLAMO", "QUEJA"],
+    tema: ["BOLETERIA", "GARANTIA DE PRODUCTO"],
+  };
+  const picked = { ...filled, area: "Electrojaponesa", fuente: "Correo Tienda", tipo: "RECLAMO", tema: "BOLETERIA" };
+
+  it("accepts values from the lists", () => {
+    const result = validateCreate(picked, catalogs);
+    expect(result.ok).toBe(true);
+    expect(result.fields).toMatchObject({ area: "Electrojaponesa", fuente: "Correo Tienda" });
+  });
+
+  it("rejects a value that is not in its list, naming the field", () => {
+    const result = validateCreate({ ...picked, fuente: "Telegrama" }, catalogs);
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.errors).toEqual([{ field: "fuente", message: "Fuente no está en la lista" }]);
+  });
+
+  it("reports every field outside its list", () => {
+    const result = validateCreate({ ...picked, area: "Nadie", tema: "Inventado" }, catalogs);
+    if (result.ok) throw new Error("expected errors");
+    expect(result.errors.map((error) => error.field)).toEqual(["area", "tema"]);
+  });
+
+  it("normalizes accents, case and spacing to the list value", () => {
+    const result = validateCreate(
+      { ...picked, area: "  electrojaponesa ", tema: "garantia  de producto", fuente: "CORREO tienda" },
+      catalogs,
+    );
+    expect(result.ok).toBe(true);
+    expect(result.fields).toMatchObject({
+      area: "Electrojaponesa",
+      tema: "GARANTIA DE PRODUCTO",
+      fuente: "Correo Tienda",
+    });
+  });
+
+  it("does not validate a field whose list is empty", () => {
+    const result = validateCreate(picked, { ...catalogs, fuente: [] });
+    expect(result.ok).toBe(true);
+    expect(validateCreate({ ...picked, fuente: "Lo que sea" }, { ...catalogs, fuente: [] }).ok).toBe(true);
+  });
+
+  it("behaves as before without catalogs", () => {
+    expect(validateCreate({ ...picked, fuente: "Telegrama" }).ok).toBe(true);
+  });
+
+  it("keeps the required message when the field is empty", () => {
+    const result = validateCreate({ ...picked, fuente: "" }, catalogs);
+    if (result.ok) throw new Error("expected errors");
+    expect(result.errors).toEqual([{ field: "fuente", message: "Fuente es obligatoria" }]);
+  });
+});
+
 describe("caseFromCreate", () => {
   it("stores official catalog values and an app id", () => {
     const row = caso();

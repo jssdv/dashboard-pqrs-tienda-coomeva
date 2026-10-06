@@ -1,5 +1,6 @@
 import { businessDays } from "./businessDays.js";
 import { parseDateCell } from "./dates.js";
+import { lookupKey } from "./normalize.js";
 import type { Dictionary } from "./dictionary.js";
 import type { CatalogField, PqrCase } from "./types.js";
 
@@ -69,8 +70,18 @@ function createFields(raw: Record<string, string>): CreateFields {
   };
 }
 
+export type Catalogs = Partial<Record<CatalogField, readonly string[]>>;
+
+const CATALOG_LABELS: Record<CatalogField, string> = {
+  area: "Proveedor",
+  fuente: "Fuente",
+  tipo: "Tipo",
+  tema: "Tema",
+};
+
 export function validateCreate(
   raw: Record<string, string>,
+  catalogs: Catalogs = {},
 ): { ok: true; fields: CreateFields } | { ok: false; fields: CreateFields; errors: FieldError[] } {
   const fields = createFields(raw);
   const errors: FieldError[] = [];
@@ -85,6 +96,17 @@ export function validateCreate(
   }
   if (fields.correo && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(fields.correo)) {
     errors.push({ field: "correo", message: "Correo no es válido" });
+  }
+  for (const field of Object.keys(CATALOG_LABELS) as CatalogField[]) {
+    const list = catalogs[field];
+    if (!list || list.length === 0 || !fields[field]) continue;
+    const wanted = lookupKey(fields[field]);
+    const match = list.find((value) => lookupKey(value) === wanted);
+    if (match === undefined) {
+      errors.push({ field, message: `${CATALOG_LABELS[field]} no está en la lista` });
+    } else {
+      fields[field] = match;
+    }
   }
   if (errors.length > 0) return { ok: false, fields, errors };
   return { ok: true, fields };
