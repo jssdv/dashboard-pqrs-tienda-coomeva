@@ -44,9 +44,9 @@ function Nav({
         </Link>
       </Button>
       <nav aria-label="Principal" className="grid gap-1" onClick={onNavigate}>
-        <NavLink to="/" end className={navClass(compact)} {...item("Resumen")}>
+        <NavLink to="/" end className={navClass(compact)} {...item("Panel")}>
           <LayoutDashboard aria-hidden="true" />
-          {compact ? null : "Resumen"}
+          {compact ? null : "Panel"}
         </NavLink>
         <NavLink
           to="/casos"

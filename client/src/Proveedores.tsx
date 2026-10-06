@@ -14,6 +14,7 @@ import {
 import { casosHref, promedioText, textOrDash } from "./format";
 import { ProveedorDetalle } from "./ProveedorDetalle";
 import { PageHead } from "./Shell";
+import { useMinWidth } from "./useMinWidth";
 import type { MatrixRow } from "./types";
 
 export function Proveedores() {
@@ -23,6 +24,7 @@ export function Proveedores() {
   const [error, setError] = useState("");
   const [pending, setPending] = useState(false);
   const [selected, setSelected] = useState<string | null>(null);
+  const wide = useMinWidth("(min-width: 768px)");
 
   const load = useCallback(async () => {
     const [proveedores, summary] = await Promise.allSettled([getProveedores(), getSummary()]);
@@ -67,7 +69,10 @@ export function Proveedores() {
 
   return (
     <>
-      <PageHead title="Proveedores" />
+      <PageHead
+        title="Proveedores"
+        lede={rows.length > 0 ? `${rows.length} ${rows.length === 1 ? "proveedor" : "proveedores"}` : undefined}
+      />
       {error ? (
         <p role="alert" className="mb-4 rounded-xl border border-orange-300 bg-orange-50 p-3">
           {error}
@@ -83,11 +88,11 @@ export function Proveedores() {
         </Button>
       </form>
       {rows.length === 0 && !error ? <p className="text-muted-foreground">Todavía no hay proveedores.</p> : null}
-      {rows.length > 0 ? (
-        <div className="overflow-x-auto rounded-xl border border-border bg-card">
+      {rows.length > 0 && wide ? (
+        <div className="max-h-[calc(100dvh-20rem)] overflow-auto rounded-xl border border-border bg-card">
           <table className="w-full min-w-[34rem] border-collapse text-sm">
             <caption className="sr-only">Proveedores</caption>
-            <thead>
+            <thead className="sticky top-0 z-10 bg-card">
               <tr className="border-b border-border text-left">
                 <th scope="col" className="px-4 py-3 font-semibold">Proveedor</th>
                 <th scope="col" className="px-3 py-3 text-right font-semibold">Casos</th>
@@ -147,6 +152,45 @@ export function Proveedores() {
             </tbody>
           </table>
         </div>
+      ) : null}
+      {rows.length > 0 && !wide ? (
+        <ul className="m-0 grid list-none gap-3 p-0">
+          {rows.map((row) => {
+            const open = selected === row.nombre;
+            return (
+              <li key={row.nombre} className="rounded-xl border border-border bg-card p-4">
+                <button
+                  type="button"
+                  aria-expanded={open}
+                  className="min-h-11 w-full cursor-pointer text-left font-semibold break-words text-primary"
+                  onClick={() => setSelected(open ? null : row.nombre)}
+                >
+                  {row.nombre}
+                </button>
+                <dl className="mt-2 grid grid-cols-2 gap-3 text-sm">
+                  {[
+                    ["Casos", String(row.casos)],
+                    ["Abiertos", String(row.abiertos)],
+                    ["Vencidos", row.vencidos === null ? "—" : String(row.vencidos)],
+                    ["Días promedio", promedioText(row.diasPromedio)],
+                  ].map(([label, value]) => (
+                    <div key={label}>
+                      <dt className="text-muted-foreground">{label}</dt>
+                      <dd className="m-0 font-mono tabular-nums">{value}</dd>
+                    </div>
+                  ))}
+                </dl>
+                {open ? (
+                  <ProveedorDetalle
+                    row={row}
+                    tipos={matriz.find((item) => item.area === row.nombre)}
+                    onRename={onRename}
+                  />
+                ) : null}
+              </li>
+            );
+          })}
+        </ul>
       ) : null}
     </>
   );

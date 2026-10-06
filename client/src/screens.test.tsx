@@ -147,7 +147,7 @@ it("keeps the sin fecha válida link even when the count is 0", async () => {
       <Resumen />
     </MemoryRouter>,
   );
-  await screen.findByText("Sin fecha válida");
+  await screen.findByText("Sin fecha de inicio");
   const link = document.querySelector('[data-kpi="sin-fecha"] a');
   expect(link?.textContent).toBe("0");
   expect(link?.getAttribute("href")).toBe("/casos?estado=abiertos&fecha=invalida");
@@ -181,7 +181,7 @@ it("renders close rate, monthly flow and plazos", async () => {
       <Resumen />
     </MemoryRouter>,
   );
-  expect((await screen.findAllByText("Cierre por tipo")).length).toBeGreaterThan(0);
+  expect((await screen.findAllByText("Tasa de cierre por tipo")).length).toBeGreaterThan(0);
   expect(screen.getByRole("heading", { name: "Entrados y cerrados" })).toBeTruthy();
   expect(screen.getByRole("link", { name: "Tienda" }).getAttribute("href")).toBe(
     "/casos?estado=abiertos&area=Tienda",
@@ -457,10 +457,10 @@ it("shows hidden filters from the url as removable chips", async () => {
     </MemoryRouter>,
   );
   expect(await screen.findByText("Proveedor Tienda")).toBeTruthy();
-  expect(screen.getByText("Sin fecha válida")).toBeTruthy();
+  expect(screen.getByText("Sin fecha de inicio")).toBeTruthy();
   fireEvent.click(screen.getByRole("button", { name: "Quitar filtro Proveedor Tienda" }));
   await waitFor(() => expect(screen.queryByText("Proveedor Tienda")).toBeNull());
-  expect(screen.getByText("Sin fecha válida")).toBeTruthy();
+  expect(screen.getByText("Sin fecha de inicio")).toBeTruthy();
 });
 
 it("shows the days of closed cases and no Asociado column in the table", async () => {
@@ -571,4 +571,56 @@ it("keeps a url provider that is not in the list selected and lets you clear it"
   fireEvent.click(screen.getByRole("button", { name: "Limpiar Proveedor" }));
   await waitFor(() => expect(fetchMock).toHaveBeenLastCalledWith("/api/casos"));
   expect(screen.queryByText("Proveedor Inexistente")).toBeNull();
+});
+
+it("titles the home page Panel with a live subtitle", async () => {
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async () => ({ ok: true, status: 200, json: async () => summary({ total: 9, abiertos: 245, colaVencida: 63 }) })),
+  );
+  render(
+    <MemoryRouter>
+      <Resumen />
+    </MemoryRouter>,
+  );
+  expect(await screen.findByRole("heading", { level: 1, name: "Panel" })).toBeTruthy();
+  expect(screen.getByText("245 abiertos · 63 vencidos")).toBeTruthy();
+  expect(screen.getByRole("heading", { name: "Plazos de casos abiertos" })).toBeTruthy();
+  expect(screen.getByText("Sin fecha de inicio", { selector: "h3" })).toBeTruthy();
+});
+
+it("names the case count in the Casos subtitle and labels the open button Abrir", async () => {
+  stubCases([caso({ id: "a" }), caso({ id: "b" })]);
+  render(
+    <MemoryRouter>
+      <Casos />
+    </MemoryRouter>,
+  );
+  expect(await screen.findByText("2 casos")).toBeTruthy();
+  const open = screen.getAllByRole("button", { name: "Ver detalle" })[0];
+  expect(open.textContent).toBe("Abrir");
+});
+
+it("uses the singular in the Casos subtitle", async () => {
+  stubCases([caso({ id: "a" })]);
+  render(
+    <MemoryRouter>
+      <Casos />
+    </MemoryRouter>,
+  );
+  expect(await screen.findByText("1 caso")).toBeTruthy();
+});
+
+it("right-aligns numeric table headers and keeps dates on one line", async () => {
+  setViewport(true);
+  stubCases([caso({ id: "a" })]);
+  render(
+    <MemoryRouter>
+      <Casos />
+    </MemoryRouter>,
+  );
+  const fecha = await screen.findByRole("columnheader", { name: "Fecha" });
+  const row = fecha.closest("table")?.querySelector("tbody td") as HTMLElement;
+  expect(row.className).toContain("whitespace-nowrap");
+  expect(fecha.closest("thead")?.className).toContain("sticky");
 });

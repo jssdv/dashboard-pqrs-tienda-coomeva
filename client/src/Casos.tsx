@@ -56,7 +56,7 @@ function chipsFrom(params: URLSearchParams): Array<{ key: string; text: string }
     if (value) chips.push({ key, text: `${label} ${value}` });
   }
   if (params.get("cola") === "vencida") chips.push({ key: "cola", text: "Más de 10 días hábiles" });
-  if (params.get("fecha") === "invalida") chips.push({ key: "fecha", text: "Sin fecha válida" });
+  if (params.get("fecha") === "invalida") chips.push({ key: "fecha", text: "Sin fecha de inicio" });
   return chips;
 }
 
@@ -140,7 +140,10 @@ export function Casos() {
 
   return (
     <>
-      <PageHead title="Casos" />
+      <PageHead
+        title="Casos"
+        lede={status === "ready" ? `${visible.length} ${visible.length === 1 ? "caso" : "casos"}` : undefined}
+      />
       <CaseFilters
         q={q}
         onSearch={setQuery}
@@ -233,7 +236,7 @@ function OpenButton({ row, onOpen }: { row: PqrCase; onOpen: (id: string) => voi
         onOpen(row.id);
       }}
     >
-      Ver
+      Abrir
     </Button>
   );
 }
@@ -264,7 +267,7 @@ function CaseCards({ rows, onOpen }: { rows: PqrCase[]; onOpen: (id: string) => 
 
 function CaseTable({ rows, onOpen }: { rows: PqrCase[]; onOpen: (id: string) => void }) {
   return (
-    <div className="min-w-0 overflow-x-auto rounded-xl border border-border bg-card">
+    <div className="max-h-[calc(100dvh-18rem)] min-w-0 overflow-auto rounded-xl border border-border bg-card">
       <table className="w-full min-w-[40rem] border-collapse text-sm">
         <caption className="sr-only">Casos</caption>
         <thead className="sticky top-0 z-10 bg-card">
@@ -286,7 +289,7 @@ function CaseTable({ rows, onOpen }: { rows: PqrCase[]; onOpen: (id: string) => 
               className="cursor-pointer border-b border-border hover:bg-muted/70"
               onClick={() => onOpen(row.id)}
             >
-              <td className="px-3 py-2 font-mono tabular-nums">{textOrDash(row.fechaInicial)}</td>
+              <td className="px-3 py-2 font-mono whitespace-nowrap tabular-nums">{textOrDash(row.fechaInicial)}</td>
               <td className="px-3 py-2 break-words">{textOrDash(row.area)}</td>
               <td className="px-3 py-2 break-words">{textOrDash(row.tipo)}</td>
               <td className="px-3 py-2 break-words">{textOrDash(row.tema)}</td>

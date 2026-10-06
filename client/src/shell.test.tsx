@@ -88,7 +88,7 @@ it("names every rail link for assistive tech and keeps the overdue counter", asy
   stubSummary(63);
   renderShell();
   const rail = document.querySelector("aside.lg\\:hidden") as HTMLElement;
-  for (const name of ["Resumen", "Casos", "Proveedores", "Nuevo caso"]) {
+  for (const name of ["Panel", "Casos", "Proveedores", "Nuevo caso"]) {
     const link = Array.from(rail.querySelectorAll("a")).find((a) => a.getAttribute("aria-label")?.startsWith(name));
     expect(link, name).toBeTruthy();
     expect(link?.getAttribute("title")).toBeTruthy();

@@ -15,7 +15,7 @@ import {
 import { ApiError, getSummary } from "./api";
 import { AXIS, ChartTip, GRID, Meter, PRIMARY, useMotion, WARNING } from "./charts";
 import { casosHref, percent, promedioText } from "./format";
-import { Card } from "./Shell";
+import { Card, PageHead } from "./Shell";
 import type { CloseRate, CountBucket, DashboardSummary, MonthFlow } from "./types";
 
 const TOP = 5;
@@ -146,7 +146,7 @@ function Plazos({ summary }: { summary: DashboardSummary }) {
     { label: "Por vencer (6 a 10)", count: porVencer.count, href: casosHref({ plazo: "por-vencer" }) },
     { label: "Vencido (más de 10)", count: vencido.count, href: casosHref({ plazo: "vencido" }) },
     {
-      label: "Sin fecha válida",
+      label: "Sin fecha de inicio",
       count: summary.sinFechaValida,
       href: casosHref({ estado: "abiertos", fecha: "invalida" }),
     },
@@ -175,7 +175,7 @@ function Plazos({ summary }: { summary: DashboardSummary }) {
 function CloseTable({ rows }: { rows: CloseRate[] }) {
   return (
     <table className="w-full border-collapse text-sm">
-      <caption className="sr-only">Cierre por tipo</caption>
+      <caption className="sr-only">Tasa de cierre por tipo</caption>
       <thead>
         <tr className="border-b border-border text-left">
           <th className="py-2 font-semibold">Tipo</th>
@@ -212,7 +212,7 @@ function CloseTable({ rows }: { rows: CloseRate[] }) {
 function ResumenSkeleton() {
   return (
     <>
-      <h1 className="mb-6 font-display text-[1.75rem] leading-tight font-semibold tracking-tight">Resumen</h1>
+      <PageHead title="Panel" />
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4" aria-busy="true">
         <p className="sr-only">Cargando…</p>
         {Array.from({ length: 4 }, (_, index) => (
@@ -292,7 +292,10 @@ export function Resumen() {
 
   return (
     <>
-      <h1 className="mb-6 font-display text-[1.75rem] leading-tight font-semibold tracking-tight">Resumen</h1>
+      <PageHead
+        title="Panel"
+        lede={colaMissing ? `${summary.abiertos} abiertos` : `${summary.abiertos} abiertos · ${summary.colaVencida} vencidos`}
+      />
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4" aria-label="Indicadores">
         <Kpi
           label="Abiertos"
@@ -308,7 +311,7 @@ export function Resumen() {
           warn={late}
         />
         <Kpi
-          label="Sin fecha válida"
+          label="Sin fecha de inicio"
           value={String(summary.sinFechaValida)}
           name="sin-fecha"
           href={casosHref({ estado: "abiertos", fecha: "invalida" })}
@@ -328,7 +331,7 @@ export function Resumen() {
               <FlowChart rows={summary.flujoPorMes} />
             )}
           </Card>
-          <Card title="Plazos de abiertos">
+          <Card title="Plazos de casos abiertos">
             <Plazos summary={summary} />
           </Card>
           <Card title="Abiertos por proveedor">
@@ -345,7 +348,7 @@ export function Resumen() {
           </Card>
           {summary.cierrePorTipo.length > 0 ? (
             <div className="lg:col-span-2">
-              <Card title="Cierre por tipo">
+              <Card title="Tasa de cierre por tipo">
                 <CloseTable rows={summary.cierrePorTipo} />
               </Card>
             </div>

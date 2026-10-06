@@ -1,9 +1,16 @@
 // @vitest-environment jsdom
 
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
-import { afterEach, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { MemoryRouter } from "react-router-dom";
 import { Proveedores } from "./Proveedores";
+
+beforeEach(() => {
+  vi.stubGlobal(
+    "matchMedia",
+    vi.fn(() => ({ matches: true, addEventListener: () => {}, removeEventListener: () => {} })),
+  );
+});
 
 afterEach(() => {
   cleanup();
@@ -113,4 +120,25 @@ it("shows an alert when providers cannot be loaded", async () => {
   stubApi({ fail: true });
   renderPage();
   expect((await screen.findByRole("alert")).textContent).toContain("No se pudieron cargar");
+});
+
+it("shows the provider count as subtitle", async () => {
+  stubApi();
+  renderPage();
+  expect(await screen.findByText("2 proveedores")).toBeTruthy();
+});
+
+it("renders each provider as a card on narrow screens, dashing nulls", async () => {
+  vi.stubGlobal(
+    "matchMedia",
+    vi.fn(() => ({ matches: false, addEventListener: () => {}, removeEventListener: () => {} })),
+  );
+  stubApi();
+  renderPage();
+  const card = (await screen.findByRole("button", { name: "Educación / Coomeva" })).closest("li") as HTMLElement;
+  expect(card).toBeTruthy();
+  expect(card.textContent).toContain("Vencidos");
+  expect(card.textContent).toContain("—");
+  expect(card.textContent).not.toContain("null");
+  expect(document.querySelector("table")).toBeNull();
 });
