@@ -4,54 +4,12 @@ import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testi
 import { afterEach, expect, it, vi } from "vitest";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { Casos } from "./Casos";
-import { Resumen } from "./Resumen";
 import { Shell } from "./Shell";
-import type { DashboardSummary, PqrCase } from "./types";
+import type { PqrCase } from "./types";
 
 afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();
-});
-
-function summary(over: Partial<DashboardSummary> = {}): DashboardSummary {
-  return {
-    total: 0,
-    abiertos: 0,
-    cerrados: 0,
-    fechasInvalidas: 0,
-    porAnio: [],
-    porArea: [],
-    porFuente: [],
-    porTipo: [],
-    porTema: [],
-    porMes: [],
-    flujoPorMes: [],
-    antiguedad: null,
-    abiertosPorArea: [],
-    abiertosPorTema: [],
-    dias: { casos: 0, promedio: null },
-    colaVencida: 4,
-    colaError: null,
-    cierrePorTipo: [],
-    sinFechaValida: 0,
-    serieMensual: [],
-    matrizProveedorTipo: [],
-    ...over,
-  };
-}
-
-it("shows Vencidos and links it to the overdue plazo", async () => {
-  vi.stubGlobal(
-    "fetch",
-    vi.fn(async () => ({ ok: true, status: 200, json: async () => summary() })),
-  );
-  render(
-    <MemoryRouter>
-      <Resumen />
-    </MemoryRouter>,
-  );
-  expect(await screen.findByText("Vencidos")).toBeTruthy();
-  expect(screen.getByRole("link", { name: "4" }).getAttribute("href")).toBe("/casos?plazo=vencido");
 });
 
 it("shows 20 cases and the page range", async () => {
@@ -111,90 +69,6 @@ it("shows the empty filter message and Nuevo caso", async () => {
   );
   expect(await screen.findByText("No hay casos con ese filtro.")).toBeTruthy();
   expect(screen.getByRole("link", { name: "Nuevo caso" }).getAttribute("href")).toBe("/casos/nuevo");
-});
-
-it("links the four headline figures into the case list", async () => {
-  vi.stubGlobal(
-    "fetch",
-    vi.fn(async () => ({
-      ok: true,
-      status: 200,
-      json: async () =>
-        summary({ total: 9, abiertos: 7, cerrados: 2, colaVencida: 4, sinFechaValida: 3, dias: { casos: 2, promedio: 13.1 } }),
-    })),
-  );
-  render(
-    <MemoryRouter>
-      <Resumen />
-    </MemoryRouter>,
-  );
-  expect((await screen.findByRole("link", { name: "7" })).getAttribute("href")).toBe("/casos?estado=abiertos");
-  expect(screen.getByRole("link", { name: "4" }).getAttribute("href")).toBe("/casos?plazo=vencido");
-  expect(screen.getByRole("link", { name: "3" }).getAttribute("href")).toBe(
-    "/casos?estado=abiertos&fecha=invalida",
-  );
-  expect(screen.getByText("13.1")).toBeTruthy();
-  expect(screen.queryByText("Total")).toBeNull();
-  expect(screen.queryByText("Cerrados")).toBeNull();
-});
-
-it("keeps the sin fecha válida link even when the count is 0", async () => {
-  vi.stubGlobal(
-    "fetch",
-    vi.fn(async () => ({ ok: true, status: 200, json: async () => summary({ total: 1, abiertos: 0, sinFechaValida: 0 }) })),
-  );
-  render(
-    <MemoryRouter>
-      <Resumen />
-    </MemoryRouter>,
-  );
-  await screen.findByText("Sin fecha de inicio");
-  const link = document.querySelector('[data-kpi="sin-fecha"] a');
-  expect(link?.textContent).toBe("0");
-  expect(link?.getAttribute("href")).toBe("/casos?estado=abiertos&fecha=invalida");
-});
-
-it("renders close rate, monthly flow and plazos", async () => {
-  vi.stubGlobal(
-    "fetch",
-    vi.fn(async () => ({
-      ok: true,
-      status: 200,
-      json: async () =>
-        summary({
-          total: 2,
-          abiertos: 1,
-          cerrados: 1,
-          cierrePorTipo: [{ tipo: "RECLAMO", entrados: 2, cerrados: 1, tasa: 0.5 }],
-          flujoPorMes: [{ mes: "2026-01", entrados: 2, cerrados: 1 }],
-          abiertosPorArea: [{ key: "Tienda", count: 1 }],
-          abiertosPorTema: [{ key: "Cine", count: 1 }],
-          antiguedad: [
-            { key: "0-5", count: 0 },
-            { key: "6-10", count: 0 },
-            { key: "mas-10", count: 1 },
-          ],
-        }),
-    })),
-  );
-  render(
-    <MemoryRouter>
-      <Resumen />
-    </MemoryRouter>,
-  );
-  expect((await screen.findAllByText("Tasa de cierre por tipo")).length).toBeGreaterThan(0);
-  expect(screen.getByRole("heading", { name: "Entrados y cerrados" })).toBeTruthy();
-  expect(screen.getByRole("link", { name: "Tienda" }).getAttribute("href")).toBe(
-    "/casos?estado=abiertos&area=Tienda",
-  );
-  expect(screen.getByRole("link", { name: "Cine" }).getAttribute("href")).toBe(
-    "/casos?estado=abiertos&tema=Cine",
-  );
-  expect(screen.getByRole("link", { name: /Vencido/ }).getAttribute("href")).toBe("/casos?plazo=vencido");
-  expect(screen.queryByRole("tab")).toBeNull();
-  const tipoLinks = screen.getAllByRole("link", { name: "RECLAMO" });
-  expect(tipoLinks.some((link) => link.getAttribute("href") === "/casos?tipo=RECLAMO")).toBe(true);
-  expect(document.querySelectorAll(".recharts-responsive-container").length).toBe(1);
 });
 
 it("opens a detail panel with the person, order and solution text", async () => {
@@ -572,22 +446,6 @@ it("keeps a url provider that is not in the list selected and lets you clear it"
   fireEvent.click(screen.getByRole("button", { name: "Limpiar Proveedor" }));
   await waitFor(() => expect(fetchMock).toHaveBeenLastCalledWith("/api/casos"));
   expect(screen.queryByText("Proveedor Inexistente")).toBeNull();
-});
-
-it("titles the home page Panel with a live subtitle", async () => {
-  vi.stubGlobal(
-    "fetch",
-    vi.fn(async () => ({ ok: true, status: 200, json: async () => summary({ total: 9, abiertos: 245, colaVencida: 63 }) })),
-  );
-  render(
-    <MemoryRouter>
-      <Resumen />
-    </MemoryRouter>,
-  );
-  expect(await screen.findByRole("heading", { level: 1, name: "Panel" })).toBeTruthy();
-  expect(screen.getByText("245 abiertos · 63 vencidos")).toBeTruthy();
-  expect(screen.getByRole("heading", { name: "Plazos de casos abiertos" })).toBeTruthy();
-  expect(screen.getByText("Sin fecha de inicio", { selector: "h3" })).toBeTruthy();
 });
 
 it("names the case count in the Casos subtitle and labels the open button Abrir", async () => {

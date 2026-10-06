@@ -1,12 +1,13 @@
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { AlertTriangle, CalendarX } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
-import { Card as UiCard, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   Area,
   CartesianGrid,
   ComposedChart,
   Line,
+  ReferenceDot,
   ResponsiveContainer,
   Tooltip as ChartTooltip,
   XAxis,
@@ -14,21 +15,37 @@ import {
 } from "recharts";
 import { ApiError, getSummary } from "./api";
 import { axisTick, ChartTip, Meter, useMotion } from "./charts";
-import { useChartColors } from "./useChartColors";
 import { casosHref, percent, promedioText } from "./format";
+import { deltaPct, tasaCierre } from "./metrics";
 import { Card, PageHead } from "./Shell";
-import type { CloseRate, CountBucket, DashboardSummary, MonthFlow } from "./types";
+import { SegmentedBar } from "./ui/SegmentedBar";
+import { StatCard } from "./ui/StatCard";
+import { TipoTag } from "./ui/TipoTag";
+import { useChartColors } from "./useChartColors";
+import type { CountBucket, DashboardSummary, MonthPoint } from "./types";
 
-const TOP = 5;
+const TOP = 8;
+const RANGES = [
+  { key: "6", label: "6 m", months: 6 },
+  { key: "12", label: "12 m", months: 12 },
+  { key: "all", label: "Todo", months: Infinity },
+] as const;
+
+function flowPoints(summary: DashboardSummary): Array<{ mes: string; entrados: number; cerrados: number }> {
+  if (summary.serieMensual.length > 0) return summary.serieMensual;
+  return summary.flujoPorMes;
+}
 
 function FlowTooltip({
   active,
   payload,
   label,
+  mean,
 }: {
   active?: boolean;
   payload?: ReadonlyArray<{ dataKey?: string; value?: number }>;
   label?: string | number;
+  mean: number;
 }) {
   if (!active || !payload?.length) return null;
   const value = (key: string) => payload.find((item) => item.dataKey === key)?.value ?? 0;
@@ -37,17 +54,43 @@ function FlowTooltip({
       <p className="font-medium">{label}</p>
       <p className="font-mono tabular-nums">Entrados {value("entrados")}</p>
       <p className="font-mono tabular-nums">Cerrados {value("cerrados")}</p>
+      {mean > 0 && value("entrados") > mean * 1.5 ? (
+        <p className="mt-1 text-xs text-warning-foreground">Mes con alta demanda</p>
+      ) : null}
     </ChartTip>
   );
 }
 
-function FlowChart({ rows }: { rows: MonthFlow[] }) {
+function RangeToggle({ value, onChange }: { value: string; onChange: (key: string) => void }) {
+  return (
+    <div role="radiogroup" aria-label="Rango" className="inline-flex rounded-lg border border-border bg-muted p-0.5 text-sm">
+      {RANGES.map((range) => (
+        <button
+          key={range.key}
+          type="button"
+          role="radio"
+          aria-checked={value === range.key}
+          onClick={() => onChange(range.key)}
+          className={`min-h-9 cursor-pointer rounded-md px-3 font-medium transition-colors ${
+            value === range.key ? "bg-card text-foreground shadow-xs" : "text-muted-foreground hover:text-foreground"
+          }`}
+        >
+          {range.label}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+function FlowChart({ rows }: { rows: Array<{ mes: string; entrados: number; cerrados: number }> }) {
   const navigate = useNavigate();
   const motion = useMotion();
   const colors = useChartColors();
+  const mean = rows.reduce((sum, row) => sum + row.entrados, 0) / Math.max(1, rows.length);
+  const peaks = rows.filter((row) => mean > 0 && row.entrados > mean * 1.5);
   return (
     <>
-      <div className="h-56 w-full min-w-0">
+      <div className="h-60 w-full min-w-0">
         <p className="sr-only">
           Casos entrados y cerrados por mes.{" "}
           {rows.map((row) => `${row.mes}: ${row.entrados} entrados, ${row.cerrados} cerrados`).join(". ")}
@@ -63,14 +106,14 @@ function FlowChart({ rows }: { rows: MonthFlow[] }) {
           >
             <defs>
               <linearGradient id="entrados-fill" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor={colors.primary} stopOpacity={0.2} />
+                <stop offset="0%" stopColor={colors.primary} stopOpacity={0.25} />
                 <stop offset="100%" stopColor={colors.primary} stopOpacity={0} />
               </linearGradient>
             </defs>
             <CartesianGrid stroke={colors.grid} vertical={false} strokeDasharray="4 4" />
-            <XAxis dataKey="mes" minTickGap={28} tick={axisTick(colors)} />
-            <YAxis width={32} allowDecimals={false} tick={axisTick(colors)} />
-            <ChartTooltip content={<FlowTooltip />} />
+            <XAxis dataKey="mes" minTickGap={28} tick={axisTick(colors)} axisLine={false} tickLine={false} />
+            <YAxis width={32} allowDecimals={false} tick={axisTick(colors)} axisLine={false} tickLine={false} />
+            <ChartTooltip content={<FlowTooltip mean={mean} />} cursor={{ stroke: colors.axis, strokeDasharray: "3 3" }} />
             <Area
               type="monotone"
               dataKey="entrados"
@@ -90,6 +133,9 @@ function FlowChart({ rows }: { rows: MonthFlow[] }) {
               isAnimationActive={motion}
               animationDuration={240}
             />
+            {peaks.map((row) => (
+              <ReferenceDot key={row.mes} x={row.mes} y={row.entrados} r={4} fill={colors.primary} stroke={colors.surface} strokeWidth={2} />
+            ))}
           </ComposedChart>
         </ResponsiveContainer>
       </div>
@@ -102,6 +148,12 @@ function FlowChart({ rows }: { rows: MonthFlow[] }) {
           <span className="w-4 border-t-2 border-dashed border-warning" />
           Cerrados
         </li>
+        {peaks.length > 0 ? (
+          <li className="inline-flex items-center gap-2">
+            <span className="size-2 rounded-full bg-primary ring-2 ring-card" />
+            Mes con alta demanda
+          </li>
+        ) : null}
       </ul>
     </>
   );
@@ -115,13 +167,13 @@ function RankedList({ buckets, hrefFor }: { buckets: CountBucket[]; hrefFor: (ke
   }
   return (
     <>
-      <ul className="grid gap-2">
+      <ul className="grid gap-1">
         {shown.map((bucket) => (
           <li key={bucket.key} className="min-w-0">
             <div className="flex items-baseline justify-between gap-3">
               <Link
                 to={hrefFor(bucket.key)}
-                className="inline-flex min-h-11 min-w-0 items-center break-words font-medium text-foreground no-underline"
+                className="inline-flex min-h-9 min-w-0 items-center break-words text-sm font-medium text-foreground no-underline hover:text-primary"
               >
                 {bucket.key}
               </Link>
@@ -143,71 +195,108 @@ function Plazos({ summary }: { summary: DashboardSummary }) {
     return <p className="text-sm text-muted-foreground">Sin festivos</p>;
   }
   const [enPlazo, porVencer, vencido] = summary.antiguedad;
-  const rows = [
-    { label: "En plazo (0 a 5 días hábiles)", count: enPlazo.count, href: casosHref({ plazo: "en-plazo" }) },
-    { label: "Por vencer (6 a 10)", count: porVencer.count, href: casosHref({ plazo: "por-vencer" }) },
-    { label: "Vencido (más de 10)", count: vencido.count, href: casosHref({ plazo: "vencido" }) },
-    {
-      label: "Sin fecha de inicio",
-      count: summary.sinFechaValida,
-      href: casosHref({ estado: "abiertos", fecha: "invalida" }),
-    },
-  ];
-  const max = Math.max(1, ...rows.map((row) => row.count));
   return (
-    <ul className="grid gap-2">
-      {rows.map((row) => (
-        <li key={row.label}>
-          <div className="flex items-baseline justify-between gap-3">
-            <Link
-              to={row.href}
-              className="inline-flex min-h-11 items-center font-medium text-foreground no-underline"
-            >
-              {row.label}
-            </Link>
-            <span className="font-mono text-sm tabular-nums">{row.count}</span>
-          </div>
-          <Meter value={row.count} max={max} />
-        </li>
-      ))}
-    </ul>
+    <SegmentedBar
+      segments={[
+        { key: "en-plazo", label: "En plazo (0 a 5 días hábiles)", count: enPlazo.count, tone: "ok", href: casosHref({ plazo: "en-plazo" }) },
+        { key: "por-vencer", label: "Por vencer (6 a 10)", count: porVencer.count, tone: "warn", href: casosHref({ plazo: "por-vencer" }) },
+        { key: "vencido", label: "Vencido (más de 10)", count: vencido.count, tone: "danger", href: casosHref({ plazo: "vencido" }) },
+        {
+          key: "sin-fecha",
+          label: "Sin fecha de inicio",
+          count: summary.sinFechaValida,
+          tone: "muted",
+          href: casosHref({ estado: "abiertos", fecha: "invalida" }),
+        },
+      ]}
+    />
   );
 }
 
-function CloseTable({ rows }: { rows: CloseRate[] }) {
+function band(tasa: number): { label: string; bar: string } {
+  if (tasa >= 0.9) return { label: "Alta", bar: "text-primary" };
+  if (tasa >= 0.7) return { label: "Media", bar: "text-warning" };
+  return { label: "Baja", bar: "text-destructive" };
+}
+
+function CloseTable({ rows }: { rows: DashboardSummary["cierrePorTipo"] }) {
   return (
     <table className="w-full border-collapse text-sm">
       <caption className="sr-only">Tasa de cierre por tipo</caption>
       <thead>
-        <tr className="border-b border-border text-left">
-          <th className="py-2 font-semibold">Tipo</th>
-          <th className="py-2 text-right font-semibold">Entrados</th>
-          <th className="py-2 text-right font-semibold">Cerrados</th>
-          <th className="w-1/3 py-2 pl-4 font-semibold">Tasa</th>
+        <tr className="border-b border-border text-left text-xs text-muted-foreground">
+          <th className="py-2 font-medium">Tipo</th>
+          <th className="py-2 text-right font-medium">Entrados</th>
+          <th className="py-2 text-right font-medium">Cerrados</th>
+          <th className="w-2/5 py-2 pl-4 font-medium">Tasa</th>
         </tr>
       </thead>
       <tbody>
-        {rows.map((row) => (
-          <tr key={row.tipo} className="border-b border-border">
-            <td className="py-2 break-words">
-              <Link className="font-semibold text-primary" to={casosHref({ tipo: row.tipo })}>
-                {row.tipo}
-              </Link>
-            </td>
-            <td className="py-2 text-right font-mono tabular-nums">{row.entrados}</td>
-            <td className="py-2 text-right font-mono tabular-nums">{row.cerrados}</td>
-            <td className="py-2 pl-4">
-              <div className="flex items-center gap-2">
-                <div className="flex-1">
-                  <Meter value={row.tasa} max={1} />
+        {rows.map((row) => {
+          const level = band(row.tasa);
+          return (
+            <tr key={row.tipo} className="border-b border-border last:border-0">
+              <td className="py-2 break-words">
+                <Link className="font-medium text-foreground no-underline hover:text-primary" to={casosHref({ tipo: row.tipo })}>
+                  <TipoTag tipo={row.tipo} />
+                </Link>
+              </td>
+              <td className="py-2 text-right font-mono tabular-nums">{row.entrados}</td>
+              <td className="py-2 text-right font-mono tabular-nums">{row.cerrados}</td>
+              <td className="py-2 pl-4">
+                <div className="flex items-center gap-2">
+                  <div className={`flex-1 ${level.bar}`}>
+                    <Meter value={row.tasa} max={1} />
+                  </div>
+                  <span className="w-12 text-right font-mono tabular-nums">{percent(row.tasa)}</span>
+                  <span className="w-12 text-xs text-muted-foreground">{level.label}</span>
                 </div>
-                <span className="w-12 text-right font-mono tabular-nums">{percent(row.tasa)}</span>
-              </div>
-            </td>
-          </tr>
-        ))}
+              </td>
+            </tr>
+          );
+        })}
       </tbody>
     </table>
+  );
+}
+
+function AlertCard({
+  tone,
+  icon: Icon,
+  label,
+  value,
+  href,
+  note,
+}: {
+  tone: "danger" | "warn";
+  icon: typeof AlertTriangle;
+  label: string;
+  value: string;
+  href?: string;
+  note: string;
+}) {
+  const body = (
+    <>
+      <span
+        aria-hidden="true"
+        className={`grid size-10 shrink-0 place-items-center rounded-lg ${tone === "danger" ? "bg-destructive/10 text-destructive" : "bg-warning/15 text-warning-foreground"}`}
+      >
+        <Icon className="size-5" />
+      </span>
+      <span className="min-w-0 flex-1">
+        <span className="block text-sm font-medium">{label}</span>
+        <span className="block text-xs text-muted-foreground">{note}</span>
+      </span>
+      <span className="font-mono text-2xl font-semibold tabular-nums">{value}</span>
+    </>
+  );
+  const cls = "flex min-h-16 items-center gap-3 rounded-xl border border-border bg-card p-4 text-foreground no-underline";
+  return href ? (
+    <Link to={href} className={`${cls} transition-colors hover:border-primary/40`}>
+      {body}
+    </Link>
+  ) : (
+    <div className={cls}>{body}</div>
   );
 }
 
@@ -218,53 +307,21 @@ function ResumenSkeleton() {
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4" aria-busy="true">
         <p className="sr-only">Cargando…</p>
         {Array.from({ length: 4 }, (_, index) => (
-          <Skeleton key={index} className="h-24 rounded-xl" />
+          <Skeleton key={index} className="h-36 rounded-xl" />
         ))}
       </div>
     </>
   );
 }
 
-function Kpi({
-  label,
-  value,
-  name,
-  href,
-  warn = false,
-}: {
-  label: ReactNode;
-  value: string;
-  name: string;
-  href?: string;
-  warn?: boolean;
-}) {
-  return (
-    <UiCard className={`border-border shadow-none ${warn ? "border-warning/50" : ""}`}>
-      <CardContent className="flex h-full flex-col gap-2 p-5">
-        <h3 className="text-sm font-medium text-muted-foreground">{label}</h3>
-        <p
-          className={`font-mono text-3xl font-semibold tracking-tight tabular-nums ${warn ? "text-warning-foreground" : "text-foreground"}`}
-          data-kpi={name}
-        >
-          {href ? (
-            <Link
-              to={href}
-              className="rounded-sm text-inherit no-underline outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"
-            >
-              {value}
-            </Link>
-          ) : (
-            value
-          )}
-        </p>
-      </CardContent>
-    </UiCard>
-  );
+function lastTwo(serie: MonthPoint[]): { last?: MonthPoint; prev?: MonthPoint } {
+  return { last: serie[serie.length - 1], prev: serie[serie.length - 2] };
 }
 
 export function Resumen() {
   const [summary, setSummary] = useState<DashboardSummary | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [range, setRange] = useState("12");
 
   useEffect(() => {
     let cancelled = false;
@@ -283,14 +340,25 @@ export function Resumen() {
     };
   }, []);
 
+  const flow = useMemo(() => {
+    if (!summary) return [];
+    const points = flowPoints(summary);
+    const months = RANGES.find((item) => item.key === range)?.months ?? Infinity;
+    return Number.isFinite(months) ? points.slice(-months) : points;
+  }, [summary, range]);
+
   if (error) {
     return <p className="rounded-xl border border-border bg-card p-4">{error}</p>;
   }
   if (!summary) return <ResumenSkeleton />;
 
+  const serie = summary.serieMensual;
+  const { last, prev } = lastTwo(serie);
+  const last12 = serie.slice(-12);
   const colaMissing = Boolean(summary.colaError) || summary.colaVencida === null;
-  const vencidos = colaMissing ? "—" : String(summary.colaVencida);
-  const late = !colaMissing && (summary.colaVencida ?? 0) > 0;
+  const tasaLast = last ? tasaCierre(last) : null;
+  const tasaPrev = prev ? tasaCierre(prev) : null;
+  const monthCaption = last?.mes;
 
   return (
     <>
@@ -299,26 +367,59 @@ export function Resumen() {
         lede={colaMissing ? `${summary.abiertos} abiertos` : `${summary.abiertos} abiertos · ${summary.colaVencida} vencidos`}
       />
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4" aria-label="Indicadores">
-        <Kpi
+        <StatCard
           label="Abiertos"
           value={String(summary.abiertos)}
-          name="abiertos"
           href={casosHref({ estado: "abiertos" })}
+          delta={{ pct: deltaPct(last?.abiertosAlCierre ?? null, prev?.abiertosAlCierre ?? null), good: "down" }}
+          series={last12.map((point) => point.abiertosAlCierre)}
+          seriesLabel="Pendientes a fin de mes, últimos 12 meses"
         />
-        <Kpi
+        <StatCard
+          label="Entrados"
+          caption={monthCaption}
+          value={last ? String(last.entrados) : "—"}
+          delta={{ pct: deltaPct(last?.entrados ?? null, prev?.entrados ?? null), good: "neutral" }}
+          series={last12.map((point) => point.entrados)}
+          seriesLabel="Casos entrados por mes, últimos 12 meses"
+          kind="bar"
+        />
+        <StatCard
+          label="Tasa de cierre"
+          caption={monthCaption}
+          value={tasaLast === null ? "—" : percent(tasaLast)}
+          delta={{ pct: deltaPct(tasaLast, tasaPrev), good: "up" }}
+          series={last12.map((point) => {
+            const tasa = tasaCierre(point);
+            return tasa === null ? null : Math.round(tasa * 100);
+          })}
+          seriesLabel="Tasa de cierre por mes, últimos 12 meses"
+        />
+        <StatCard
+          label="Días promedio"
+          value={promedioText(summary.dias.promedio)}
+          delta={{ pct: deltaPct(last?.diasPromedio ?? null, prev?.diasPromedio ?? null), good: "down" }}
+          series={last12.map((point) => point.diasPromedio)}
+          seriesLabel="Días promedio de solución por mes, últimos 12 meses"
+        />
+      </div>
+      <div role="region" aria-label="Alertas" className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <AlertCard
+          tone="danger"
+          icon={AlertTriangle}
           label="Vencidos"
-          value={vencidos}
-          name="vencidos"
+          note="Más de 10 días hábiles abiertos"
+          value={colaMissing ? "Sin festivos" : String(summary.colaVencida)}
           href={colaMissing ? undefined : casosHref({ plazo: "vencido" })}
-          warn={late}
         />
-        <Kpi
+        <AlertCard
+          tone="warn"
+          icon={CalendarX}
           label="Sin fecha de inicio"
+          note="Abiertos que no se pueden medir"
           value={String(summary.sinFechaValida)}
-          name="sin-fecha"
           href={casosHref({ estado: "abiertos", fecha: "invalida" })}
         />
-        <Kpi label="Días promedio" value={promedioText(summary.dias.promedio)} name="promedio" />
       </div>
       {summary.total === 0 ? (
         <p className="mt-6 rounded-xl border border-border bg-card p-6">
@@ -326,11 +427,11 @@ export function Resumen() {
         </p>
       ) : (
         <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-2">
-          <Card title="Entrados y cerrados">
-            {summary.flujoPorMes.length === 0 ? (
+          <Card title="Entrados y cerrados" action={<RangeToggle value={range} onChange={setRange} />}>
+            {flow.length === 0 ? (
               <p className="text-sm text-muted-foreground">No hay meses con fecha válida.</p>
             ) : (
-              <FlowChart rows={summary.flujoPorMes} />
+              <FlowChart rows={flow} />
             )}
           </Card>
           <Card title="Plazos de casos abiertos">

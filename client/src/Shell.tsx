@@ -229,16 +229,19 @@ export function Card({
   title,
   children,
   level = 2,
+  action,
 }: {
   title: string;
   children: ReactNode;
   level?: 2 | 3;
+  action?: ReactNode;
 }) {
   const Title = level === 2 ? "h2" : "h3";
   return (
     <UiCard className="h-full min-w-0 border-border shadow-none">
-      <CardHeader className="pb-0">
-        <Title className="font-display text-lg font-semibold">{title}</Title>
+      <CardHeader className="flex flex-row items-center justify-between gap-3 pb-0">
+        <Title className="font-display text-base font-semibold tracking-tight">{title}</Title>
+        {action}
       </CardHeader>
       <CardContent>{children}</CardContent>
     </UiCard>
