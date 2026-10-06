@@ -1,11 +1,8 @@
 import { useEffect, useState, type ReactNode } from "react";
 
-// SVG presentation attributes do not resolve var(--token), so these mirror
-// --primary, --warning, --border and --muted-foreground from index.css.
-export const PRIMARY = "#00843d";
-export const WARNING = "#d97706";
-export const GRID = "#e7e5e4";
-export const AXIS = { fontSize: 12, fill: "#52525b" } as const;
+import type { ChartColors } from "./useChartColors";
+
+export const axisTick = (colors: ChartColors) => ({ fontSize: 12, fill: colors.axis }) as const;
 
 export function useMotion() {
   const [on, setOn] = useState(true);

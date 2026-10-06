@@ -13,7 +13,8 @@ import {
   YAxis,
 } from "recharts";
 import { ApiError, getSummary } from "./api";
-import { AXIS, ChartTip, GRID, Meter, PRIMARY, useMotion, WARNING } from "./charts";
+import { axisTick, ChartTip, Meter, useMotion } from "./charts";
+import { useChartColors } from "./useChartColors";
 import { casosHref, percent, promedioText } from "./format";
 import { Card, PageHead } from "./Shell";
 import type { CloseRate, CountBucket, DashboardSummary, MonthFlow } from "./types";
@@ -43,6 +44,7 @@ function FlowTooltip({
 function FlowChart({ rows }: { rows: MonthFlow[] }) {
   const navigate = useNavigate();
   const motion = useMotion();
+  const colors = useChartColors();
   return (
     <>
       <div className="h-56 w-full min-w-0">
@@ -61,18 +63,18 @@ function FlowChart({ rows }: { rows: MonthFlow[] }) {
           >
             <defs>
               <linearGradient id="entrados-fill" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor={PRIMARY} stopOpacity={0.2} />
-                <stop offset="100%" stopColor={PRIMARY} stopOpacity={0} />
+                <stop offset="0%" stopColor={colors.primary} stopOpacity={0.2} />
+                <stop offset="100%" stopColor={colors.primary} stopOpacity={0} />
               </linearGradient>
             </defs>
-            <CartesianGrid stroke={GRID} vertical={false} strokeDasharray="4 4" />
-            <XAxis dataKey="mes" minTickGap={28} tick={AXIS} />
-            <YAxis width={32} allowDecimals={false} tick={AXIS} />
+            <CartesianGrid stroke={colors.grid} vertical={false} strokeDasharray="4 4" />
+            <XAxis dataKey="mes" minTickGap={28} tick={axisTick(colors)} />
+            <YAxis width={32} allowDecimals={false} tick={axisTick(colors)} />
             <ChartTooltip content={<FlowTooltip />} />
             <Area
               type="monotone"
               dataKey="entrados"
-              stroke={PRIMARY}
+              stroke={colors.primary}
               strokeWidth={2}
               fill="url(#entrados-fill)"
               isAnimationActive={motion}
@@ -81,7 +83,7 @@ function FlowChart({ rows }: { rows: MonthFlow[] }) {
             <Line
               type="monotone"
               dataKey="cerrados"
-              stroke={WARNING}
+              stroke={colors.warning}
               strokeWidth={2}
               strokeDasharray="4 4"
               dot={false}

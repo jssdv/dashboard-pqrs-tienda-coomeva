@@ -15,7 +15,8 @@ import {
   YAxis,
 } from "recharts";
 import { getProviderTimeline, type ProveedorRow } from "./api";
-import { AXIS, ChartTip, GRID, PRIMARY, useMotion, WARNING } from "./charts";
+import { axisTick, ChartTip, useMotion } from "./charts";
+import { useChartColors } from "./useChartColors";
 import { casosHref, promedioText } from "./format";
 import type { MatrixRow, TimelinePoint } from "./types";
 
@@ -42,6 +43,7 @@ function TimelineTooltip({
 
 function Timeline({ nombre }: { nombre: string }) {
   const motion = useMotion();
+  const colors = useChartColors();
   const [points, setPoints] = useState<TimelinePoint[] | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -77,15 +79,15 @@ function Timeline({ nombre }: { nombre: string }) {
       </p>
       <ResponsiveContainer width="100%" height="100%" minWidth={0}>
         <ComposedChart data={points} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
-          <CartesianGrid stroke={GRID} vertical={false} strokeDasharray="4 4" />
-          <XAxis dataKey="mes" minTickGap={28} tick={AXIS} />
-          <YAxis width={32} allowDecimals={false} tick={AXIS} />
+          <CartesianGrid stroke={colors.grid} vertical={false} strokeDasharray="4 4" />
+          <XAxis dataKey="mes" minTickGap={28} tick={axisTick(colors)} />
+          <YAxis width={32} allowDecimals={false} tick={axisTick(colors)} />
           <ChartTooltip content={<TimelineTooltip />} />
           <Line
             type="monotone"
             dataKey="entrados"
             name="Entrados"
-            stroke={PRIMARY}
+            stroke={colors.primary}
             strokeWidth={2}
             dot={false}
             isAnimationActive={motion}
@@ -95,7 +97,7 @@ function Timeline({ nombre }: { nombre: string }) {
             type="monotone"
             dataKey="cerrados"
             name="Cerrados"
-            stroke={WARNING}
+            stroke={colors.warning}
             strokeWidth={2}
             strokeDasharray="4 4"
             dot={false}
