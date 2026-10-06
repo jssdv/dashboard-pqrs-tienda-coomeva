@@ -5,10 +5,12 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { ApiError, closeCase, createCase, getCases } from "./api";
+import { ApiError, closeCase, createCase, getCases, getCatalogs } from "./api";
 import { fieldMessage } from "./format";
 import { PageHead } from "./Shell";
-import type { CloseFields, CreateFields, FieldError, PqrCase } from "./types";
+import { Combobox } from "./ui/Combobox";
+import { Select } from "./ui/Select";
+import type { Catalogs, CloseFields, CreateFields, FieldError, PqrCase } from "./types";
 
 const EMPTY_CREATE: CreateFields = {
   fechaInicial: "",
@@ -22,23 +24,48 @@ const EMPTY_CREATE: CreateFields = {
   motivo: "",
 };
 
-const CREATE_FIELDS: Array<{ name: keyof CreateFields; label: string; type: string }> = [
+type ListKind = "select" | "combobox";
+
+const CREATE_FIELDS: Array<{ name: keyof CreateFields; label: string; type: string; list?: ListKind }> = [
   { name: "fechaInicial", label: "Fecha inicial", type: "date" },
-  { name: "area", label: "Proveedor", type: "text" },
+  { name: "area", label: "Proveedor", type: "text", list: "combobox" },
   { name: "idOrden", label: "ID de orden", type: "text" },
   { name: "asociado", label: "Asociado", type: "text" },
   { name: "correo", label: "Correo", type: "email" },
-  { name: "fuente", label: "Fuente", type: "text" },
-  { name: "tipo", label: "Tipo", type: "text" },
-  { name: "tema", label: "Tema", type: "text" },
+  { name: "fuente", label: "Fuente", type: "text", list: "select" },
+  { name: "tipo", label: "Tipo", type: "text", list: "select" },
+  { name: "tema", label: "Tema", type: "text", list: "combobox" },
   { name: "motivo", label: "Motivo", type: "textarea" },
 ];
+
+function hasData(catalogs: Catalogs): boolean {
+  return [catalogs.area, catalogs.fuente, catalogs.tipo, catalogs.tema].some((list) => list.length > 0);
+}
 
 export function NuevoCaso() {
   const navigate = useNavigate();
   const [fields, setFields] = useState<CreateFields>(EMPTY_CREATE);
   const [errors, setErrors] = useState<FieldError[]>([]);
   const [pending, setPending] = useState(false);
+  const [catalogs, setCatalogs] = useState<Catalogs | null>(null);
+  const [catalogsError, setCatalogsError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    getCatalogs().then(
+      (next) => {
+        if (!cancelled) setCatalogs(next);
+      },
+      () => {
+        if (!cancelled) setCatalogsError("No se pudieron cargar las listas");
+      },
+    );
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const ready = catalogs !== null && hasData(catalogs);
 
   async function onSubmit(event: FormEvent) {
     event.preventDefault();
@@ -58,19 +85,53 @@ export function NuevoCaso() {
       <Card className="max-w-xl shadow-sm">
         <CardContent className="pt-4">
           <form onSubmit={onSubmit} noValidate>
+            {catalogsError ? (
+              <p role="alert" className="mb-4 rounded-xl border border-orange-300 bg-orange-50 p-3">
+                {catalogsError}
+              </p>
+            ) : null}
+            {catalogs && !hasData(catalogs) ? (
+              <p className="mb-4 rounded-xl border border-border bg-card p-3">
+                Todavía no hay datos cargados. Importa el archivo primero (<code className="font-mono">npm run import</code>).
+              </p>
+            ) : null}
             <ErrorSummary errors={errors} />
-            {CREATE_FIELDS.map((field) => (
-              <Field
-                key={field.name}
-                id={field.name}
-                label={field.label}
-                type={field.type}
-                value={fields[field.name]}
-                error={fieldMessage(errors, field.name)}
-                onChange={(value) => setFields((current) => ({ ...current, [field.name]: value }))}
-              />
-            ))}
-            <Button className="mt-5 min-h-11" type="submit" disabled={pending}>
+            {CREATE_FIELDS.map((field) => {
+              const onChange = (value: string) => setFields((current) => ({ ...current, [field.name]: value }));
+              if (field.list) {
+                const options = (catalogs?.[field.name as keyof Catalogs] ?? []).map((value) => ({ value, label: value }));
+                const shared = {
+                  label: field.label,
+                  value: fields[field.name],
+                  onChange,
+                  options,
+                  allLabel: null,
+                  required: true,
+                  error: fieldMessage(errors, field.name) || undefined,
+                };
+                return (
+                  <div key={field.name} id={field.name} className="mt-4">
+                    {field.list === "select" ? (
+                      <Select {...shared} placeholder="Selecciona…" />
+                    ) : (
+                      <Combobox {...shared} placeholder="Busca o selecciona…" />
+                    )}
+                  </div>
+                );
+              }
+              return (
+                <Field
+                  key={field.name}
+                  id={field.name}
+                  label={field.label}
+                  type={field.type}
+                  value={fields[field.name]}
+                  error={fieldMessage(errors, field.name)}
+                  onChange={onChange}
+                />
+              );
+            })}
+            <Button className="mt-5 min-h-11" type="submit" disabled={pending || !ready}>
               {pending ? "Guardando…" : "Guardar caso"}
             </Button>
           </form>

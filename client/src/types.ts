@@ -127,3 +127,10 @@ export interface TimelinePoint {
   cerrados: number;
   diasPromedio: number | null;
 }
+
+export interface Catalogs {
+  area: string[];
+  fuente: string[];
+  tipo: string[];
+  tema: string[];
+}

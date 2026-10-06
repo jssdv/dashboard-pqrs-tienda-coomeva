@@ -1,4 +1,5 @@
 import type {
+  Catalogs,
   CaseQuery,
   CloseFields,
   CreateFields,
@@ -34,6 +35,18 @@ export async function getSummary(): Promise<DashboardSummary> {
     );
   }
   return body as unknown as DashboardSummary;
+}
+
+export async function getCatalogs(): Promise<Catalogs> {
+  const response = await fetch("/api/catalogos");
+  const body = await readBody(response);
+  if (!response.ok) {
+    throw new ApiError(
+      typeof body.error === "string" ? body.error : "No se pudieron cargar las listas",
+      response.status,
+    );
+  }
+  return body as unknown as Catalogs;
 }
 
 export async function getCases(query: CaseQuery): Promise<PqrCase[]> {
