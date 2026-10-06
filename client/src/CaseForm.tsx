@@ -273,7 +273,7 @@ function Field({
     <div className="mt-4 grid gap-1.5">
       <Label htmlFor={id}>
         {label}{" "}
-        <abbr className="text-warning no-underline" title="obligatorio">
+        <abbr className="text-destructive no-underline" title="obligatorio">
           *
         </abbr>
       </Label>

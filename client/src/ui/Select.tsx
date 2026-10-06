@@ -46,7 +46,7 @@ export function Select({
         {required ? (
           <>
             {" "}
-            <abbr className="text-warning no-underline" title="obligatorio">
+            <abbr className="text-destructive no-underline" title="obligatorio">
               *
             </abbr>
           </>

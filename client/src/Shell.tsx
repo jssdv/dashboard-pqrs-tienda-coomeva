@@ -51,17 +51,23 @@ function Nav({
             ? { "aria-label": vencidos ? `Casos, ${vencidos} vencidos` : "Casos", title: "Casos" }
             : {})}
         >
-          <List aria-hidden="true" />
-          {compact ? null : "Casos"}
-          {vencidos ? (
-            <Badge
-              variant="destructive"
-              className={compact ? "absolute -top-1 -right-1 px-1.5 text-[0.65rem]" : "ml-auto"}
-              aria-label={`${vencidos} vencidos`}
-            >
-              {vencidos}
-            </Badge>
-          ) : null}
+          {({ isActive }) => (
+            <>
+              <List aria-hidden="true" />
+              {compact ? null : "Casos"}
+              {vencidos ? (
+                <Badge
+                  variant="destructive"
+                  className={`${compact ? "absolute -top-1 -right-1 px-1.5 text-[0.65rem]" : "ml-auto"} ${
+                    isActive ? "bg-primary-foreground text-destructive" : ""
+                  }`}
+                  aria-label={`${vencidos} vencidos`}
+                >
+                  {vencidos}
+                </Badge>
+              ) : null}
+            </>
+          )}
         </NavLink>
         <NavLink to="/proveedores" className={navClass(compact)} {...item("Proveedores")}>
           <Store aria-hidden="true" />

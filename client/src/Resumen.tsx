@@ -226,9 +226,9 @@ function CloseTable({ rows }: { rows: DashboardSummary["cierrePorTipo"] }) {
       <thead>
         <tr className="border-b border-border text-left text-xs text-muted-foreground">
           <th className="py-2 font-medium">Tipo</th>
-          <th className="py-2 text-right font-medium">Entrados</th>
-          <th className="py-2 text-right font-medium">Cerrados</th>
-          <th className="w-2/5 py-2 pl-4 font-medium">Tasa</th>
+          <th className="hidden py-2 text-right font-medium sm:table-cell">Entrados</th>
+          <th className="hidden py-2 text-right font-medium sm:table-cell">Cerrados</th>
+          <th className="py-2 pl-4 font-medium sm:w-2/5">Tasa</th>
         </tr>
       </thead>
       <tbody>
@@ -241,11 +241,11 @@ function CloseTable({ rows }: { rows: DashboardSummary["cierrePorTipo"] }) {
                   <TipoTag tipo={row.tipo} />
                 </Link>
               </td>
-              <td className="py-2 text-right font-mono tabular-nums">{row.entrados}</td>
-              <td className="py-2 text-right font-mono tabular-nums">{row.cerrados}</td>
+              <td className="hidden py-2 text-right font-mono tabular-nums sm:table-cell">{row.entrados}</td>
+              <td className="hidden py-2 text-right font-mono tabular-nums sm:table-cell">{row.cerrados}</td>
               <td className="py-2 pl-4">
-                <div className="flex items-center gap-2">
-                  <div className={`flex-1 ${level.bar}`}>
+                <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
+                  <div className={`min-w-16 flex-1 ${level.bar}`}>
                     <Meter value={row.tasa} max={1} />
                   </div>
                   <span className="w-12 text-right font-mono tabular-nums">{percent(row.tasa)}</span>

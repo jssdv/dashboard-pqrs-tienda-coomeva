@@ -29,7 +29,7 @@ FECHA INICIAL, FECHA SOLUCION, AREA, ID ORDEN, ASOCIADO, CORREO, FUENTE, TIPO PQ
 
 ## Resumen (`summarize`)
 
-`DashboardSummary`: totales (total, abiertos, cerrados, fechas inválidas); `sinFechaValida` (abiertos sin fecha inicial utilizable); conteos por año, área, fuente, tipo, tema, mes; flujo mensual entrados/cerrados; antigüedad (`0-5`, `6-10`, `mas-10`) de abiertos; abiertos por área y tema; promedio de días; `colaVencida` / `colaError`; tasa de cierre por tipo (`closeRates`); matriz proveedor × tipo (`providerTypeMatrix`).
+`DashboardSummary`: totales (total, abiertos, cerrados, fechas inválidas); `sinFechaValida` (abiertos sin fecha inicial utilizable); conteos por año, área, fuente, tipo, tema, mes; flujo mensual entrados/cerrados; antigüedad (`0-5`, `6-10`, `mas-10`) de abiertos; abiertos por área y tema; promedio de días; `colaVencida` / `colaError`; tasa de cierre por tipo (`closeRates`); matriz proveedor × tipo (`providerTypeMatrix`); `serieMensual` (`monthSeries`): por mes, entrados, cerrados, pendientes al cierre (acumulado de entrados menos cerrados) y días promedio de solución, con meses contiguos.
 
 ## Riesgo de vencimiento (`risk.ts`)
 
