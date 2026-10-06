@@ -1,3 +1,4 @@
+import ExcelJS from "exceljs";
 import type { Server } from "node:http";
 import { describe, expect, it } from "vitest";
 import { createSummaryServer } from "../../src/api/summaryServer";
@@ -414,6 +415,72 @@ describe("GET /api/catalogos and catalog validation on create", () => {
     } finally {
       await new Promise((resolve) => server.close(resolve));
     }
+  });
+});
+
+describe("GET /api/casos/exportar", () => {
+  const now = () => new Date("2026-01-19T15:00:00Z");
+  const base = () => [
+    caso({ id: "venc", sheetYear: 2026, rowNumber: 2, fechaInicial: "2026-01-05", area: "Tienda", tipo: "RECLAMO", tema: "Cine", idOrden: "ORD-1", asociado: "Ana Ruiz" }),
+    caso({ id: "plazo", sheetYear: 2026, rowNumber: 3, fechaInicial: "2026-01-16", area: "Lagobo", tipo: "QUEJA", tema: "Bonos", idOrden: "ORD-2", asociado: "Luis" }),
+    caso({ id: "cerr", sheetYear: 2026, rowNumber: 4, fechaInicial: "2026-01-05", fechaSolucion: "2026-01-09", diasSolucion: 4, area: "Tienda", tipo: "RECLAMO", tema: "Cine", idOrden: "ORD-3", asociado: "Ana Ruiz" }),
+  ];
+
+  async function download(query: string, repo: CaseRepository = memoryRepo(base())) {
+    const server = createSummaryServer(repo, { now });
+    const port = await listen(server);
+    try {
+      const response = await fetch(`http://127.0.0.1:${port}/api/casos/exportar${query}`);
+      const buffer = Buffer.from(await response.arrayBuffer());
+      return { response, buffer };
+    } finally {
+      await new Promise((resolve) => server.close(resolve));
+    }
+  }
+
+  async function rowsOf(buffer: Buffer): Promise<string[]> {
+    const workbook = new ExcelJS.Workbook();
+    await workbook.xlsx.load(buffer);
+    const sheet = workbook.getWorksheet("Casos");
+    const ids: string[] = [];
+    sheet?.eachRow((row, index) => {
+      if (index > 1) ids.push(String(row.getCell(1).value));
+    });
+    return ids;
+  }
+
+  it("returns an xlsx attachment named with today's date", async () => {
+    const { response, buffer } = await download("");
+    expect(response.status).toBe(200);
+    expect(response.headers.get("content-type")).toBe(
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    );
+    expect(response.headers.get("content-disposition")).toBe('attachment; filename="casos-2026-01-19.xlsx"');
+    expect(await rowsOf(buffer)).toEqual(["ORD-1", "ORD-2", "ORD-3"]);
+  });
+
+  it("applies the same filters as the list, including estado, tema and q", async () => {
+    expect(await rowsOf((await download("?estado=abiertos")).buffer)).toEqual(["ORD-1", "ORD-2"]);
+    expect(await rowsOf((await download("?area=Tienda&estado=cerrados")).buffer)).toEqual(["ORD-3"]);
+    expect(await rowsOf((await download("?plazo=vencido")).buffer)).toEqual(["ORD-1"]);
+    expect(await rowsOf((await download("?tema=Bonos")).buffer)).toEqual(["ORD-2"]);
+    expect(await rowsOf((await download("?q=ana")).buffer)).toEqual(["ORD-1", "ORD-3"]);
+    expect(await rowsOf((await download("?q=zzz")).buffer)).toEqual([]);
+  });
+
+  it("lists the applied filters on the Filtros sheet", async () => {
+    const { buffer } = await download("?estado=abiertos&area=Tienda");
+    const workbook = new ExcelJS.Workbook();
+    await workbook.xlsx.load(buffer);
+    const text = (workbook.getWorksheet("Filtros")?.getSheetValues() as unknown[][]).flat().filter(Boolean).join("|");
+    expect(text).toContain("Estado: abiertos");
+    expect(text).toContain("Proveedor: Tienda");
+  });
+
+  it("returns 503 as JSON when plazo cannot be computed without holidays", async () => {
+    const { response, buffer } = await download("?plazo=vencido", memoryRepo(base(), []));
+    expect(response.status).toBe(503);
+    expect(JSON.parse(buffer.toString("utf8")).error).toContain("festivos");
   });
 });
 

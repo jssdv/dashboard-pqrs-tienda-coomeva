@@ -6,7 +6,9 @@ import { randomUUID } from "node:crypto";
 import { applyClose, caseFromCreate, validateClose, validateCreate } from "../domain/caseForm.js";
 import { Dictionary } from "../domain/dictionary.js";
 import { bogotaToday, openQueue } from "../domain/openQueue.js";
+import { matchesSearch } from "../domain/matchesSearch.js";
 import { providerTimeline } from "../domain/providerTimeline.js";
+import { buildCasesWorkbook } from "../export/casesWorkbook.js";
 import { riskOf, type PlazoEstado, type Riesgo } from "../domain/risk.js";
 import { summarize } from "../domain/summary.js";
 import type { CatalogField, PqrCase } from "../domain/types.js";
@@ -42,6 +44,9 @@ interface CaseQuery {
   mes?: string;
   plazo?: string;
   fecha?: string;
+  estado?: string;
+  tema?: string;
+  q?: string;
 }
 
 function json(res: ServerResponse, status: number, body: unknown): void {
@@ -92,6 +97,20 @@ function catalogsOf(repository: CaseRepository): Record<CatalogField, string[]> 
   };
 }
 
+function describeFilters(query: CaseQuery): string[] {
+  const out: string[] = [];
+  if (query.estado === "abiertos" || query.estado === "cerrados") out.push(`Estado: ${query.estado}`);
+  if (PLAZOS.some((plazo) => plazo === query.plazo)) out.push(`Plazo: ${query.plazo}`);
+  if (query.area) out.push(`Proveedor: ${query.area}`);
+  if (query.tipo) out.push(`Tipo: ${query.tipo}`);
+  if (query.tema) out.push(`Tema: ${query.tema}`);
+  if (query.mes) out.push(`Mes: ${query.mes}`);
+  if (query.cola === "vencida") out.push("Más de 10 días hábiles");
+  if (query.fecha === "invalida") out.push("Sin fecha de inicio");
+  if (query.q?.trim()) out.push(`Búsqueda: ${query.q.trim()}`);
+  return out;
+}
+
 const PLAZOS: readonly PlazoEstado[] = ["en-plazo", "por-vencer", "vencido"];
 
 function queryOf(url: URL): CaseQuery {
@@ -102,6 +121,9 @@ function queryOf(url: URL): CaseQuery {
     mes: url.searchParams.get("mes") ?? undefined,
     plazo: url.searchParams.get("plazo") ?? undefined,
     fecha: url.searchParams.get("fecha") ?? undefined,
+    estado: url.searchParams.get("estado") ?? undefined,
+    tema: url.searchParams.get("tema") ?? undefined,
+    q: url.searchParams.get("q") ?? undefined,
   };
 }
 
@@ -149,6 +171,10 @@ function applyFilters(
   return {
     rows: rows.filter((row) => {
       if (query.fecha === "invalida" && row.fechaInicial !== null && !row.fechaInicialInvalida) return false;
+      if (query.estado === "abiertos" && row.fechaSolucion !== null) return false;
+      if (query.estado === "cerrados" && row.fechaSolucion === null) return false;
+      if (query.tema && (row.tema ?? "(sin valor)") !== query.tema) return false;
+      if (query.q && !matchesSearch(row, query.q)) return false;
       if (query.area && (row.area ?? "(sin valor)") !== query.area) return false;
       if (query.tipo && (row.tipo ?? "(sin valor)") !== query.tipo) return false;
       if (query.mes) {
@@ -285,6 +311,23 @@ export function createSummaryServer(
         }
         repository.renameProveedor(desde, hacia);
         json(res, 200, { nombre: hacia });
+        return;
+      }
+      if (req.method === "GET" && url.pathname === "/api/casos/exportar") {
+        const query = queryOf(url);
+        const filtered = applyFilters(repository.list(), query, repository.listHolidays(), today());
+        if (filtered.notice) {
+          json(res, 503, { error: filtered.notice });
+          return;
+        }
+        const generatedAt = today();
+        const buffer = await buildCasesWorkbook(filtered.rows, { generatedAt, filters: describeFilters(query) });
+        res.writeHead(200, {
+          "Content-Type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+          "Content-Disposition": `attachment; filename="casos-${generatedAt}.xlsx"`,
+          "Content-Length": buffer.length,
+        });
+        res.end(buffer);
         return;
       }
       if (req.method === "GET" && url.pathname === "/api/casos") {
