@@ -184,7 +184,7 @@ export function Shell() {
             </Button>
             <ThemeToggle />
             <Button asChild className="hidden min-h-11 md:inline-flex">
-              <Link to="/casos/nuevo" viewTransition>Nuevo caso</Link>
+              <Link to="/casos/nuevo">Nuevo caso</Link>
             </Button>
             <div className="md:hidden">
               <Sheet open={open} onOpenChange={setOpen}>
@@ -209,7 +209,7 @@ export function Shell() {
             id="contenido"
             className="mx-auto min-h-0 w-full min-w-0 max-w-[72rem] flex-1 overflow-x-hidden overflow-y-auto px-4 py-6 md:px-8 md:py-8"
           >
-            <div key={location.pathname} className="rise-in">
+            <div key={location.pathname.split("/")[1] || "panel"} className="rise-in">
               <Outlet />
             </div>
           </main>

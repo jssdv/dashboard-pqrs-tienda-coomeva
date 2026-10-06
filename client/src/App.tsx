@@ -11,10 +11,15 @@ const router = createBrowserRouter([
     element: <Shell />,
     children: [
       { index: true, element: <Resumen /> },
-      { path: "casos", element: <Casos /> },
+      {
+        path: "casos",
+        element: <Casos />,
+        children: [
+          { path: "nuevo", element: <NuevoCaso /> },
+          { path: ":id/cerrar", element: <CerrarCaso /> },
+        ],
+      },
       { path: "proveedores", element: <Proveedores /> },
-      { path: "casos/nuevo", element: <NuevoCaso /> },
-      { path: "casos/:id/cerrar", element: <CerrarCaso /> },
     ],
   },
 ]);

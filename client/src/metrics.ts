@@ -17,3 +17,12 @@ export function completeMonths<T extends { mes: string }>(serie: readonly T[], c
   const last = serie[serie.length - 1];
   return last && last.mes === currentMonth ? serie.slice(0, -1) : [...serie];
 }
+
+export function bogotaToday(now = new Date()): string {
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: "America/Bogota",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(now);
+}

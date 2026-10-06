@@ -1,8 +1,9 @@
 // @vitest-environment jsdom
 
+import { useEffect } from "react";
 import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, expect, it, vi } from "vitest";
-import { MemoryRouter, Route, Routes } from "react-router-dom";
+import { MemoryRouter, Outlet, Route, Routes, useNavigate } from "react-router-dom";
 import { PageHead, Shell } from "./Shell";
 
 afterEach(() => {
@@ -123,4 +124,36 @@ it("names every rail link for assistive tech and keeps the overdue counter", asy
   }
   await screen.findAllByLabelText("63 vencidos");
   expect(within(rail).getByLabelText("63 vencidos")).toBeTruthy();
+});
+
+it("does not remount a screen when a child dialog route opens over it", () => {
+  stubSummary(null);
+  const mounts = vi.fn();
+  function List() {
+    useEffect(() => mounts(), []);
+    return <Outlet />;
+  }
+  function Open() {
+    const navigate = useNavigate();
+    return (
+      <button type="button" onClick={() => navigate("/casos/nuevo")}>
+        abrir
+      </button>
+    );
+  }
+  render(
+    <MemoryRouter initialEntries={["/casos"]}>
+      <Routes>
+        <Route element={<Shell />}>
+          <Route path="casos" element={<List />}>
+            <Route index element={<Open />} />
+            <Route path="nuevo" element={<p>ventana</p>} />
+          </Route>
+        </Route>
+      </Routes>
+    </MemoryRouter>,
+  );
+  fireEvent.click(screen.getByRole("button", { name: "abrir" }));
+  expect(screen.getByText("ventana")).toBeTruthy();
+  expect(mounts).toHaveBeenCalledTimes(1);
 });

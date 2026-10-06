@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Link, useSearchParams } from "react-router-dom";
+import { Link, Outlet, useMatch, useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { ApiError, getCases } from "./api";
 import { CaseDetail } from "./CaseDetail";
@@ -74,6 +74,12 @@ export function Casos() {
   const [loaded, setLoaded] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [reloadKey, setReloadKey] = useState(0);
+  const atList = useMatch("/casos") !== null;
+
+  useEffect(() => {
+    if (!atList) setSelectedId(null);
+  }, [atList]);
   const chips = chipsFrom(params);
   const activeCount = [estado, query.plazo, query.area, query.tipo, tema, query.cola, query.mes, query.fecha].filter(
     Boolean,
@@ -101,7 +107,7 @@ export function Casos() {
     return () => {
       cancelled = true;
     };
-  }, [query.cola, query.area, query.tipo, query.mes, query.plazo, query.fecha]);
+  }, [query.cola, query.area, query.tipo, query.mes, query.plazo, query.fecha, reloadKey]);
 
   function setFilter(key: string, value: string) {
     const next = new URLSearchParams(params);
@@ -218,6 +224,7 @@ export function Casos() {
         </div>
       ) : null}
       <CaseDetail caso={selected} onClose={() => setSelectedId(null)} />
+      <Outlet context={{ reload: () => setReloadKey((key) => key + 1) }} />
     </>
   );
 }

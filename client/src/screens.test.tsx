@@ -2,7 +2,7 @@
 
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, expect, it, vi } from "vitest";
-import { MemoryRouter, Route, Routes } from "react-router-dom";
+import { MemoryRouter, Route, Routes, useOutletContext } from "react-router-dom";
 import { Casos } from "./Casos";
 import { Shell } from "./Shell";
 import type { PqrCase } from "./types";
@@ -594,4 +594,47 @@ it("staggers the entrance of rows with an index variable", async () => {
   const rows = Array.from(document.querySelectorAll("tbody tr")) as HTMLElement[];
   expect(rows.map((row) => row.style.getPropertyValue("--i"))).toEqual(["0", "1", "2"]);
   expect(rows[0].className).toContain("fade-up");
+});
+
+function ReloadProbe() {
+  const context = useOutletContext<{ reload: () => void }>();
+  return (
+    <button type="button" onClick={context.reload}>
+      recargar
+    </button>
+  );
+}
+
+function renderWithChildren(path: string) {
+  return render(
+    <MemoryRouter initialEntries={[path]}>
+      <Routes>
+        <Route path="/casos" element={<Casos />}>
+          <Route path="nuevo" element={<ReloadProbe />} />
+          <Route path=":id/cerrar" element={<p>cerrando</p>} />
+        </Route>
+      </Routes>
+    </MemoryRouter>,
+  );
+}
+
+it("keeps the list behind a child route and reloads it on request", async () => {
+  setViewport(true);
+  const fetchMock = recordingFetch([caso({ id: "a", area: "Tienda" })]);
+  renderWithChildren("/casos/nuevo");
+  await screen.findByText("Tienda");
+  expect(fetchMock).toHaveBeenCalledTimes(1);
+  fireEvent.click(screen.getByRole("button", { name: "recargar" }));
+  await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2));
+  expect(screen.getByText("Tienda")).toBeTruthy();
+});
+
+it("closes the detail panel when a child route opens", async () => {
+  stubCases([caso({ id: "a" })]);
+  renderWithChildren("/casos");
+  fireEvent.click(await screen.findByRole("button", { name: "Ver detalle" }));
+  const panel = await screen.findByRole("dialog");
+  fireEvent.click(within(panel).getByRole("link", { name: "Cerrar caso" }));
+  await screen.findByText("cerrando");
+  await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
 });

@@ -2,7 +2,7 @@
 
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, expect, it, vi } from "vitest";
-import { MemoryRouter, Route, Routes } from "react-router-dom";
+import { MemoryRouter, Outlet, Route, Routes, useLocation } from "react-router-dom";
 import { NuevoCaso } from "./CaseForm";
 
 afterEach(() => {
@@ -32,15 +32,31 @@ function stubApi(opts: { catalogs?: unknown; catalogsOk?: boolean; post?: { stat
   return fetchMock;
 }
 
-function renderForm() {
-  return render(
+function Where() {
+  const location = useLocation();
+  return <p data-testid="where">{location.pathname}</p>;
+}
+
+function renderForm(reload = vi.fn()) {
+  function Parent() {
+    return (
+      <>
+        <p>lista de casos</p>
+        <Where />
+        <Outlet context={{ reload }} />
+      </>
+    );
+  }
+  render(
     <MemoryRouter initialEntries={["/casos/nuevo"]}>
       <Routes>
-        <Route path="/casos/nuevo" element={<NuevoCaso />} />
-        <Route path="/casos" element={<p>lista de casos</p>} />
+        <Route path="/casos" element={<Parent />}>
+          <Route path="nuevo" element={<NuevoCaso />} />
+        </Route>
       </Routes>
     </MemoryRouter>,
   );
+  return reload;
 }
 
 const listbox = () => screen.getByRole("listbox", { hidden: true });
@@ -143,4 +159,46 @@ it("groups the fields in titled sections", async () => {
   const clasificacion = screen.getByRole("heading", { level: 2, name: "Clasificación" }).closest("section") as HTMLElement;
   expect(within(clasificacion).getByRole("combobox", { name: /Proveedor/ })).toBeTruthy();
   expect(within(clasificacion).getByRole("button", { name: /Fuente/ })).toBeTruthy();
+});
+
+it("is a dialog named Nuevo caso that closes with Cancelar and Escape back to the list", async () => {
+  stubApi();
+  renderForm();
+  const dialog = await screen.findByRole("dialog", { name: "Nuevo caso" });
+  fireEvent.click(within(dialog).getByRole("button", { name: "Cancelar" }));
+  await waitFor(() => expect(screen.getByTestId("where").textContent).toBe("/casos"));
+  expect(screen.queryByRole("dialog")).toBeNull();
+});
+
+it("closes with Escape", async () => {
+  stubApi();
+  renderForm();
+  fireEvent.keyDown(await screen.findByRole("dialog", { name: "Nuevo caso" }), { key: "Escape" });
+  await waitFor(() => expect(screen.getByTestId("where").textContent).toBe("/casos"));
+});
+
+it("saves with Ctrl+Enter and asks the list to reload", async () => {
+  const fetchMock = stubApi();
+  const reload = renderForm();
+  await fillAll();
+  fireEvent.keyDown(screen.getByRole("dialog"), { key: "Enter", ctrlKey: true });
+  await waitFor(() => expect(reload).toHaveBeenCalledTimes(1));
+  expect(fetchMock.mock.calls.some(([url, init]) => url === "/api/casos" && init?.method === "POST")).toBe(true);
+  await waitFor(() => expect(screen.getByTestId("where").textContent).toBe("/casos"));
+});
+
+it("does not save with a plain Enter inside a text area", async () => {
+  const fetchMock = stubApi();
+  renderForm();
+  await fillAll();
+  fireEvent.keyDown(screen.getByLabelText(/Motivo/), { key: "Enter" });
+  expect(fetchMock.mock.calls.some(([, init]) => init?.method === "POST")).toBe(false);
+});
+
+it("autofocuses the first field and shows the shortcut hint", async () => {
+  stubApi();
+  renderForm();
+  await screen.findByRole("dialog", { name: "Nuevo caso" });
+  await waitFor(() => expect(document.activeElement).toBe(screen.getByLabelText(/Fecha inicial/)));
+  expect(screen.getByText(/Ctrl|⌘/)).toBeTruthy();
 });

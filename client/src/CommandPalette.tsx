@@ -51,15 +51,15 @@ export function CommandPalette({
   }, [open, cases]);
 
   const entries = useMemo(() => {
-    const go = (to: string) => () => {
+    const go = (to: string, viewTransition = true) => () => {
       onOpenChange(false);
-      navigate(to, { viewTransition: true });
+      navigate(to, { viewTransition });
     };
     const base: Entry[] = [
       { id: "go-panel", group: "Ir a", label: "Panel", icon: LayoutDashboard, run: go("/") },
       { id: "go-casos", group: "Ir a", label: "Casos", icon: List, run: go("/casos") },
       { id: "go-proveedores", group: "Ir a", label: "Proveedores", icon: Store, run: go("/proveedores") },
-      { id: "act-nuevo", group: "Acciones", label: "Nuevo caso", icon: Plus, run: go("/casos/nuevo") },
+      { id: "act-nuevo", group: "Acciones", label: "Nuevo caso", icon: Plus, run: go("/casos/nuevo", false) },
       {
         id: "act-tema",
         group: "Acciones",

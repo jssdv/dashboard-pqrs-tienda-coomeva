@@ -32,3 +32,10 @@ it("completeMonths drops the month in progress and keeps the rest", () => {
   expect(completeMonths(serie, "2026-10").map((p) => p.mes)).toEqual(["2026-07", "2026-08", "2026-09"]);
   expect(completeMonths([], "2026-09")).toEqual([]);
 });
+
+import { bogotaToday } from "./metrics";
+
+it("bogotaToday is the calendar date in America/Bogota", () => {
+  expect(bogotaToday(new Date("2026-09-01T03:00:00Z"))).toBe("2026-08-31");
+  expect(bogotaToday(new Date("2026-09-01T06:00:00Z"))).toBe("2026-09-01");
+});
