@@ -63,7 +63,7 @@ writeFileSync(
     assets,
   }),
 );
-// PQR_NODE_BIN: a full (not Homebrew-stub) node binary to package. Defaults to the one running this script.
+// PQR_NODE_BIN: an official Node build to package (Homebrew's node has no SEA fuse, so postject fails). Defaults to the one running this script.
 const nodeBin = process.env.PQR_NODE_BIN ?? process.execPath;
 execFileSync(nodeBin, ["--experimental-sea-config", seaConfig], { stdio: "inherit" });
 
@@ -88,5 +88,6 @@ if (process.platform === "darwin") {
 }
 
 mkdirSync(join(folder, "data"), { recursive: true });
+copyFileSync(join(root, "scripts", "LEEME.txt"), join(folder, "LEEME.txt"));
 rmSync(work, { recursive: true, force: true });
 console.log(`built ${exe}`);

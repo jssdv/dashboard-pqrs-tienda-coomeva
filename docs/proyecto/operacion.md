@@ -1,6 +1,6 @@
 # Operación
 
-Requiere Node.js 20+.
+Requiere Node.js 22.13+ (`node:sqlite` sin bandera).
 
 ```bash
 npm install

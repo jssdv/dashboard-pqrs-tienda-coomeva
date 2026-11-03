@@ -1,0 +1,14 @@
+PQR - Dashboard PQRS Tienda Coomeva
+
+CÓMO ABRIR
+1. Mantén esta carpeta completa: el ejecutable y la carpeta data/ deben quedar juntos.
+2. macOS: haz doble clic en "pqr". La primera vez: clic derecho > Abrir > Abrir.
+   Si no abre, en Terminal: xattr -dr com.apple.quarantine "<ruta de la carpeta>"
+   Windows: haz doble clic en "pqr.exe". Si aparece SmartScreen: Más información > Ejecutar de todas formas.
+3. Se abre el navegador en http://localhost:3000. La primera vez, crea el administrador en /setup.
+4. Mientras uses la app, no cierres la ventana de la aplicación.
+
+DATOS
+- Todo queda dentro de data/ (pqr.sqlite y los csv de diccionario y festivos).
+- Respaldo: con la app cerrada, copia data/pqr.sqlite.
+- Para cambiar el puerto, abre la app desde una terminal con la variable PORT=3001.
