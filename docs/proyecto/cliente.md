@@ -32,7 +32,6 @@ Barra superior con migas, búsqueda (⌘K / Ctrl K), interruptor de tema y "Nuev
 ## Componentes compartidos (`src/`)
 
 - `components/ui/` — shadcn: `mark`, badge (incluye `destructive`; etiquetas rectas con borde), button, card, input, label, separator, sheet, skeleton, tabs, textarea, tooltip.
-- `components/base/`, `components/foundations/` — Untitled UI (código sin uso en pantallas; todavía importa `@untitledui/icons`, que no entra en el bundle).
 
 ## Pruebas
 

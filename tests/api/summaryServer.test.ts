@@ -528,6 +528,51 @@ describe("GET /api/casos/exportar", () => {
   });
 });
 
+describe("POST /api/admin/importar", () => {
+  async function libro(): Promise<Buffer> {
+    const workbook = new ExcelJS.Workbook();
+    const sheet = workbook.addWorksheet("PQRs 2026");
+    sheet.addRow(["FECHA INICIAL", "FECHA SOLUCION", "AREA", "ASOCIADO", "PQRs"]);
+    sheet.addRow([46027, 46027, "Tienda Coomeva", "NOMBRE", "motivo"]);
+    return Buffer.from(await workbook.xlsx.writeBuffer());
+  }
+  // Holidays for 2025-2027 come from extraHolidays, so no request should leave the server.
+  const offline = { extraHolidays: ["2025-01-01", "2026-01-01", "2027-01-01"], fetchImpl: (async () => ({ ok: false, status: 500 }) as Response) as typeof fetch };
+
+  it("replaces every case with the workbook rows for an admin", async () => {
+    const repo = memoryRepo([caso({ id: "viejo", sheetYear: 2025, rowNumber: 2 })]);
+    const server = serve(repo, { dictionary, ...offline });
+    const port = await listen(server);
+    try {
+      const response = await authed(`http://127.0.0.1:${port}/api/admin/importar`, { method: "POST", body: await libro() });
+      expect(response.status).toBe(200);
+      expect(await response.json()).toMatchObject({ imported: 1, skipped: 0 });
+      expect(repo.list().map((row) => row.id)).not.toContain("viejo");
+      expect(repo.list()).toHaveLength(1);
+    } finally {
+      await new Promise((resolve) => server.close(resolve));
+    }
+  });
+
+  it("refuses a user without the admin role and keeps the cases", async () => {
+    const user = auth.insertUser({ usuario: "operadora", passwordHash: "unused", rol: "user", activo: true, creadoEn: "2026-01-01T00:00:00.000Z" });
+    const repo = memoryRepo([caso({ id: "viejo", sheetYear: 2025, rowNumber: 2 })]);
+    const server = serve(repo, { dictionary, ...offline });
+    const port = await listen(server);
+    try {
+      const response = await fetch(`http://127.0.0.1:${port}/api/admin/importar`, {
+        method: "POST",
+        headers: { cookie: `pqr_session=${createSession(auth, user.id)}` },
+        body: await libro(),
+      });
+      expect(response.status).toBe(403);
+      expect(repo.list().map((row) => row.id)).toEqual(["viejo"]);
+    } finally {
+      await new Promise((resolve) => server.close(resolve));
+    }
+  });
+});
+
 describe("POST /api/casos", () => {
   it("returns 400 with the field list and does not insert", async () => {
     const repo = memoryRepo([]);

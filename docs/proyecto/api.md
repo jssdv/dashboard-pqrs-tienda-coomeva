@@ -17,6 +17,7 @@ Servidor en `src/api/summaryServer.ts`. Escucha en `0.0.0.0`, puerto `PORT` o 30
 | POST | `/api/proveedores` | `{nombre}` → 201 |
 | POST | `/api/proveedores/renombrar` | `{desde,hacia}` → 200; 409 si el nombre nuevo ya existe (sin tildes ni mayúsculas) |
 | PUT | `/api/proveedores/:nombre` | `{contacto,correo,telefono,notas,activo,plazoDias}` → 200; 400 si el correo o el plazo (1-60) no son válidos, 404 si no existe. `plazoDias` vacío usa 15 días hábiles; los inactivos salen de `/api/catalogos` |
+| POST | `/api/admin/importar` | Solo `admin`. Cuerpo binario = libro `.xlsx` (máx. 20 MB). Reemplaza todos los casos (la bitácora se conserva) y responde `{imported,skipped,invalidDates,holidays}`. 400 si no es un libro legible, 413 si supera el límite, 503 si faltan festivos |
 | GET/HEAD | `/`, `/casos`, `/casos/nuevo`, `/casos/:id/cerrar`, `/proveedores` | SPA desde `client/dist` |
 | GET/HEAD | otros estáticos | Archivos de `client/dist` |
 

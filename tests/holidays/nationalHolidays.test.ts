@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { Dictionary } from "../../src/domain/dictionary";
+import type { CaseRepository } from "../../src/store/repository";
 import {
   holidayDates,
   importLoadedCases,
@@ -86,19 +87,18 @@ describe("loadNationalHolidays", () => {
 });
 
 describe("importLoadedCases", () => {
-  it("does not open the repository when the holiday request fails", async () => {
-    const openRepository = vi.fn();
+  it("does not replace cases when the holiday request fails", async () => {
+    const repository = { replaceAll: vi.fn(), addHolidays: vi.fn() } as unknown as CaseRepository;
     const fetchImpl = (async () => ({ ok: false, status: 500 }) as Response) as typeof fetch;
     await expect(
       importLoadedCases({
         rows: [{ sheetYear: 2026, rowNumber: 2, cells: {} }],
         dictionary: new Dictionary(new Map()),
-        dbPath: "./data/pqr.sqlite",
+        repository,
         fetchImpl,
-        openRepository,
       }),
     ).rejects.toThrow(/holiday request failed/);
-    expect(openRepository).not.toHaveBeenCalled();
+    expect(repository.replaceAll).not.toHaveBeenCalled();
   });
 
   it("stores the loaded holiday dates after replacing cases", async () => {
@@ -124,9 +124,8 @@ describe("importLoadedCases", () => {
     await importLoadedCases({
       rows: [{ sheetYear: 2026, rowNumber: 2, cells: {} }],
       dictionary: new Dictionary(new Map()),
-      dbPath: "./data/pqr.sqlite",
+      repository,
       fetchImpl,
-      openRepository: () => repository,
     });
     expect(repository.addHolidays).toHaveBeenCalledWith(["2025-01-01", "2026-01-01", "2027-01-01"]);
   });
@@ -158,9 +157,8 @@ describe("importLoadedCases", () => {
     await importLoadedCases({
       rows: [{ sheetYear: 2024, rowNumber: 2, cells: {} }, { sheetYear: 2025, rowNumber: 3, cells: {} }],
       dictionary: new Dictionary(new Map()),
-      dbPath: "./data/pqr.sqlite",
+      repository,
       fetchImpl,
-      openRepository: () => repository,
       extraHolidays: ["2023-01-09", "2024-01-08"],
       onMissingYear: (year) => missing.push(year),
     });

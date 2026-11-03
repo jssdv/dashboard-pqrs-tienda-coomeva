@@ -17,9 +17,10 @@ try {
   const dictionary = parseDictionary(readFileSync(join(dataDir, "dictionary.csv"), "utf8"));
   const repository = openSqliteRepository(dbPath, { respaldos: join(dataDir, "respaldos") });
   // INSERT OR IGNORE: safe on every start, and lets closing cases work offline for the listed years.
-  repository.addHolidays(parseHolidayCsv(readFileSync(join(dataDir, "holidays.csv"), "utf8")));
+  const extraHolidays = parseHolidayCsv(readFileSync(join(dataDir, "holidays.csv"), "utf8"));
+  repository.addHolidays(extraHolidays);
 
-  const server = createSummaryServer(repository, { dictionary, auth: repository });
+  const server = createSummaryServer(repository, { dictionary, extraHolidays, auth: repository });
   server.on("error", (error: NodeJS.ErrnoException) => {
     console.error(
       error.code === "EADDRINUSE"

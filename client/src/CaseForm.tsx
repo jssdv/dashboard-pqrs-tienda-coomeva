@@ -110,7 +110,7 @@ export function NuevoCaso() {
       ) : null}
       {catalogs && !hasData(catalogs) ? (
         <p className="mb-3 rounded-lg border border-border bg-muted p-3 text-sm">
-          Todavía no hay datos cargados. Importa el archivo primero (<code className="font-mono">npm run import</code>).
+          Todavía no hay datos cargados. Un administrador debe importar el libro primero desde Administración.
         </p>
       ) : null}
       <ErrorSummary errors={errors} />

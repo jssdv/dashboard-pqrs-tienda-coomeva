@@ -28,8 +28,9 @@ import { providerTimeline } from "../domain/providerTimeline.js";
 import { buildCasesWorkbook } from "../export/casesWorkbook.js";
 import { PLAZO_DIAS, riskOf, type Plazos, type PlazoEstado, type Riesgo } from "../domain/risk.js";
 import { summarize } from "../domain/summary.js";
-import type { CatalogField, PqrCase } from "../domain/types.js";
-import { ensureHolidayYears } from "../holidays/nationalHolidays.js";
+import type { CatalogField, PqrCase, RawRow } from "../domain/types.js";
+import { ensureHolidayYears, importLoadedCases } from "../holidays/nationalHolidays.js";
+import { readWorkbook } from "../import/readWorkbook.js";
 import { ProveedorExistsError, type CaseRepository, type ProveedorFields } from "../store/repository.js";
 
 const MIME: Record<string, string> = {
@@ -49,6 +50,7 @@ const MIME: Record<string, string> = {
 export interface SummaryServerOptions {
   auth: AuthRepository & ShareRepository;
   dictionary?: Dictionary;
+  extraHolidays?: string[];
   fetchImpl?: typeof fetch;
   now?: () => Date;
 }
@@ -80,6 +82,20 @@ async function readBody(req: IncomingMessage): Promise<string> {
   const chunks: Buffer[] = [];
   for await (const chunk of req) chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
   return Buffer.concat(chunks).toString("utf8");
+}
+
+const MAX_UPLOAD_BYTES = 20 * 1024 * 1024;
+
+// Null when the body is over the limit: the caller answers 413 and the rest of the stream is dropped.
+async function readUpload(req: IncomingMessage): Promise<Buffer | null> {
+  const chunks: Buffer[] = [];
+  let total = 0;
+  for await (const chunk of req) {
+    total += chunk.length;
+    if (total > MAX_UPLOAD_BYTES) return null;
+    chunks.push(chunk);
+  }
+  return Buffer.concat(chunks);
 }
 
 async function readJson(req: IncomingMessage): Promise<Record<string, string>> {
@@ -736,6 +752,35 @@ export function createSummaryServer(repository: CaseRepository, options: Summary
         if (created.area) repository.addProveedor(created.area);
         repository.insert(created);
         json(res, 201, created);
+        return;
+      }
+
+      // Admin only (see the /api/admin/ gate above). Replaces every case, like the old CLI import.
+      if (req.method === "POST" && url.pathname === "/api/admin/importar") {
+        const data = await readUpload(req);
+        if (!data) {
+          json(res, 413, { error: "El libro supera 20 MB" });
+          return;
+        }
+        let rows: RawRow[];
+        try {
+          ({ rows } = await readWorkbook(data));
+        } catch {
+          json(res, 400, { error: "No se pudo leer el libro: sube un .xlsx" });
+          return;
+        }
+        try {
+          const summary = await importLoadedCases({
+            rows,
+            dictionary,
+            repository,
+            fetchImpl,
+            extraHolidays: options.extraHolidays,
+          });
+          json(res, 200, summary);
+        } catch (error) {
+          json(res, 503, { error: error instanceof Error ? error.message : String(error) });
+        }
         return;
       }
 

@@ -68,9 +68,8 @@ export async function loadNationalHolidays(
 export async function importLoadedCases(input: {
   rows: RawRow[];
   dictionary: Dictionary;
-  dbPath: string;
+  repository: CaseRepository;
   fetchImpl: typeof fetch;
-  openRepository: (dbPath: string) => CaseRepository;
   onMissingYear?: (year: number) => void;
   extraHolidays?: readonly string[];
 }): Promise<{ imported: number; skipped: number; invalidDates: number; holidays: number }> {
@@ -83,9 +82,8 @@ export async function importLoadedCases(input: {
   );
   const holidays = [...new Set([...extra, ...fetched])].sort();
   const result = importCases({ rows: input.rows, holidays, dictionary: input.dictionary });
-  const repository = input.openRepository(input.dbPath);
-  repository.replaceAll(result.cases);
-  repository.addHolidays(holidays);
+  input.repository.replaceAll(result.cases);
+  input.repository.addHolidays(holidays);
   return {
     imported: result.cases.length,
     skipped: result.skipped,
