@@ -3,7 +3,6 @@
 
 @plugin "tailwindcss-animate";
 
-@custom-variant dark (&:is(.dark *));
 
 @theme inline {
   --font-sans: "Geist", "Inter", system-ui, sans-serif;
@@ -57,27 +56,6 @@
   --input: #e7e5e4;
   --ring: #00843d;
   --radius: 0.125rem;
-}
-
-.dark {
-  --background: #0c1210;
-  --foreground: #f4f4f5;
-  --card: #141c18;
-  --card-foreground: #f4f4f5;
-  --primary: #3dce7a;
-  --primary-foreground: #052e16;
-  --secondary: #163024;
-  --secondary-foreground: #d1fae5;
-  --muted: #1c2620;
-  --muted-foreground: #a1a1aa;
-  --accent: #1a2e24;
-  --accent-foreground: #ecfdf5;
-  --warning: #fbbf24;
-  --warning-foreground: #fde68a;
-  --destructive: #f87171;
-  --border: #2a3830;
-  --input: #2a3830;
-  --ring: #3dce7a;
 }
 
 @layer base {
@@ -230,16 +208,6 @@ tbody tr {
   transition: background-color var(--dur-fast) var(--ease-out);
 }
 
-/* Smooth color change while switching theme (class set for ~300ms by theme.ts). */
-html.theme-switching,
-html.theme-switching *,
-html.theme-switching *::before,
-html.theme-switching *::after {
-  transition: background-color var(--dur-slow) var(--ease-out), color var(--dur-slow) var(--ease-out),
-    border-color var(--dur-slow) var(--ease-out), fill var(--dur-slow) var(--ease-out),
-    stroke var(--dur-slow) var(--ease-out) !important;
-}
-
 /* Route change cross-fade (View Transitions API, where supported). */
 ::view-transition-old(root),
 ::view-transition-new(root) {
@@ -266,11 +234,6 @@ html.theme-switching *::after {
 
   .shimmer {
     animation: none;
-  }
-
-  html.theme-switching,
-  html.theme-switching * {
-    transition: none !important;
   }
 
   button:not(:disabled):active,

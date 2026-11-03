@@ -1,3 +1,5 @@
+export type PlazoEstado = "en-plazo" | "por-vencer" | "vencido";
+
 export interface CountBucket {
   key: string;
   count: number;
@@ -17,7 +19,7 @@ export interface MonthFlow {
 }
 
 export interface AgingBucket {
-  key: "0-5" | "6-10" | "mas-10";
+  key: PlazoEstado;
   count: number;
 }
 
@@ -66,7 +68,6 @@ export interface DashboardSummary {
   matrizProveedorTipo: MatrixRow[];
 }
 
-export type PlazoEstado = "en-plazo" | "por-vencer" | "vencido";
 
 export interface Riesgo {
   diasAbiertos: number;

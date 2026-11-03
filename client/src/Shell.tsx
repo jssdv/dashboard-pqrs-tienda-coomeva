@@ -14,7 +14,6 @@ import {
 } from "@/components/ui/sheet";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { CommandPalette } from "./CommandPalette";
-import { ThemeToggle } from "./ui/ThemeToggle";
 import { useVencidos } from "./useVencidos";
 
 const navClass = (compact: boolean) => ({ isActive }: { isActive: boolean }) =>
@@ -134,7 +133,7 @@ export function Shell() {
         </a>
         <aside className="hidden w-52 shrink-0 flex-col border-r border-border bg-card px-3 py-5 lg:flex">
           <div className="mb-6 px-3">
-            <img src="/logo.png" alt="Tienda Coomeva" className="h-auto w-32 bg-white p-1" />
+            <img src="/logo.png" alt="Tienda Coomeva" className="h-auto w-32" />
             <span className="mt-1 block font-mono text-[0.7rem] tracking-widest text-muted-foreground uppercase">
               PQRS
             </span>
@@ -176,7 +175,6 @@ export function Shell() {
                 Ctrl K
               </kbd>
             </Button>
-            <ThemeToggle />
             <Button asChild className="hidden min-h-11 md:inline-flex">
               <Link to="/casos/nuevo">Nuevo caso</Link>
             </Button>
@@ -190,7 +188,7 @@ export function Shell() {
                 <SheetContent side="left">
                   <SheetHeader>
                     <SheetTitle>
-                      <img src="/logo.png" alt="Tienda Coomeva" className="h-auto w-28 bg-white p-1" />
+                      <img src="/logo.png" alt="Tienda Coomeva" className="h-auto w-28" />
                       <span className="sr-only">PQRS</span>
                     </SheetTitle>
                     <SheetDescription>Navegación</SheetDescription>

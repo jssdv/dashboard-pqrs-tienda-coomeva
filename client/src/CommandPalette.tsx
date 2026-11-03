@@ -3,7 +3,6 @@ import { Dialog } from "radix-ui";
 import { useNavigate } from "react-router-dom";
 import { getCases } from "./api";
 import { matchesSearch } from "./matchesSearch";
-import { useTheme, type ThemeMode } from "./theme";
 import { searchKey } from "./ui/options";
 import type { PqrCase } from "./types";
 
@@ -15,7 +14,6 @@ interface Entry {
   run: () => void;
 }
 
-const NEXT_THEME: Record<ThemeMode, ThemeMode> = { light: "dark", dark: "system", system: "light" };
 const MAX_CASES = 8;
 
 export function CommandPalette({
@@ -28,7 +26,6 @@ export function CommandPalette({
   returnFocusTo?: RefObject<HTMLElement | null>;
 }) {
   const navigate = useNavigate();
-  const { mode, setMode } = useTheme();
   const [query, setQuery] = useState("");
   const [active, setActive] = useState(0);
   const [cases, setCases] = useState<PqrCase[] | null>(null);
@@ -58,15 +55,6 @@ export function CommandPalette({
       { id: "go-casos", group: "Ir a", label: "Casos", run: go("/casos") },
       { id: "go-proveedores", group: "Ir a", label: "Proveedores", run: go("/proveedores") },
       { id: "act-nuevo", group: "Acciones", label: "Nuevo caso", run: go("/casos/nuevo", false) },
-      {
-        id: "act-tema",
-        group: "Acciones",
-        label: "Cambiar tema",
-        run: () => {
-          setMode(NEXT_THEME[mode]);
-          onOpenChange(false);
-        },
-      },
     ];
     const needle = searchKey(query);
     const commands = needle ? base.filter((entry) => searchKey(entry.label).includes(needle)) : base;
@@ -87,7 +75,7 @@ export function CommandPalette({
             })
         : [];
     return [...commands, ...found];
-  }, [query, cases, mode, navigate, onOpenChange, setMode]);
+  }, [query, cases, navigate, onOpenChange]);
 
   useEffect(() => setActive(0), [query]);
 

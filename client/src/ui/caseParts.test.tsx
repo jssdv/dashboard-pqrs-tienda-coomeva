@@ -37,16 +37,16 @@ function caso(over: Partial<PqrCase> = {}): PqrCase {
 
 const fill = () => (document.querySelector("[data-fill]") as HTMLElement).style.width;
 
-it("PlazoBar fills in proportion to the days over 10", () => {
-  render(<PlazoBar dias={4} estado="en-plazo" />);
-  expect(screen.getByRole("img", { name: "4 días hábiles de 10" })).toBeTruthy();
-  expect(fill()).toBe("40%");
+it("PlazoBar fills in proportion to the days over 15", () => {
+  render(<PlazoBar dias={3} estado="en-plazo" />);
+  expect(screen.getByRole("img", { name: "3 días hábiles de 15" })).toBeTruthy();
+  expect(fill()).toBe("20%");
 });
 
-it("PlazoBar caps at 100% beyond 10 days and keeps the real number in the label", () => {
+it("PlazoBar caps at 100% beyond 15 days and keeps the real number in the label", () => {
   render(<PlazoBar dias={681} estado="vencido" />);
   expect(fill()).toBe("100%");
-  expect(screen.getByRole("img", { name: "681 días hábiles de 10" })).toBeTruthy();
+  expect(screen.getByRole("img", { name: "681 días hábiles de 15" })).toBeTruthy();
 });
 
 it("PlazoBar without days says Sin fecha de inicio", () => {
@@ -54,7 +54,7 @@ it("PlazoBar without days says Sin fecha de inicio", () => {
   expect(screen.getByText("Sin fecha de inicio")).toBeTruthy();
 });
 
-it("PlazoBar marks 5 and 10 days", () => {
+it("PlazoBar marks half and full plazo", () => {
   render(<PlazoBar dias={2} estado="en-plazo" />);
   expect(document.querySelectorAll("[data-tick]")).toHaveLength(2);
 });
@@ -79,7 +79,7 @@ it("CaseTimeline for a closed case shows the solution date and days", () => {
   expect(region.textContent).toContain("6 días hábiles");
 });
 
-it("CaseTimeline caps the marker beyond 10 days but keeps the real number", () => {
+it("CaseTimeline caps the marker beyond 15 days but keeps the real number", () => {
   render(<CaseTimeline caso={caso({ riesgo: { diasAbiertos: 40, diasParaVencer: -30, estado: "vencido" } })} />);
   expect(fill()).toBe("100%");
   expect(screen.getByRole("region", { name: "Línea de tiempo" }).textContent).toContain("40 días hábiles");

@@ -32,6 +32,8 @@ export function textOrDash(value: string | number | null | undefined): string {
   return String(value);
 }
 
+export const PLAZO_DIAS = 15;
+
 export function plazoLabel(
   riesgo?: Riesgo,
 ): { text: string; variant: "secondary" | "warning" | "destructive" } | null {

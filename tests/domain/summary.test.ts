@@ -136,14 +136,14 @@ describe("summarize months and days", () => {
   it("counts the open queue only when holidays and a Bogotá date are provided", () => {
     const summary = summarize(
       [caso({ id: "2026-2", sheetYear: 2026, rowNumber: 2, fechaSolucion: null, diasSolucion: null })],
-      { holidays: ["2026-01-01"], today: "2026-01-19" },
+      { holidays: ["2026-01-01"], today: "2026-01-26" },
     );
     expect(summary.colaVencida).toBe(1);
     expect(summary.colaError).toBeNull();
     expect(summary.antiguedad).toEqual([
-      { key: "0-5", count: 0 },
-      { key: "6-10", count: 0 },
-      { key: "mas-10", count: 1 },
+      { key: "en-plazo", count: 0 },
+      { key: "por-vencer", count: 0 },
+      { key: "vencido", count: 1 },
     ]);
     expect(summary.cierrePorTipo).toEqual([
       { tipo: "RECLAMO", entrados: 1, cerrados: 0, tasa: 0 },
@@ -174,7 +174,7 @@ describe("summarize open work", () => {
         id: "2026-3",
         sheetYear: 2026,
         rowNumber: 3,
-        fechaInicial: "2026-01-20",
+        fechaInicial: "2026-01-26",
         fechaSolucion: null,
         diasSolucion: null,
       }),
@@ -196,7 +196,7 @@ describe("summarize open work", () => {
 
   it("ages only open cases with a valid start date", () => {
     const holidays = ["2026-01-01"];
-    const today = "2026-01-20";
+    const today = "2026-01-26";
     const cases = [
       caso({
         id: "recent",
@@ -240,9 +240,9 @@ describe("summarize open work", () => {
       }),
     ];
     expect(summarize(cases, { holidays, today }).antiguedad).toEqual([
-      { key: "0-5", count: 1 },
-      { key: "6-10", count: 1 },
-      { key: "mas-10", count: 1 },
+      { key: "en-plazo", count: 1 },
+      { key: "por-vencer", count: 1 },
+      { key: "vencido", count: 1 },
     ]);
   });
 

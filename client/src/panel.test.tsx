@@ -26,9 +26,9 @@ function summary(over: Partial<DashboardSummary> = {}): DashboardSummary {
     porMes: [],
     flujoPorMes: [],
     antiguedad: [
-      { key: "0-5", count: 1 },
-      { key: "6-10", count: 0 },
-      { key: "mas-10", count: 63 },
+      { key: "en-plazo", count: 1 },
+      { key: "por-vencer", count: 0 },
+      { key: "vencido", count: 63 },
     ],
     abiertosPorArea: [],
     abiertosPorTema: [],
@@ -143,7 +143,7 @@ it("limits the flow chart with the range selector", async () => {
 it("shows plazos as one segmented bar with a link per segment", async () => {
   show();
   await screen.findByRole("heading", { level: 2, name: "Plazos de casos abiertos" });
-  const bar = screen.getByRole("img", { name: /Vencido \(más de 10\) 63/ });
+  const bar = screen.getByRole("img", { name: /Vencido 63/ });
   expect(bar.querySelectorAll("[data-segment]")).toHaveLength(3);
   const card = bar.closest("[data-slot='card']") as HTMLElement;
   expect(within(card).getByRole("link", { name: /Vencido/ }).getAttribute("href")).toBe("/casos?plazo=vencido");

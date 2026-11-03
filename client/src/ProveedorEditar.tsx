@@ -53,7 +53,7 @@ export function ProveedorEditar({
   return (
     <FormDialog
       title="Editar proveedor"
-      description="El plazo vacío usa el estándar de 10 días hábiles."
+      description="El plazo vacío usa el estándar de 15 días hábiles."
       width="md"
       submitLabel="Guardar"
       pending={pending}

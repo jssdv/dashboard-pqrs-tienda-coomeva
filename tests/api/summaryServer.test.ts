@@ -170,7 +170,7 @@ describe("GET /api/casos", () => {
           diasSolucion: 2,
         }),
       ]),
-      { now: () => new Date("2026-01-19T15:00:00Z") },
+      { now: () => new Date("2026-01-26T15:00:00Z") },
     );
     const port = await listen(server);
     try {
@@ -227,7 +227,7 @@ describe("GET /api/casos plazo", () => {
       diasSolucion: 2,
     }),
   ];
-  const now = () => new Date("2026-01-19T15:00:00Z");
+  const now = () => new Date("2026-01-26T15:00:00Z");
 
   it("filters by plazo and attaches riesgo only to open cases", async () => {
     const server = createSummaryServer(memoryRepo(rows()), { now });
@@ -241,7 +241,7 @@ describe("GET /api/casos plazo", () => {
       const all = await (await fetch(base)).json();
       const byId = Object.fromEntries(all.cases.map((row: { id: string }) => [row.id, row]));
       expect(byId.plazo.riesgo.estado).toBe("en-plazo");
-      expect(byId.venc.riesgo).toMatchObject({ diasAbiertos: 11, diasParaVencer: -1 });
+      expect(byId.venc.riesgo).toMatchObject({ diasAbiertos: 16, diasParaVencer: -1 });
       expect(byId.cerr.riesgo).toBeUndefined();
     } finally {
       await new Promise((resolve) => server.close(resolve));
@@ -302,7 +302,7 @@ describe("GET /api/proveedores/:nombre/linea", () => {
 });
 
 describe("GET /api/proveedores metrics", () => {
-  const now = () => new Date("2026-01-19T15:00:00Z");
+  const now = () => new Date("2026-01-26T15:00:00Z");
   const rows = () => [
     caso({ id: "1", sheetYear: 2026, rowNumber: 2, area: "Tienda", fechaInicial: "2026-01-05" }),
     caso({ id: "2", sheetYear: 2026, rowNumber: 3, area: "Tienda", fechaInicial: "2026-01-16" }),
@@ -442,7 +442,7 @@ describe("GET /api/catalogos and catalog validation on create", () => {
 });
 
 describe("GET /api/casos/exportar", () => {
-  const now = () => new Date("2026-01-19T15:00:00Z");
+  const now = () => new Date("2026-01-26T15:00:00Z");
   const base = () => [
     caso({ id: "venc", sheetYear: 2026, rowNumber: 2, fechaInicial: "2026-01-05", area: "Tienda", tipo: "RECLAMO", tema: "Cine", idOrden: "ORD-1", asociado: "Ana Ruiz" }),
     caso({ id: "plazo", sheetYear: 2026, rowNumber: 3, fechaInicial: "2026-01-16", area: "Lagobo", tipo: "QUEJA", tema: "Bonos", idOrden: "ORD-2", asociado: "Luis" }),
@@ -478,7 +478,7 @@ describe("GET /api/casos/exportar", () => {
     expect(response.headers.get("content-type")).toBe(
       "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
     );
-    expect(response.headers.get("content-disposition")).toBe('attachment; filename="casos-2026-01-19.xlsx"');
+    expect(response.headers.get("content-disposition")).toBe('attachment; filename="casos-2026-01-26.xlsx"');
     expect(await rowsOf(buffer)).toEqual(["ORD-1", "ORD-2", "ORD-3"]);
   });
 

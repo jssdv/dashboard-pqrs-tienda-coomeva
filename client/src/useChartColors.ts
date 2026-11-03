@@ -1,6 +1,5 @@
 import { useMemo } from "react";
 import { tipoColor, TIPO_ORDER } from "./palette";
-import { useTheme } from "./theme";
 
 export interface ChartColors {
   primary: string;
@@ -19,23 +18,21 @@ function cssVar(style: CSSStyleDeclaration, name: string, fallback: string): str
 }
 
 // SVG presentation attributes do not resolve var(--token), so chart colors are
-// read from the active theme's CSS variables and recomputed when the theme changes.
+// read from the theme's CSS variables.
 export function useChartColors(): ChartColors {
-  const { resolved } = useTheme();
   return useMemo(() => {
     const style = getComputedStyle(document.documentElement);
-    const dark = resolved === "dark";
     const tipo: Record<string, string> = {};
-    for (const name of TIPO_ORDER) tipo[name] = tipoColor(name, resolved);
+    for (const name of TIPO_ORDER) tipo[name] = tipoColor(name);
     return {
-      primary: cssVar(style, "--primary", dark ? "#3dce7a" : "#00843d"),
-      warning: cssVar(style, "--warning", dark ? "#fbbf24" : "#d97706"),
-      danger: cssVar(style, "--destructive", dark ? "#f87171" : "#b91c1c"),
-      muted: cssVar(style, "--muted", dark ? "#1c2620" : "#f4f4f5"),
-      grid: cssVar(style, "--border", dark ? "#2a3830" : "#e7e5e4"),
-      axis: cssVar(style, "--muted-foreground", dark ? "#a1a1aa" : "#52525b"),
-      surface: cssVar(style, "--card", dark ? "#141c18" : "#ffffff"),
+      primary: cssVar(style, "--primary", "#00843d"),
+      warning: cssVar(style, "--warning", "#d97706"),
+      danger: cssVar(style, "--destructive", "#b91c1c"),
+      muted: cssVar(style, "--muted", "#f4f4f5"),
+      grid: cssVar(style, "--border", "#e7e5e4"),
+      axis: cssVar(style, "--muted-foreground", "#52525b"),
+      surface: cssVar(style, "--card", "#ffffff"),
       tipo,
     };
-  }, [resolved]);
+  }, []);
 }

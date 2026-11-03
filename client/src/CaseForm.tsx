@@ -292,7 +292,11 @@ function CaseSummary({ caso }: { caso: PqrCase }) {
       </dl>
       {riesgo ? (
         <div className="grid gap-1">
-          <PlazoBar dias={riesgo.diasAbiertos} estado={riesgo.estado} />
+          <PlazoBar
+            dias={riesgo.diasAbiertos}
+            estado={riesgo.estado}
+            plazo={riesgo.diasAbiertos + riesgo.diasParaVencer}
+          />
           <p className="m-0 text-xs text-muted-foreground">
             Abierto desde {caso.fechaInicial} · {riesgo.diasAbiertos} días hábiles
           </p>

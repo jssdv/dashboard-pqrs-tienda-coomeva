@@ -1,7 +1,8 @@
 import { businessDays, dueDate } from "./businessDays.js";
 import type { PqrCase } from "./types.js";
 
-export const PLAZO_DIAS = 10;
+/** Ley 1755 de 2015, art. 14: las PQR se responden en 15 días hábiles. */
+export const PLAZO_DIAS = 15;
 
 export type PlazoEstado = "en-plazo" | "por-vencer" | "vencido";
 
