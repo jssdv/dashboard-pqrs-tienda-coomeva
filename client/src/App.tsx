@@ -1,4 +1,4 @@
-import { createBrowserRouter, Outlet, RouterProvider } from "react-router-dom";
+import { createBrowserRouter, Navigate, Outlet, RouterProvider } from "react-router-dom";
 import { Admin } from "./Admin";
 import { AuthProvider, RequireRole } from "./auth";
 import { Casos } from "./Casos";
@@ -23,6 +23,8 @@ const router = createBrowserRouter([
     children: [
       { path: "login", element: <Login /> },
       { path: "setup", element: <Setup /> },
+      // The server already checked the share link; the viewer opens the dashboard like any other user.
+      { path: "ver/:token", element: <Navigate to="/" replace /> },
       {
         element: (
           <RequireRole roles={[...ALL]}>
