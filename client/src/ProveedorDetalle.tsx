@@ -15,6 +15,7 @@ import {
   YAxis,
 } from "recharts";
 import { getProviderTimeline, type ProveedorRow } from "./api";
+import { useAuth } from "./auth";
 import { axisTick, ChartTip, useMotion } from "./charts";
 import { useChartColors } from "./useChartColors";
 import { casosHref, promedioText } from "./format";
@@ -124,6 +125,7 @@ export function ProveedorDetalle({
   onRename: (desde: string, hacia: string) => Promise<void>;
 }) {
   const [nombre, setNombre] = useState(row.nombre);
+  const { canWrite } = useAuth();
   useEffect(() => setNombre(row.nombre), [row.nombre]);
   const celdas = (tipos?.celdas ?? []).filter((cell) => cell.total > 0);
   const maxTotal = Math.max(1, ...celdas.map((cell) => cell.total));
@@ -187,15 +189,17 @@ export function ProveedorDetalle({
             {row.plazoDias !== null ? ` · Plazo ${row.plazoDias} días hábiles` : ""}
           </p>
         ) : null}
-        <form className="mt-4 flex flex-wrap items-end gap-3" onSubmit={submit}>
-          <div className="grid min-w-40 flex-1 gap-1.5">
-            <Label htmlFor={`renombrar-${row.nombre}`}>Nombre del proveedor</Label>
-            <Input id={`renombrar-${row.nombre}`} value={nombre} onChange={(event) => setNombre(event.target.value)} />
-          </div>
-          <Button className="min-h-11" type="submit" disabled={nombre.trim() === "" || nombre.trim() === row.nombre}>
-            Renombrar
-          </Button>
-        </form>
+        {canWrite ? (
+          <form className="mt-4 flex flex-wrap items-end gap-3" onSubmit={submit}>
+            <div className="grid min-w-40 flex-1 gap-1.5">
+              <Label htmlFor={`renombrar-${row.nombre}`}>Nombre del proveedor</Label>
+              <Input id={`renombrar-${row.nombre}`} value={nombre} onChange={(event) => setNombre(event.target.value)} />
+            </div>
+            <Button className="min-h-11" type="submit" disabled={nombre.trim() === "" || nombre.trim() === row.nombre}>
+              Renombrar
+            </Button>
+          </form>
+        ) : null}
       </section>
       <section aria-label="Línea de tiempo">
         <h3 className="mb-2 text-sm font-semibold">Entrados y cerrados por mes</h3>

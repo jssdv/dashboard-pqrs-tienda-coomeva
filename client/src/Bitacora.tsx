@@ -5,6 +5,7 @@ import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
 import { ApiError, addBitacoraEntry, getBitacora } from "./api";
+import { useAuth } from "./auth";
 import { bogotaToday } from "./metrics";
 import type { BitacoraEntry, FieldError } from "./types";
 
@@ -15,6 +16,7 @@ export function Bitacora({ caseId }: { caseId: string }) {
   const [texto, setTexto] = useState("");
   const [errors, setErrors] = useState<FieldError[]>([]);
   const [saving, setSaving] = useState(false);
+  const { canWrite } = useAuth();
 
   useEffect(() => {
     let live = true;
@@ -55,34 +57,36 @@ export function Bitacora({ caseId }: { caseId: string }) {
   return (
     <section aria-labelledby="det-bitacora" className="grid gap-3">
       <h3 id="det-bitacora" className="text-sm font-semibold">Bitácora</h3>
-      <form onSubmit={submit} className="grid gap-2" noValidate>
-        <div className="grid gap-1">
-          <Label htmlFor="bitacora-fecha">Fecha del avance</Label>
-          <Input
-            id="bitacora-fecha"
-            type="date"
-            value={fecha}
-            max={bogotaToday()}
-            onChange={(event) => setFecha(event.target.value)}
-            aria-invalid={Boolean(message("fecha"))}
-          />
-          {message("fecha") ? <p role="alert" className="text-sm text-destructive">{message("fecha")}</p> : null}
-        </div>
-        <div className="grid gap-1">
-          <Label htmlFor="bitacora-texto">Avance</Label>
-          <Textarea
-            id="bitacora-texto"
-            value={texto}
-            onChange={(event) => setTexto(event.target.value)}
-            aria-invalid={Boolean(message("texto"))}
-          />
-          {message("texto") ? <p role="alert" className="text-sm text-destructive">{message("texto")}</p> : null}
-        </div>
-        {message("form") ? <p role="alert" className="text-sm text-destructive">{message("form")}</p> : null}
-        <Button type="submit" variant="outline" disabled={saving} className="w-fit">
-          Registrar avance
-        </Button>
-      </form>
+      {canWrite ? (
+        <form onSubmit={submit} className="grid gap-2" noValidate>
+          <div className="grid gap-1">
+            <Label htmlFor="bitacora-fecha">Fecha del avance</Label>
+            <Input
+              id="bitacora-fecha"
+              type="date"
+              value={fecha}
+              max={bogotaToday()}
+              onChange={(event) => setFecha(event.target.value)}
+              aria-invalid={Boolean(message("fecha"))}
+            />
+            {message("fecha") ? <p role="alert" className="text-sm text-destructive">{message("fecha")}</p> : null}
+          </div>
+          <div className="grid gap-1">
+            <Label htmlFor="bitacora-texto">Avance</Label>
+            <Textarea
+              id="bitacora-texto"
+              value={texto}
+              onChange={(event) => setTexto(event.target.value)}
+              aria-invalid={Boolean(message("texto"))}
+            />
+            {message("texto") ? <p role="alert" className="text-sm text-destructive">{message("texto")}</p> : null}
+          </div>
+          {message("form") ? <p role="alert" className="text-sm text-destructive">{message("form")}</p> : null}
+          <Button type="submit" variant="outline" disabled={saving} className="w-fit">
+            Registrar avance
+          </Button>
+        </form>
+      ) : null}
       {loadError ? (
         <p role="alert" className="text-sm text-destructive">No se pudo cargar la bitácora</p>
       ) : entries === null ? (

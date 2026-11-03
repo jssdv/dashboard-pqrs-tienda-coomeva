@@ -297,6 +297,10 @@ async function handleAuthRoute(
   limit: LoginLimit,
 ): Promise<boolean> {
   const token = cookieValue(req, SESSION_COOKIE);
+  if (req.method === "GET" && url.pathname === "/api/auth/estado") {
+    json(res, 200, { requiereSetup: auth.countUsers() === 0 });
+    return true;
+  }
   if (req.method === "GET" && url.pathname === "/api/auth/me") {
     const user = userForSession(auth, token);
     if (!user) json(res, 401, { error: "No autenticado" });
@@ -399,7 +403,7 @@ async function handleAdminRoute(
       }
       next.rol = raw.rol;
     }
-    if ("activo" in raw) next.activo = raw.activo !== "false";
+    if ("activo" in raw) next.activo = String(raw.activo) !== "false";
     if (raw.password) {
       const error = validatePassword(raw.password);
       if (error) {

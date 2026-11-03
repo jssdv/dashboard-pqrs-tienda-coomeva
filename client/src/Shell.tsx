@@ -1,5 +1,7 @@
 import type { ReactNode } from "react";
-import { Link, NavLink, Outlet, useLocation } from "react-router-dom";
+import { Link, NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
+import { logout } from "./api";
+import { useAuth } from "./auth";
 import { useEffect, useRef, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -37,6 +39,7 @@ function Nav({
   onNavigate?: () => void;
 }) {
   const item = (label: string) => (compact ? { "aria-label": label, title: label } : {});
+  const { user } = useAuth();
   return (
     <div className="grid gap-4">
       <nav aria-label="Principal" className="grid gap-px" onClick={onNavigate}>
@@ -68,6 +71,12 @@ function Nav({
           <span className={NUM}>03</span>
           {compact ? null : "Proveedores"}
         </NavLink>
+        {user?.rol === "admin" ? (
+          <NavLink to="/admin" viewTransition className={navClass(compact)} {...item("Administración")}>
+            <span className={NUM}>04</span>
+            {compact ? null : "Administración"}
+          </NavLink>
+        ) : null}
       </nav>
     </div>
   );
@@ -79,6 +88,7 @@ const CRUMBS: Array<[RegExp, string[]]> = [
   [/^\/casos\/nuevo$/, ["Casos", "Nuevo caso"]],
   [/^\/casos\/[^/]+\/cerrar$/, ["Casos", "Cerrar caso"]],
   [/^\/proveedores$/, ["Proveedores"]],
+  [/^\/admin$/, ["Administración"]],
 ];
 
 function crumbsOf(pathname: string): string[] {
@@ -97,6 +107,14 @@ export function Shell() {
   const [searchOpen, setSearchOpen] = useState(false);
   const searchButton = useRef<HTMLButtonElement>(null);
   const returnFocus = useRef<HTMLElement | null>(null);
+  const { setUser, canWrite } = useAuth();
+  const navigate = useNavigate();
+
+  async function onLogout() {
+    await logout().catch(() => {});
+    setUser(null);
+    navigate("/login", { replace: true });
+  }
 
   function openSearch(from?: HTMLElement | null) {
     const active = document.activeElement;
@@ -175,8 +193,13 @@ export function Shell() {
                 Ctrl K
               </kbd>
             </Button>
-            <Button asChild className="hidden min-h-11 md:inline-flex">
-              <Link to="/casos/nuevo">Nuevo caso</Link>
+            {canWrite ? (
+              <Button asChild className="hidden min-h-11 md:inline-flex">
+                <Link to="/casos/nuevo">Nuevo caso</Link>
+              </Button>
+            ) : null}
+            <Button type="button" variant="ghost" className="min-h-11" onClick={onLogout}>
+              Cerrar sesión
             </Button>
             <div className="md:hidden">
               <Sheet open={open} onOpenChange={setOpen}>

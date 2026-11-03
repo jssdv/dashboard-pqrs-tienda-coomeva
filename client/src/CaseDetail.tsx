@@ -10,6 +10,7 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet";
 import { plazoLabel, textOrDash } from "./format";
+import { useAuth } from "./auth";
 import { Bitacora } from "./Bitacora";
 import { CaseTimeline } from "./ui/CaseTimeline";
 import { TipoTag } from "./ui/TipoTag";
@@ -26,6 +27,7 @@ function Field({ label, value }: { label: string; value: string | null }) {
 
 export function CaseDetail({ caso, onClose }: { caso: PqrCase | null; onClose: () => void }) {
   const open = caso !== null && caso.fechaSolucion === null;
+  const { canWrite } = useAuth();
   const plazo = caso ? plazoLabel(caso.riesgo) : null;
   return (
     <Sheet open={caso !== null} onOpenChange={(next) => (next ? undefined : onClose())}>
@@ -74,7 +76,7 @@ export function CaseDetail({ caso, onClose }: { caso: PqrCase | null; onClose: (
               </section>
               <Bitacora caseId={caso.id} />
             </div>
-            {open ? (
+            {open && canWrite ? (
               <SheetFooter>
                 <Button asChild className="min-h-11 w-full">
                   <Link to={`/casos/${encodeURIComponent(caso.id)}/cerrar`}>Cerrar caso</Link>

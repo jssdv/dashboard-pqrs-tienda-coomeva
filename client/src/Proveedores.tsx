@@ -12,6 +12,7 @@ import {
   type ProveedorRow,
 } from "./api";
 import { casosHref, promedioText, textOrDash } from "./format";
+import { useAuth } from "./auth";
 import { ProveedorDetalle } from "./ProveedorDetalle";
 import { ProveedorEditar } from "./ProveedorEditar";
 import { PageHead } from "./Shell";
@@ -26,6 +27,7 @@ export function Proveedores() {
   const [pending, setPending] = useState(false);
   const [selected, setSelected] = useState<string | null>(null);
   const [editing, setEditing] = useState<ProveedorRow | null>(null);
+  const { canWrite } = useAuth();
   const wide = useMinWidth("(min-width: 768px)");
   const maxAbiertos = Math.max(1, ...rows.map((row) => row.abiertos));
 
@@ -82,15 +84,17 @@ export function Proveedores() {
           {error}
         </p>
       ) : null}
-      <form className="mb-6 flex max-w-xl flex-wrap items-end gap-3" onSubmit={onCreate}>
-        <div className="grid min-w-48 flex-1 gap-1.5">
-          <Label htmlFor="nuevo-proveedor">Nuevo proveedor</Label>
-          <Input id="nuevo-proveedor" value={nombre} onChange={(event) => setNombre(event.target.value)} required />
-        </div>
-        <Button className="min-h-11" type="submit" disabled={pending}>
-          {pending ? "Guardando…" : "Agregar"}
-        </Button>
-      </form>
+      {canWrite ? (
+        <form className="mb-6 flex max-w-xl flex-wrap items-end gap-3" onSubmit={onCreate}>
+          <div className="grid min-w-48 flex-1 gap-1.5">
+            <Label htmlFor="nuevo-proveedor">Nuevo proveedor</Label>
+            <Input id="nuevo-proveedor" value={nombre} onChange={(event) => setNombre(event.target.value)} required />
+          </div>
+          <Button className="min-h-11" type="submit" disabled={pending}>
+            {pending ? "Guardando…" : "Agregar"}
+          </Button>
+        </form>
+      ) : null}
       {rows.length === 0 && !error ? <p className="text-muted-foreground">Todavía no hay proveedores.</p> : null}
       {rows.length > 0 && wide ? (
         <div className="max-h-[calc(100dvh-20rem)] overflow-auto border border-border bg-card">
@@ -126,15 +130,17 @@ export function Proveedores() {
                               Inactivo
                             </span>
                           )}
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            className="min-h-11"
-                            aria-label={`Editar ${row.nombre}`}
-                            onClick={() => setEditing(row)}
-                          >
-                            Editar
-                          </Button>
+                          {canWrite ? (
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              className="min-h-11"
+                              aria-label={`Editar ${row.nombre}`}
+                              onClick={() => setEditing(row)}
+                            >
+                              Editar
+                            </Button>
+                          ) : null}
                         </div>
                       </th>
                       <td className="px-3 py-3 text-right font-mono tabular-nums">{row.casos}</td>
@@ -206,15 +212,17 @@ export function Proveedores() {
                       Inactivo
                     </span>
                   )}
-                  <Button
-                  type="button"
-                  variant="ghost"
-                  className="min-h-11"
-                  aria-label={`Editar ${row.nombre}`}
-                  onClick={() => setEditing(row)}
-                          >
-                  Editar
-                          </Button>
+                  {canWrite ? (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      className="min-h-11"
+                      aria-label={`Editar ${row.nombre}`}
+                      onClick={() => setEditing(row)}
+                    >
+                      Editar
+                    </Button>
+                  ) : null}
                 </div>
                 <dl className="mt-2 grid grid-cols-2 gap-3 text-sm">
                   {[
