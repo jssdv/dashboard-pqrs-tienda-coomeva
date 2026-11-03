@@ -23,7 +23,7 @@ Rama de trabajo: `feature/pqr-core`.
 
 ## Uso: aplicación para macOS y Windows
 
-No hace falta instalar nada. Descarga el `.zip` de la última versión en la pestaña **Releases** del repositorio (`pqr-macos-arm64`, `pqr-macos-x64` o `pqr-windows-x64`) y:
+No hace falta instalar nada. Descarga el `.zip` de la última versión en la pestaña **Releases** del repositorio (`pqr-macos-arm64` o `pqr-windows-x64`) y:
 
 1. Descomprime el zip. Queda una carpeta `pqr-<sistema>-<arquitectura>/` con `pqr` (o `pqr.exe`), `data/` y `LEEME.txt`.
 2. Haz doble clic en `pqr` (macOS) o `pqr.exe` (Windows). Se abre el navegador en http://localhost:3000.
