@@ -101,8 +101,25 @@ export async function createCase(fields: CreateFields): Promise<PqrCase> {
   return postJson("/api/casos", fields);
 }
 
-export interface ProveedorRow {
+export interface ProveedorFields {
+  contacto: string;
+  correo: string;
+  telefono: string;
+  notas: string;
+  activo: boolean;
+  plazoDias: number | null;
+}
+
+export interface Scorecard {
+  cerrados: number;
+  fueraDePlazoPct: number | null;
+  reincidentes: number;
+  causas: Array<{ key: string; count: number }>;
+}
+
+export interface ProveedorRow extends ProveedorFields {
   nombre: string;
+  scorecard?: Scorecard;
   casos: number;
   abiertos: number;
   vencidos: number | null;
@@ -158,6 +175,21 @@ export async function renameProveedor(desde: string, hacia: string): Promise<voi
   if (!response.ok) {
     throw new ApiError(
       typeof body.error === "string" ? body.error : "No se pudo renombrar el proveedor",
+      response.status,
+    );
+  }
+}
+
+export async function updateProveedor(nombre: string, fields: ProveedorFields): Promise<void> {
+  const response = await fetch(`/api/proveedores/${encodeURIComponent(nombre)}`, {
+    method: "PUT",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify(fields),
+  });
+  const body = await readBody(response);
+  if (!response.ok) {
+    throw new ApiError(
+      typeof body.error === "string" ? body.error : "No se pudo guardar el proveedor",
       response.status,
     );
   }

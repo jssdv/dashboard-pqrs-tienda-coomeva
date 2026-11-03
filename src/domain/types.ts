@@ -30,4 +30,6 @@ export interface PqrCase {
   temaOriginal: string | null;
   motivo: string | null;
   solucion: string | null;
+  causaRaiz?: string | null;
+  accionCorrectiva?: string | null;
 }

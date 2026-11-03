@@ -13,6 +13,7 @@ import {
 } from "./api";
 import { casosHref, promedioText, textOrDash } from "./format";
 import { ProveedorDetalle } from "./ProveedorDetalle";
+import { ProveedorEditar } from "./ProveedorEditar";
 import { PageHead } from "./Shell";
 import { useMinWidth } from "./useMinWidth";
 import type { MatrixRow } from "./types";
@@ -24,6 +25,7 @@ export function Proveedores() {
   const [error, setError] = useState("");
   const [pending, setPending] = useState(false);
   const [selected, setSelected] = useState<string | null>(null);
+  const [editing, setEditing] = useState<ProveedorRow | null>(null);
   const wide = useMinWidth("(min-width: 768px)");
   const maxAbiertos = Math.max(1, ...rows.map((row) => row.abiertos));
 
@@ -110,14 +112,30 @@ export function Proveedores() {
                   <Fragment key={row.nombre}>
                     <tr className="border-b border-border hover:bg-muted/70">
                       <th scope="row" className="px-4 py-1 text-left font-semibold">
-                        <button
-                          type="button"
-                          aria-expanded={open}
-                          className="min-h-11 w-full cursor-pointer text-left break-words text-primary"
-                          onClick={() => setSelected(open ? null : row.nombre)}
-                        >
-                          {row.nombre}
-                        </button>
+                        <div className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            aria-expanded={open}
+                            className="min-h-11 flex-1 cursor-pointer text-left break-words text-primary"
+                            onClick={() => setSelected(open ? null : row.nombre)}
+                          >
+                            {row.nombre}
+                          </button>
+                          {row.activo ? null : (
+                            <span className="font-mono text-[0.7rem] tracking-widest text-muted-foreground uppercase">
+                              Inactivo
+                            </span>
+                          )}
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            className="min-h-11"
+                            aria-label={`Editar ${row.nombre}`}
+                            onClick={() => setEditing(row)}
+                          >
+                            Editar
+                          </Button>
+                        </div>
                       </th>
                       <td className="px-3 py-3 text-right font-mono tabular-nums">{row.casos}</td>
                       <td className="px-3 py-3">
@@ -174,14 +192,30 @@ export function Proveedores() {
             const open = selected === row.nombre;
             return (
               <li key={row.nombre} className="border border-border bg-card p-4">
-                <button
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    aria-expanded={open}
+                    className="min-h-11 flex-1 cursor-pointer text-left font-semibold break-words text-primary"
+                    onClick={() => setSelected(open ? null : row.nombre)}
+                  >
+                    {row.nombre}
+                  </button>
+                  {row.activo ? null : (
+                    <span className="font-mono text-[0.7rem] tracking-widest text-muted-foreground uppercase">
+                      Inactivo
+                    </span>
+                  )}
+                  <Button
                   type="button"
-                  aria-expanded={open}
-                  className="min-h-11 w-full cursor-pointer text-left font-semibold break-words text-primary"
-                  onClick={() => setSelected(open ? null : row.nombre)}
-                >
-                  {row.nombre}
-                </button>
+                  variant="ghost"
+                  className="min-h-11"
+                  aria-label={`Editar ${row.nombre}`}
+                  onClick={() => setEditing(row)}
+                          >
+                  Editar
+                          </Button>
+                </div>
                 <dl className="mt-2 grid grid-cols-2 gap-3 text-sm">
                   {[
                     ["Casos", String(row.casos)],
@@ -206,6 +240,17 @@ export function Proveedores() {
             );
           })}
         </ul>
+      ) : null}
+      {editing ? (
+        <ProveedorEditar
+          row={editing}
+          onClose={() => setEditing(null)}
+          onSaved={async (nombre) => {
+            setEditing(null);
+            setSelected((current) => (current === editing.nombre ? nombre : current));
+            await load();
+          }}
+        />
       ) : null}
     </>
   );

@@ -1,7 +1,13 @@
 import Database from "better-sqlite3";
 import type { BitacoraEntry } from "../domain/caseForm.js";
 import type { PqrCase } from "../domain/types.js";
-import type { CaseRepository } from "./repository.js";
+import {
+  ProveedorExistsError,
+  sameName,
+  type CaseRepository,
+  type ProveedorFields,
+  type ProveedorInfo,
+} from "./repository.js";
 
 const COLUMNS = [
   "id",
@@ -25,6 +31,8 @@ const COLUMNS = [
   "temaOriginal",
   "motivo",
   "solucion",
+  "causaRaiz",
+  "accionCorrectiva",
 ] as const;
 
 function flag(value: number): boolean {
@@ -54,6 +62,8 @@ function caseValues(row: PqrCase): Array<string | number | null> {
     row.temaOriginal,
     row.motivo,
     row.solucion,
+    row.causaRaiz ?? null,
+    row.accionCorrectiva ?? null,
   ];
 }
 
@@ -86,7 +96,9 @@ export function openSqliteRepository(dbPath: string): CaseRepository {
       tema TEXT,
       temaOriginal TEXT,
       motivo TEXT,
-      solucion TEXT
+      solucion TEXT,
+      causaRaiz TEXT,
+      accionCorrectiva TEXT
     )
   `);
   const existing = new Set(
@@ -102,6 +114,9 @@ export function openSqliteRepository(dbPath: string): CaseRepository {
     "observaciones",
   ]) {
     if (existing.has(retired)) db.exec(`ALTER TABLE cases DROP COLUMN ${retired}`);
+  }
+  for (const added of ["causaRaiz", "accionCorrectiva"]) {
+    if (!existing.has(added)) db.exec(`ALTER TABLE cases ADD COLUMN ${added} TEXT`);
   }
   const insert = db.prepare(
     `INSERT INTO cases (${COLUMNS.join(", ")}) VALUES (${COLUMNS.map(() => "?").join(", ")})`,
@@ -135,11 +150,51 @@ export function openSqliteRepository(dbPath: string): CaseRepository {
     )
   `);
   db.exec("CREATE INDEX IF NOT EXISTS bitacora_case ON bitacora (caseId)");
+  const storedColumns = new Set(
+    (db.prepare("PRAGMA table_info(proveedores)").all() as Array<{ name: string }>).map(
+      (column) => column.name,
+    ),
+  );
+  for (const [column, type] of [
+    ["contacto", "TEXT NOT NULL DEFAULT ''"],
+    ["correo", "TEXT NOT NULL DEFAULT ''"],
+    ["telefono", "TEXT NOT NULL DEFAULT ''"],
+    ["notas", "TEXT NOT NULL DEFAULT ''"],
+    ["activo", "INTEGER NOT NULL DEFAULT 1"],
+    ["plazoDias", "INTEGER"],
+  ] as const) {
+    if (!storedColumns.has(column)) db.exec(`ALTER TABLE proveedores ADD COLUMN ${column} ${type}`);
+  }
   const insertProveedor = db.prepare("INSERT OR IGNORE INTO proveedores (nombre) VALUES (?)");
+  const names = (): string[] => {
+    const stored = (
+      db.prepare("SELECT nombre FROM proveedores").all() as Array<{ nombre: string }>
+    ).map((row) => row.nombre);
+    const used = (
+      db.prepare(
+        "SELECT DISTINCT area AS nombre FROM cases WHERE area IS NOT NULL AND trim(area) != ''",
+      ).all() as Array<{ nombre: string }>
+    ).map((row) => row.nombre);
+    return [...new Set([...stored, ...used])].sort((a, b) => a.localeCompare(b, "es"));
+  };
   const renameProveedorTx = db.transaction((desde: string, hacia: string) => {
-    insertProveedor.run(hacia);
+    insertProveedor.run(desde);
+    db.prepare("UPDATE proveedores SET nombre = ? WHERE nombre = ?").run(hacia, desde);
     db.prepare("UPDATE cases SET area = ? WHERE area = ?").run(hacia, desde);
-    db.prepare("DELETE FROM proveedores WHERE nombre = ?").run(desde);
+  });
+  const updateProveedorTx = db.transaction((nombre: string, fields: ProveedorFields) => {
+    insertProveedor.run(nombre);
+    db.prepare(
+      "UPDATE proveedores SET contacto = ?, correo = ?, telefono = ?, notas = ?, activo = ?, plazoDias = ? WHERE nombre = ?",
+    ).run(
+      fields.contacto,
+      fields.correo,
+      fields.telefono,
+      fields.notas,
+      fields.activo ? 1 : 0,
+      fields.plazoDias,
+      nombre,
+    );
   });
 
   return {
@@ -162,21 +217,41 @@ export function openSqliteRepository(dbPath: string): CaseRepository {
       addHolidaySet(dates);
     },
     listProveedores() {
-      const stored = (
-        db.prepare("SELECT nombre FROM proveedores").all() as Array<{ nombre: string }>
-      ).map((row) => row.nombre);
-      const used = (
-        db.prepare(
-          "SELECT DISTINCT area AS nombre FROM cases WHERE area IS NOT NULL AND trim(area) != ''",
-        ).all() as Array<{ nombre: string }>
-      ).map((row) => row.nombre);
-      return [...new Set([...stored, ...used])].sort((a, b) => a.localeCompare(b, "es"));
+      return names();
+    },
+    listProveedorInfo() {
+      const stored = new Map(
+        (
+          db.prepare("SELECT * FROM proveedores").all() as Array<
+            Omit<ProveedorInfo, "activo"> & { activo: number }
+          >
+        ).map((row) => [row.nombre, { ...row, activo: row.activo === 1 }]),
+      );
+      return names().map(
+        (nombre) =>
+          stored.get(nombre) ?? {
+            nombre,
+            contacto: "",
+            correo: "",
+            telefono: "",
+            notas: "",
+            activo: true,
+            plazoDias: null,
+          },
+      );
     },
     addProveedor(nombre) {
       insertProveedor.run(nombre.trim().replace(/\s+/g, " "));
     },
+    updateProveedor(nombre, fields) {
+      updateProveedorTx(nombre, fields);
+    },
     renameProveedor(desde, hacia) {
-      renameProveedorTx(desde, hacia.trim().replace(/\s+/g, " "));
+      const destino = hacia.trim().replace(/\s+/g, " ");
+      if (names().some((nombre) => nombre !== desde && sameName(nombre, destino))) {
+        throw new ProveedorExistsError(destino);
+      }
+      renameProveedorTx(desde, destino);
     },
     listBitacora(caseId) {
       return db

@@ -37,6 +37,7 @@ describe("riskOf", () => {
       diasAbiertos: 5,
       diasParaVencer: 5,
       estado: "en-plazo",
+      vence: "2026-01-16",
     });
   });
 
@@ -52,6 +53,7 @@ describe("riskOf", () => {
       diasAbiertos: 10,
       diasParaVencer: 0,
       estado: "por-vencer",
+      vence: "2026-01-16",
     });
   });
 
@@ -60,6 +62,16 @@ describe("riskOf", () => {
       diasAbiertos: 11,
       diasParaVencer: -1,
       estado: "vencido",
+      vence: "2026-01-16",
+    });
+  });
+
+  it("uses the provider's own plazo", () => {
+    const plazos = new Map([["Tienda", 4]]);
+    expect(riskOf(caso({ area: "Tienda" }), HOLIDAYS, "2026-01-12", plazos)).toMatchObject({
+      estado: "vencido",
+      diasParaVencer: -2,
+      vence: "2026-01-08",
     });
   });
 

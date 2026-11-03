@@ -72,6 +72,7 @@ export interface Riesgo {
   diasAbiertos: number;
   diasParaVencer: number;
   estado: PlazoEstado;
+  vence?: string;
 }
 
 export interface PqrCase {
@@ -96,6 +97,8 @@ export interface PqrCase {
   temaOriginal: string | null;
   motivo: string | null;
   solucion: string | null;
+  causaRaiz?: string | null;
+  accionCorrectiva?: string | null;
   riesgo?: Riesgo;
 }
 
@@ -111,9 +114,13 @@ export interface CreateFields {
   motivo: string;
 }
 
+export const CAUSAS_RAIZ = ["Producto", "Logística", "Atención", "Información", "Otro"] as const;
+
 export interface CloseFields {
   fechaSolucion: string;
   solucion: string;
+  causaRaiz?: string;
+  accionCorrectiva?: string;
 }
 
 export interface FieldError {

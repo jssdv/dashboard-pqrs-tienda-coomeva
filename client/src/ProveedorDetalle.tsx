@@ -163,6 +163,30 @@ export function ProveedorDetalle({
             ))}
           </ul>
         )}
+        {row.scorecard ? (
+          <dl aria-label="Indicadores" className="mt-4 grid grid-cols-3 gap-3 text-sm">
+            <div>
+              <dt className="text-muted-foreground">Fuera de plazo</dt>
+              <dd className="m-0 font-mono tabular-nums">
+                {row.scorecard.fueraDePlazoPct === null ? "—" : `${row.scorecard.fueraDePlazoPct} %`}
+              </dd>
+            </div>
+            <div>
+              <dt className="text-muted-foreground">Reincidentes</dt>
+              <dd className="m-0 font-mono tabular-nums">{row.scorecard.reincidentes}</dd>
+            </div>
+            <div>
+              <dt className="text-muted-foreground">Causa principal</dt>
+              <dd className="m-0">{row.scorecard.causas[0]?.key ?? "—"}</dd>
+            </div>
+          </dl>
+        ) : null}
+        {row.contacto || row.correo || row.telefono ? (
+          <p className="mt-3 text-sm text-muted-foreground">
+            {[row.contacto, row.correo, row.telefono].filter(Boolean).join(" · ")}
+            {row.plazoDias !== null ? ` · Plazo ${row.plazoDias} días hábiles` : ""}
+          </p>
+        ) : null}
         <form className="mt-4 flex flex-wrap items-end gap-3" onSubmit={submit}>
           <div className="grid min-w-40 flex-1 gap-1.5">
             <Label htmlFor={`renombrar-${row.nombre}`}>Nombre del proveedor</Label>

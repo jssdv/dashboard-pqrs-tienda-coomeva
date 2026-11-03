@@ -133,11 +133,11 @@ export function Shell() {
           Saltar al contenido
         </a>
         <aside className="hidden w-52 shrink-0 flex-col border-r border-border bg-card px-3 py-5 lg:flex">
-          <div className="mb-6 flex items-center gap-2 px-3">
-            <span className="grid size-8 place-items-center bg-primary font-display text-xs font-bold text-primary-foreground">
-              PQ
+          <div className="mb-6 px-3">
+            <img src="/logo.png" alt="Tienda Coomeva" className="h-auto w-32 bg-white p-1" />
+            <span className="mt-1 block font-mono text-[0.7rem] tracking-widest text-muted-foreground uppercase">
+              PQRS
             </span>
-            <span className="font-display text-base font-semibold tracking-tight">PQRS</span>
           </div>
           <Nav vencidos={vencidos} />
           <div className="mt-auto pt-6">
@@ -189,7 +189,10 @@ export function Shell() {
                 </SheetTrigger>
                 <SheetContent side="left">
                   <SheetHeader>
-                    <SheetTitle>PQRS</SheetTitle>
+                    <SheetTitle>
+                      <img src="/logo.png" alt="Tienda Coomeva" className="h-auto w-28 bg-white p-1" />
+                      <span className="sr-only">PQRS</span>
+                    </SheetTitle>
                     <SheetDescription>Navegación</SheetDescription>
                   </SheetHeader>
                   <div className="px-4">

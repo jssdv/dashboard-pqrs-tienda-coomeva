@@ -27,6 +27,8 @@ function sample(overrides: Partial<PqrCase> = {}): PqrCase {
     temaOriginal: "CINE",
     motivo: "texto",
     solucion: null,
+    causaRaiz: null,
+    accionCorrectiva: null,
     ...overrides,
   };
 }
@@ -62,4 +64,25 @@ it("keeps bitácora entries across replaceAll", () => {
   expect(db.listBitacora("2026-2").map((e) => e.texto)).toEqual(["dos", "uno"]);
   expect(db.listBitacora("2026-2")[0]).toEqual(second);
   expect(db.listBitacora("otro")).toEqual([]);
+});
+
+it("edits proveedor data, keeps it on rename and refuses a duplicate name", () => {
+  const repo = openSqliteRepository(path.join(os.tmpdir(), `pqr-prov-${Date.now()}-${Math.random()}.sqlite`));
+  repo.insert(sample());
+  repo.addProveedor("Natech");
+  repo.updateProveedor("Natech", {
+    contacto: "Ana",
+    correo: "ana@natech.co",
+    telefono: "300",
+    notas: "",
+    activo: false,
+    plazoDias: 5,
+  });
+  repo.renameProveedor("Natech", "Natech SAS");
+  expect(repo.listProveedorInfo().find((p) => p.nombre === "Natech SAS")).toMatchObject({
+    contacto: "Ana",
+    activo: false,
+    plazoDias: 5,
+  });
+  expect(() => repo.renameProveedor("Natech SAS", "TIENDA COOMEVA")).toThrow(/Ya existe/);
 });

@@ -46,6 +46,7 @@ export function CaseDetail({ caso, onClose }: { caso: PqrCase | null; onClose: (
                 <dl className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                   <Field label="Fecha inicial" value={caso.fechaInicial} />
                   <Field label="Fecha de solución" value={caso.fechaSolucion} />
+                  {caso.riesgo?.vence ? <Field label="Vence" value={caso.riesgo.vence} /> : null}
                   <div className="min-w-0">
                     <dt className="text-sm text-muted-foreground">Tipo</dt>
                     <dd className="m-0"><TipoTag tipo={caso.tipo} /></dd>
@@ -67,6 +68,8 @@ export function CaseDetail({ caso, onClose }: { caso: PqrCase | null; onClose: (
                 <dl className="grid gap-3">
                   <Field label="Motivo" value={caso.motivo} />
                   <Field label="Solución" value={caso.solucion} />
+                  <Field label="Causa raíz" value={caso.causaRaiz ?? null} />
+                  <Field label="Acción correctiva" value={caso.accionCorrectiva ?? null} />
                 </dl>
               </section>
               <Bitacora caseId={caso.id} />

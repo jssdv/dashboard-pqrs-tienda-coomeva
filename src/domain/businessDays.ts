@@ -29,3 +29,17 @@ export function businessDays(
   const raw = startIso <= endIso ? span(startIso, endIso, set) : -span(endIso, startIso, set);
   return raw < -5 ? 0 : raw;
 }
+
+/** Último día dentro de plazo: el día hábil número `count`, contando el día de inicio como en businessDays. */
+export function dueDate(startIso: string, count: number, holidays: readonly string[]): string {
+  const set = new Set(holidays);
+  const cursor = new Date(`${startIso}T00:00:00Z`);
+  let counted = 0;
+  for (;;) {
+    const iso = cursor.toISOString().slice(0, 10);
+    const day = cursor.getUTCDay();
+    if (day !== 0 && day !== 6 && !set.has(iso)) counted += 1;
+    if (counted >= count) return iso;
+    cursor.setUTCDate(cursor.getUTCDate() + 1);
+  }
+}

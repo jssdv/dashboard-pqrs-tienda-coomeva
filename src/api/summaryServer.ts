@@ -7,13 +7,14 @@ import { applyClose, caseFromCreate, validateBitacora, validateClose, validateCr
 import { Dictionary } from "../domain/dictionary.js";
 import { bogotaToday, openQueue } from "../domain/openQueue.js";
 import { matchesSearch } from "../domain/matchesSearch.js";
+import { providerScorecard } from "../domain/providerScorecard.js";
 import { providerTimeline } from "../domain/providerTimeline.js";
 import { buildCasesWorkbook } from "../export/casesWorkbook.js";
-import { riskOf, type PlazoEstado, type Riesgo } from "../domain/risk.js";
+import { PLAZO_DIAS, riskOf, type Plazos, type PlazoEstado, type Riesgo } from "../domain/risk.js";
 import { summarize } from "../domain/summary.js";
 import type { CatalogField, PqrCase } from "../domain/types.js";
 import { ensureHolidayYears } from "../holidays/nationalHolidays.js";
-import type { CaseRepository } from "../store/repository.js";
+import { ProveedorExistsError, type CaseRepository, type ProveedorFields } from "../store/repository.js";
 
 const clientDist = join(dirname(fileURLToPath(import.meta.url)), "../../client/dist");
 
@@ -90,10 +91,33 @@ function catalogsOf(repository: CaseRepository): Record<CatalogField, string[]> 
       ),
     ].sort((a, b) => a.localeCompare(b, "es"));
   return {
-    area: [...new Set(repository.listProveedores())].sort((a, b) => a.localeCompare(b, "es")),
+    area: repository
+      .listProveedorInfo()
+      .filter((proveedor) => proveedor.activo)
+      .map((proveedor) => proveedor.nombre)
+      .sort((a, b) => a.localeCompare(b, "es")),
     fuente: collect("fuente"),
     tipo: collect("tipo"),
     tema: collect("tema"),
+  };
+}
+
+function validateProveedor(raw: Record<string, string>): { fields: ProveedorFields } | { error: string } {
+  const correo = (raw.correo ?? "").trim();
+  if (correo && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(correo)) return { error: "El correo no es válido" };
+  const plazo = (raw.plazoDias ?? "").trim();
+  if (plazo && !(/^\d+$/.test(plazo) && Number(plazo) >= 1 && Number(plazo) <= 60)) {
+    return { error: "El plazo debe ser un número de días entre 1 y 60" };
+  }
+  return {
+    fields: {
+      contacto: (raw.contacto ?? "").trim(),
+      correo,
+      telefono: (raw.telefono ?? "").trim(),
+      notas: (raw.notas ?? "").trim(),
+      activo: raw.activo !== "false",
+      plazoDias: plazo ? Number(plazo) : null,
+    },
   };
 }
 
@@ -105,7 +129,7 @@ function describeFilters(query: CaseQuery): string[] {
   if (query.tipo) out.push(`Tipo: ${query.tipo}`);
   if (query.tema) out.push(`Tema: ${query.tema}`);
   if (query.mes) out.push(`Mes: ${query.mes}`);
-  if (query.cola === "vencida") out.push("Más de 10 días hábiles");
+  if (query.cola === "vencida") out.push("Fuera de plazo");
   if (query.fecha === "invalida") out.push("Sin fecha de inicio");
   if (query.q?.trim()) out.push(`Búsqueda: ${query.q.trim()}`);
   return out;
@@ -132,13 +156,14 @@ function applyFilters(
   query: CaseQuery,
   holidays: readonly string[],
   today: string,
+  plazos?: Plazos,
 ): { rows: Array<PqrCase & { riesgo?: Riesgo }>; notice: string | null } {
   let rows: Array<PqrCase & { riesgo?: Riesgo }> = cases;
   const plazo = PLAZOS.find((estado) => estado === query.plazo);
   if (plazo || holidays.length > 0) {
     try {
       rows = rows.map((row) => {
-        const riesgo = riskOf(row, holidays, today);
+        const riesgo = riskOf(row, holidays, today, plazos);
         return riesgo ? { ...row, riesgo } : row;
       });
       if (plazo) rows = rows.filter((row) => row.riesgo?.estado === plazo);
@@ -155,7 +180,7 @@ function applyFilters(
   }
   if (query.cola === "vencida") {
     try {
-      const ids = new Set(openQueue(cases, holidays, today).map((row) => row.id));
+      const ids = new Set(openQueue(cases, holidays, today, plazos).map((row) => row.id));
       rows = rows.filter((row) => ids.has(row.id));
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
@@ -234,7 +259,14 @@ export function createSummaryServer(
   return createServer(async (req, res) => {
     try {
       const url = new URL(req.url ?? "/", "http://127.0.0.1");
-      const clock = () => ({ holidays: repository.listHolidays(), today: today() });
+      const plazos = (): Plazos =>
+        new Map(
+          repository
+            .listProveedorInfo()
+            .filter((info) => info.plazoDias !== null)
+            .map((info) => [info.nombre, info.plazoDias as number]),
+        );
+      const clock = () => ({ holidays: repository.listHolidays(), today: today(), plazos: plazos() });
 
       if (req.method === "GET" && url.pathname === "/summary") {
         json(res, 200, summarize(repository.list(), clock()));
@@ -245,27 +277,29 @@ export function createSummaryServer(
         return;
       }
       if (req.method === "GET" && url.pathname === "/api/proveedores") {
-        const { holidays, today: hoy } = clock();
+        const { holidays, today: hoy, plazos: byName } = clock();
         const groups = new Map<string, PqrCase[]>();
         for (const row of repository.list()) {
           if (!row.area) continue;
           groups.set(row.area, [...(groups.get(row.area) ?? []), row]);
         }
         json(res, 200, {
-          proveedores: repository.listProveedores().map((nombre) => {
+          proveedores: repository.listProveedorInfo().map((info) => {
+            const { nombre } = info;
             const rows = groups.get(nombre) ?? [];
             const dias = rows
               .filter((row) => !row.fechaInicialInvalida && !row.fechaSolucionInvalida)
               .map((row) => row.diasSolucion)
               .filter((value): value is number => value !== null);
             return {
-              nombre,
+              ...info,
+              scorecard: providerScorecard(rows, info.plazoDias ?? PLAZO_DIAS),
               casos: rows.length,
               abiertos: rows.filter((row) => row.fechaSolucion === null).length,
               vencidos:
                 holidays.length === 0
                   ? null
-                  : rows.filter((row) => riskOf(row, holidays, hoy)?.estado === "vencido").length,
+                  : rows.filter((row) => riskOf(row, holidays, hoy, byName)?.estado === "vencido").length,
               diasPromedio:
                 dias.length === 0 ? null : dias.reduce((sum, value) => sum + value, 0) / dias.length,
             };
@@ -309,19 +343,48 @@ export function createSummaryServer(
           json(res, 400, { error: "Indica el nombre actual y el nuevo" });
           return;
         }
-        repository.renameProveedor(desde, hacia);
+        try {
+          repository.renameProveedor(desde, hacia);
+        } catch (error) {
+          if (!(error instanceof ProveedorExistsError)) throw error;
+          json(res, 409, { error: error.message });
+          return;
+        }
         json(res, 200, { nombre: hacia });
+        return;
+      }
+      const edit = url.pathname.match(/^\/api\/proveedores\/([^/]+)$/);
+      if (edit && req.method === "PUT") {
+        const nombre = decodeURIComponent(edit[1]);
+        if (!repository.listProveedores().includes(nombre)) {
+          json(res, 404, { error: "not found" });
+          return;
+        }
+        let raw: Record<string, string>;
+        try {
+          raw = await readJson(req);
+        } catch {
+          json(res, 400, { error: "El cuerpo no es JSON válido" });
+          return;
+        }
+        const result = validateProveedor(raw);
+        if ("error" in result) {
+          json(res, 400, { error: result.error });
+          return;
+        }
+        repository.updateProveedor(nombre, result.fields);
+        json(res, 200, { nombre, ...result.fields });
         return;
       }
       if (req.method === "GET" && url.pathname === "/api/casos/exportar") {
         const query = queryOf(url);
-        const filtered = applyFilters(repository.list(), query, repository.listHolidays(), today());
+        const filtered = applyFilters(repository.list(), query, repository.listHolidays(), today(), plazos());
         if (filtered.notice) {
           json(res, 503, { error: filtered.notice });
           return;
         }
         const generatedAt = today();
-        const buffer = await buildCasesWorkbook(filtered.rows, { generatedAt, filters: describeFilters(query) });
+        const buffer = await buildCasesWorkbook(filtered.rows, { generatedAt, filters: describeFilters(query), plazos: plazos() });
         res.writeHead(200, {
           "Content-Type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
           "Content-Disposition": `attachment; filename="casos-${generatedAt}.xlsx"`,
@@ -331,7 +394,7 @@ export function createSummaryServer(
         return;
       }
       if (req.method === "GET" && url.pathname === "/api/casos") {
-        const filtered = applyFilters(repository.list(), queryOf(url), repository.listHolidays(), today());
+        const filtered = applyFilters(repository.list(), queryOf(url), repository.listHolidays(), today(), plazos());
         if (filtered.notice) {
           json(res, 503, { error: filtered.notice });
           return;

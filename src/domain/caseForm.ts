@@ -30,13 +30,17 @@ export interface CreateFields {
   motivo: string;
 }
 
+export const CAUSAS_RAIZ = ["Producto", "Logística", "Atención", "Información", "Otro"] as const;
+
 export interface CloseFields {
   fechaSolucion: string;
   solucion: string;
+  causaRaiz?: string;
+  accionCorrectiva?: string;
 }
 
 export interface FieldError {
-  field: CreateField | "fechaSolucion" | "solucion" | "fecha" | "texto" | "form";
+  field: CreateField | "fechaSolucion" | "solucion" | "causaRaiz" | "fecha" | "texto" | "form";
   message: string;
 }
 
@@ -147,8 +151,15 @@ export function validateClose(
   raw: Record<string, string>,
   fechaInicial: string | null,
 ): { ok: true; fields: CloseFields } | { ok: false; fields: CloseFields; errors: FieldError[] } {
-  const fields = { fechaSolucion: text(raw, "fechaSolucion"), solucion: text(raw, "solucion") };
+  const fields: CloseFields = { fechaSolucion: text(raw, "fechaSolucion"), solucion: text(raw, "solucion") };
+  const causaRaiz = text(raw, "causaRaiz");
+  const accionCorrectiva = text(raw, "accionCorrectiva");
+  if (causaRaiz) fields.causaRaiz = causaRaiz;
+  if (accionCorrectiva) fields.accionCorrectiva = accionCorrectiva;
   const errors: FieldError[] = [];
+  if (causaRaiz && !(CAUSAS_RAIZ as readonly string[]).includes(causaRaiz)) {
+    errors.push({ field: "causaRaiz", message: "Causa raíz no es válida" });
+  }
   if (!fields.fechaSolucion) {
     errors.push({ field: "fechaSolucion", message: "Fecha de solución es obligatoria" });
   } else {
@@ -213,6 +224,8 @@ export function applyClose(caso: PqrCase, fields: CloseFields, holidays: readonl
     fechaSolucion: fields.fechaSolucion,
     fechaSolucionInvalida: false,
     solucion: fields.solucion,
+    causaRaiz: fields.causaRaiz ?? null,
+    accionCorrectiva: fields.accionCorrectiva ?? null,
     diasSolucion: businessDays(caso.fechaInicial, fields.fechaSolucion, holidays),
   };
 }

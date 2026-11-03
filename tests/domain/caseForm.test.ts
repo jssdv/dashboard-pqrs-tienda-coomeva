@@ -197,3 +197,15 @@ describe("validateBitacora", () => {
     expect(fields("no", "x")).toEqual(["fecha"]);
   });
 });
+
+describe("validateClose causa raíz", () => {
+  it("accepts a known cause and corrective action, rejects an unknown one", () => {
+    const ok = validateClose(
+      { fechaSolucion: "2026-01-12", solucion: "ok", causaRaiz: "Logística", accionCorrectiva: " Cambiar courier " },
+      "2026-01-05",
+    );
+    expect(ok).toMatchObject({ ok: true, fields: { causaRaiz: "Logística", accionCorrectiva: "Cambiar courier" } });
+    const bad = validateClose({ fechaSolucion: "2026-01-12", solucion: "ok", causaRaiz: "Magia" }, "2026-01-05");
+    expect(bad).toMatchObject({ ok: false, errors: [{ field: "causaRaiz" }] });
+  });
+});

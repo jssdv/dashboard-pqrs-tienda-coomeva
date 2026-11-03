@@ -31,6 +31,16 @@ function caso(over: Partial<PqrCase> & Pick<PqrCase, "id" | "sheetYear" | "rowNu
   };
 }
 
+const infoOf = (nombre: string) => ({
+  nombre,
+  contacto: "",
+  correo: "",
+  telefono: "",
+  notas: "",
+  activo: true,
+  plazoDias: null,
+});
+
 function memoryRepo(cases: PqrCase[], holidays: string[] = ["2026-01-01"]): CaseRepository {
   const rows = [...cases];
   const dates = [...holidays];
@@ -52,7 +62,9 @@ function memoryRepo(cases: PqrCase[], holidays: string[] = ["2026-01-01"]): Case
       dates.push(...more);
     },
     listProveedores: () => [],
+    listProveedorInfo: () => [],
     addProveedor() {},
+    updateProveedor() {},
     renameProveedor() {},
     listBitacora: (caseId) =>
       notes.filter((n) => n.caseId === caseId).sort((a, b) => b.fecha.localeCompare(a.fecha) || b.id - a.id),
@@ -308,6 +320,7 @@ describe("GET /api/proveedores metrics", () => {
   const withProveedores = (repo: CaseRepository, names: string[]): CaseRepository => ({
     ...repo,
     listProveedores: () => names,
+    listProveedorInfo: () => names.map(infoOf),
   });
 
   it("returns abiertos, vencidos and diasPromedio per provider", async () => {
@@ -363,6 +376,7 @@ describe("GET /api/catalogos and catalog validation on create", () => {
   const withProveedores = (repo: CaseRepository, names: string[]): CaseRepository => ({
     ...repo,
     listProveedores: () => names,
+    listProveedorInfo: () => names.map(infoOf),
   });
 
   it("returns distinct sorted official values without empties", async () => {
@@ -681,6 +695,33 @@ describe("bitácora", () => {
       expect(bad.status).toBe(400);
       expect((await bad.json()).errors.map((e: { field: string }) => e.field)).toEqual(["fecha", "texto"]);
       expect((await fetch(`http://127.0.0.1:${port}/api/casos/nope/bitacora`)).status).toBe(404);
+    } finally {
+      await new Promise((resolve) => server.close(resolve));
+    }
+  });
+});
+
+describe("PUT /api/proveedores/:nombre", () => {
+  it("validates, saves and 404s unknown names", async () => {
+    const saved: unknown[] = [];
+    const repo = {
+      ...memoryRepo([]),
+      listProveedores: () => ["Natech"],
+      listProveedorInfo: () => [infoOf("Natech")],
+      updateProveedor: (...args: unknown[]) => void saved.push(args),
+    } as CaseRepository;
+    const server = createSummaryServer(repo);
+    const port = await listen(server);
+    const put = (name: string, body: object) =>
+      fetch(`http://127.0.0.1:${port}/api/proveedores/${name}`, { method: "PUT", body: JSON.stringify(body) });
+    try {
+      expect((await put("Natech", { correo: "mal" })).status).toBe(400);
+      expect((await put("Natech", { plazoDias: "99" })).status).toBe(400);
+      expect((await put("Otro", {})).status).toBe(404);
+      expect((await put("Natech", { correo: "a@b.co", plazoDias: "7", activo: "false" })).status).toBe(200);
+      expect(saved).toEqual([
+        ["Natech", { contacto: "", correo: "a@b.co", telefono: "", notas: "", activo: false, plazoDias: 7 }],
+      ]);
     } finally {
       await new Promise((resolve) => server.close(resolve));
     }
