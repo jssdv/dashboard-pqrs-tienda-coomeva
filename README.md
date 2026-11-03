@@ -27,8 +27,10 @@ Requiere Node.js 20+.
 
 ```bash
 npm install
-npm test
+npm start
 ```
+
+`npm start` compila la webapp y la sirve con `data/pqr.sqlite` en http://localhost:3000.
 
 Importar un libro (el `.xlsx` no se versiona):
 

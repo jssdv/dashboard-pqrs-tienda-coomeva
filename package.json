@@ -3,6 +3,7 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "start": "vite build && tsx src/cli/serveSummary.ts data/pqr.sqlite",
     "test": "vitest run",
     "dev": "vite",
     "build": "vite build",
