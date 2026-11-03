@@ -1,3 +1,4 @@
+import type { BitacoraEntry, BitacoraFields } from "../domain/caseForm.js";
 import type { PqrCase } from "../domain/types.js";
 
 export interface CaseRepository {
@@ -10,4 +11,6 @@ export interface CaseRepository {
   listProveedores(): string[];
   addProveedor(nombre: string): void;
   renameProveedor(desde: string, hacia: string): void;
+  listBitacora(caseId: string): BitacoraEntry[];
+  addBitacora(caseId: string, fields: BitacoraFields, creadoEn: string): BitacoraEntry;
 }

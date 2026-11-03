@@ -3,6 +3,7 @@ import type { Server } from "node:http";
 import { describe, expect, it } from "vitest";
 import { createSummaryServer } from "../../src/api/summaryServer";
 import { Dictionary } from "../../src/domain/dictionary";
+import type { BitacoraEntry } from "../../src/domain/caseForm.js";
 import type { PqrCase } from "../../src/domain/types";
 import type { CaseRepository } from "../../src/store/repository";
 
@@ -33,6 +34,7 @@ function caso(over: Partial<PqrCase> & Pick<PqrCase, "id" | "sheetYear" | "rowNu
 function memoryRepo(cases: PqrCase[], holidays: string[] = ["2026-01-01"]): CaseRepository {
   const rows = [...cases];
   const dates = [...holidays];
+  const notes: BitacoraEntry[] = [];
   return {
     replaceAll(next) {
       rows.splice(0, rows.length, ...next);
@@ -52,6 +54,13 @@ function memoryRepo(cases: PqrCase[], holidays: string[] = ["2026-01-01"]): Case
     listProveedores: () => [],
     addProveedor() {},
     renameProveedor() {},
+    listBitacora: (caseId) =>
+      notes.filter((n) => n.caseId === caseId).sort((a, b) => b.fecha.localeCompare(a.fecha) || b.id - a.id),
+    addBitacora(caseId, fields, creadoEn) {
+      const entry = { id: notes.length + 1, caseId, ...fields, creadoEn };
+      notes.push(entry);
+      return entry;
+    },
   };
 }
 
@@ -635,6 +644,43 @@ describe("POST /api/casos/:id/cerrar", () => {
         jsonPost({ fechaSolucion: "2026-01-06", solucion: "Listo" }),
       );
       expect(missing.status).toBe(404);
+    } finally {
+      await new Promise((resolve) => server.close(resolve));
+    }
+  });
+});
+
+describe("bitácora", () => {
+  const now = () => new Date("2026-01-19T15:00:00Z");
+  const open = caso({ id: "app-1", fechaInicial: "2026-01-05" });
+
+  it("adds entries to an open case without closing it and lists newest first", async () => {
+    const repo = memoryRepo([open]);
+    const server = createSummaryServer(repo, { now });
+    const port = await listen(server);
+    const url = `http://127.0.0.1:${port}/api/casos/app-1/bitacora`;
+    try {
+      expect((await fetch(url, jsonPost({ fecha: "2026-01-12", texto: "Se llamó al proveedor" }))).status).toBe(201);
+      expect((await fetch(url, jsonPost({ fecha: "2026-01-15", texto: "Respondió" }))).status).toBe(201);
+      const body = await (await fetch(url)).json();
+      expect(body.entries.map((e: { texto: string }) => e.texto)).toEqual(["Respondió", "Se llamó al proveedor"]);
+      expect(repo.list()[0]?.fechaSolucion).toBeNull();
+    } finally {
+      await new Promise((resolve) => server.close(resolve));
+    }
+  });
+
+  it("rejects empty text, future dates and unknown cases", async () => {
+    const server = createSummaryServer(memoryRepo([open]), { now });
+    const port = await listen(server);
+    try {
+      const bad = await fetch(
+        `http://127.0.0.1:${port}/api/casos/app-1/bitacora`,
+        jsonPost({ fecha: "2026-02-01", texto: " " }),
+      );
+      expect(bad.status).toBe(400);
+      expect((await bad.json()).errors.map((e: { field: string }) => e.field)).toEqual(["fecha", "texto"]);
+      expect((await fetch(`http://127.0.0.1:${port}/api/casos/nope/bitacora`)).status).toBe(404);
     } finally {
       await new Promise((resolve) => server.close(resolve));
     }

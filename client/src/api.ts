@@ -1,4 +1,6 @@
 import type {
+  BitacoraEntry,
+  BitacoraFields,
   Catalogs,
   CaseQuery,
   CloseFields,
@@ -165,7 +167,21 @@ export async function closeCase(id: string, fields: CloseFields): Promise<PqrCas
   return postJson(`/api/casos/${encodeURIComponent(id)}/cerrar`, fields);
 }
 
-async function postJson(url: string, fields: CreateFields | CloseFields): Promise<PqrCase> {
+export async function getBitacora(id: string): Promise<BitacoraEntry[]> {
+  const response = await fetch(`/api/casos/${encodeURIComponent(id)}/bitacora`);
+  const body = await readBody(response);
+  if (!response.ok) throw new ApiError("No se pudo cargar la bitácora", response.status);
+  return Array.isArray(body.entries) ? (body.entries as unknown as BitacoraEntry[]) : [];
+}
+
+export async function addBitacoraEntry(id: string, fields: BitacoraFields): Promise<BitacoraEntry> {
+  return postJson<BitacoraEntry>(`/api/casos/${encodeURIComponent(id)}/bitacora`, fields);
+}
+
+async function postJson<T = PqrCase>(
+  url: string,
+  fields: CreateFields | CloseFields | BitacoraFields,
+): Promise<T> {
   const response = await fetch(url, {
     method: "POST",
     headers: { "content-type": "application/json" },
@@ -182,5 +198,5 @@ async function postJson(url: string, fields: CreateFields | CloseFields): Promis
       response.status,
     );
   }
-  return body as unknown as PqrCase;
+  return body as unknown as T;
 }

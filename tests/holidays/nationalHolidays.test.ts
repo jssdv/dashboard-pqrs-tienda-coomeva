@@ -112,6 +112,8 @@ describe("importLoadedCases", () => {
       listProveedores: () => [],
       addProveedor: vi.fn(),
       renameProveedor: vi.fn(),
+      listBitacora: () => [],
+      addBitacora: vi.fn(),
     };
     const fetchImpl = (async (url: string) => {
       const year = String(url).match(/(\d{4})/)?.[1];
@@ -138,6 +140,8 @@ describe("importLoadedCases", () => {
       listProveedores: () => [],
       addProveedor: vi.fn(),
       renameProveedor: vi.fn(),
+      listBitacora: () => [],
+      addBitacora: vi.fn(),
     };
     const requested: string[] = [];
     const fetchImpl = (async (url: string) => {

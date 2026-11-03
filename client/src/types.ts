@@ -117,7 +117,7 @@ export interface CloseFields {
 }
 
 export interface FieldError {
-  field: keyof CreateFields | keyof CloseFields | "form";
+  field: keyof CreateFields | keyof CloseFields | keyof BitacoraFields | "form";
   message: string;
 }
 
@@ -142,4 +142,15 @@ export interface Catalogs {
   fuente: string[];
   tipo: string[];
   tema: string[];
+}
+
+export interface BitacoraFields {
+  fecha: string;
+  texto: string;
+}
+
+export interface BitacoraEntry extends BitacoraFields {
+  id: number;
+  caseId: string;
+  creadoEn: string;
 }

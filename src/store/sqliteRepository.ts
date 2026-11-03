@@ -1,4 +1,5 @@
 import Database from "better-sqlite3";
+import type { BitacoraEntry } from "../domain/caseForm.js";
 import type { PqrCase } from "../domain/types.js";
 import type { CaseRepository } from "./repository.js";
 
@@ -123,6 +124,17 @@ export function openSqliteRepository(dbPath: string): CaseRepository {
       nombre TEXT PRIMARY KEY
     )
   `);
+  // Sin FK a cases: replaceAll borra los casos, la bitácora sobrevive por id estable.
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS bitacora (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      caseId TEXT NOT NULL,
+      fecha TEXT NOT NULL,
+      texto TEXT NOT NULL,
+      creadoEn TEXT NOT NULL
+    )
+  `);
+  db.exec("CREATE INDEX IF NOT EXISTS bitacora_case ON bitacora (caseId)");
   const insertProveedor = db.prepare("INSERT OR IGNORE INTO proveedores (nombre) VALUES (?)");
   const renameProveedorTx = db.transaction((desde: string, hacia: string) => {
     insertProveedor.run(hacia);
@@ -165,6 +177,17 @@ export function openSqliteRepository(dbPath: string): CaseRepository {
     },
     renameProveedor(desde, hacia) {
       renameProveedorTx(desde, hacia.trim().replace(/\s+/g, " "));
+    },
+    listBitacora(caseId) {
+      return db
+        .prepare("SELECT * FROM bitacora WHERE caseId = ? ORDER BY fecha DESC, id DESC")
+        .all(caseId) as BitacoraEntry[];
+    },
+    addBitacora(caseId, fields, creadoEn) {
+      const { lastInsertRowid } = db
+        .prepare("INSERT INTO bitacora (caseId, fecha, texto, creadoEn) VALUES (?, ?, ?, ?)")
+        .run(caseId, fields.fecha, fields.texto, creadoEn);
+      return { id: Number(lastInsertRowid), caseId, ...fields, creadoEn };
     },
     list() {
       const rows = db

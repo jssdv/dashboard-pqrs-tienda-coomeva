@@ -52,3 +52,14 @@ it("inserts and updates one case without dropping holidays", () => {
   db.update(sample({ id: "app-1", sheetYear: 2026, rowNumber: 0, solucion: "Listo" }));
   expect(db.list()[0]?.solucion).toBe("Listo");
 });
+
+it("keeps bitácora entries across replaceAll", () => {
+  const db = openSqliteRepository(path.join(os.tmpdir(), `pqr-bit-${Date.now()}.sqlite`));
+  db.replaceAll([sample()]);
+  db.addBitacora("2026-2", { fecha: "2026-01-10", texto: "uno" }, "2026-01-10T10:00:00Z");
+  const second = db.addBitacora("2026-2", { fecha: "2026-01-12", texto: "dos" }, "2026-01-12T10:00:00Z");
+  db.replaceAll([sample()]);
+  expect(db.listBitacora("2026-2").map((e) => e.texto)).toEqual(["dos", "uno"]);
+  expect(db.listBitacora("2026-2")[0]).toEqual(second);
+  expect(db.listBitacora("otro")).toEqual([]);
+});

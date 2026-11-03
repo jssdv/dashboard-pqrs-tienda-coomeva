@@ -36,7 +36,7 @@ export interface CloseFields {
 }
 
 export interface FieldError {
-  field: CreateField | "fechaSolucion" | "solucion" | "form";
+  field: CreateField | "fechaSolucion" | "solucion" | "fecha" | "texto" | "form";
   message: string;
 }
 
@@ -167,6 +167,40 @@ export function validateClose(
   if (!fields.solucion) {
     errors.push({ field: "solucion", message: "Texto de solución es obligatorio" });
   }
+  if (errors.length > 0) return { ok: false, fields, errors };
+  return { ok: true, fields };
+}
+
+export interface BitacoraFields {
+  fecha: string;
+  texto: string;
+}
+
+export interface BitacoraEntry extends BitacoraFields {
+  id: number;
+  caseId: string;
+  creadoEn: string;
+}
+
+export function validateBitacora(
+  raw: Record<string, string>,
+  hoy: string,
+): { ok: true; fields: BitacoraFields } | { ok: false; fields: BitacoraFields; errors: FieldError[] } {
+  const fields = { fecha: text(raw, "fecha"), texto: text(raw, "texto") };
+  const errors: FieldError[] = [];
+  if (!fields.fecha) {
+    errors.push({ field: "fecha", message: "Fecha es obligatoria" });
+  } else {
+    const parsed = parseDateCell(fields.fecha);
+    if (parsed.invalid || !parsed.iso) {
+      errors.push({ field: "fecha", message: "Fecha no es válida" });
+    } else if (parsed.iso > hoy) {
+      errors.push({ field: "fecha", message: "La fecha no puede ser futura" });
+    } else {
+      fields.fecha = parsed.iso;
+    }
+  }
+  if (!fields.texto) errors.push({ field: "texto", message: "Texto es obligatorio" });
   if (errors.length > 0) return { ok: false, fields, errors };
   return { ok: true, fields };
 }

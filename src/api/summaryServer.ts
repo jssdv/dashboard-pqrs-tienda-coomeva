@@ -3,7 +3,7 @@ import { createServer, type IncomingMessage, type Server, type ServerResponse } 
 import { dirname, extname, join, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 import { randomUUID } from "node:crypto";
-import { applyClose, caseFromCreate, validateClose, validateCreate } from "../domain/caseForm.js";
+import { applyClose, caseFromCreate, validateBitacora, validateClose, validateCreate } from "../domain/caseForm.js";
 import { Dictionary } from "../domain/dictionary.js";
 import { bogotaToday, openQueue } from "../domain/openQueue.js";
 import { matchesSearch } from "../domain/matchesSearch.js";
@@ -402,6 +402,33 @@ export function createSummaryServer(
           const message = error instanceof Error ? error.message : String(error);
           json(res, 503, { error: message });
         }
+        return;
+      }
+
+      const apiBitacora = url.pathname.match(/^\/api\/casos\/([^/]+)\/bitacora$/);
+      if (apiBitacora && (req.method === "GET" || req.method === "POST")) {
+        const id = decodeURIComponent(apiBitacora[1]);
+        if (!repository.list().some((row) => row.id === id)) {
+          json(res, 404, { error: "not found" });
+          return;
+        }
+        if (req.method === "GET") {
+          json(res, 200, { entries: repository.listBitacora(id) });
+          return;
+        }
+        let raw: Record<string, string>;
+        try {
+          raw = await readJson(req);
+        } catch {
+          json(res, 400, { errors: [{ field: "form", message: "El cuerpo no es JSON válido" }] });
+          return;
+        }
+        const result = validateBitacora(raw, today());
+        if (!result.ok) {
+          json(res, 400, { errors: result.errors });
+          return;
+        }
+        json(res, 201, repository.addBitacora(id, result.fields, (options.now?.() ?? new Date()).toISOString()));
         return;
       }
 

@@ -10,6 +10,7 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet";
 import { plazoLabel, textOrDash } from "./format";
+import { Bitacora } from "./Bitacora";
 import { CaseTimeline } from "./ui/CaseTimeline";
 import { TipoTag } from "./ui/TipoTag";
 import type { PqrCase } from "./types";
@@ -68,6 +69,7 @@ export function CaseDetail({ caso, onClose }: { caso: PqrCase | null; onClose: (
                   <Field label="Solución" value={caso.solucion} />
                 </dl>
               </section>
+              <Bitacora caseId={caso.id} />
             </div>
             {open ? (
               <SheetFooter>
