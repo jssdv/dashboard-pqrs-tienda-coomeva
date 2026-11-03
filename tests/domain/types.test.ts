@@ -25,11 +25,6 @@ describe("PqrCase", () => {
       temaOriginal: "BOLETERIA",
       motivo: "texto",
       solucion: "texto",
-      valorDevolucion: null,
-      mesCompra: null,
-      tipoDevolucion: null,
-      fechaSolicitud: null,
-      observaciones: null,
     };
     expect(row.id).toBe("2026-2");
     expect(row.temaOriginal).toBe(row.tema);

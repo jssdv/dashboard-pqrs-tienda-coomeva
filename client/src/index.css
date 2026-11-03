@@ -1,0 +1,282 @@
+@import "tailwindcss";
+@source "../../src";
+
+@plugin "tailwindcss-animate";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --font-sans: "Geist", "Inter", system-ui, sans-serif;
+  --font-display: "Geist", "Inter", system-ui, sans-serif;
+  --font-mono: "Geist Mono", ui-monospace, monospace;
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-surface: var(--card);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-on-primary: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted-text: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-warning: var(--warning);
+  --color-warning-foreground: var(--warning-foreground);
+  --color-destructive: var(--destructive);
+  --color-danger: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --radius-sm: 2px;
+  --radius-md: 2px;
+  --radius-lg: 2px;
+  --radius-xl: 0px;
+}
+
+:root {
+  --background: #fafaf9;
+  --foreground: #18181b;
+  --card: #ffffff;
+  --card-foreground: #18181b;
+  --primary: #00843d;
+  --primary-foreground: #ffffff;
+  --secondary: #e8f6ee;
+  --secondary-foreground: #005628;
+  --muted: #f4f4f5;
+  --muted-foreground: #52525b;
+  --accent: #e7f5ec;
+  --accent-foreground: #064e2a;
+  --warning: #d97706;
+  --warning-foreground: #9a3412;
+  --destructive: #b91c1c;
+  --border: #e7e5e4;
+  --input: #e7e5e4;
+  --ring: #00843d;
+  --radius: 0.125rem;
+}
+
+.dark {
+  --background: #0c1210;
+  --foreground: #f4f4f5;
+  --card: #141c18;
+  --card-foreground: #f4f4f5;
+  --primary: #3dce7a;
+  --primary-foreground: #052e16;
+  --secondary: #163024;
+  --secondary-foreground: #d1fae5;
+  --muted: #1c2620;
+  --muted-foreground: #a1a1aa;
+  --accent: #1a2e24;
+  --accent-foreground: #ecfdf5;
+  --warning: #fbbf24;
+  --warning-foreground: #fde68a;
+  --destructive: #f87171;
+  --border: #2a3830;
+  --input: #2a3830;
+  --ring: #3dce7a;
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  html,
+  body,
+  #root {
+    height: 100%;
+    margin: 0;
+  }
+
+  body {
+    overflow: hidden;
+    background: var(--background);
+    color: var(--foreground);
+    font-family: var(--font-sans);
+    font-size: 16px;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+    touch-action: manipulation;
+  }
+
+  h1,
+  h2,
+  h3 {
+    font-family: var(--font-display);
+  }
+
+  .font-mono {
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+/* Motion: short, purposeful, only opacity/transform. One easing, three durations. */
+:root {
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --dur-fast: 150ms;
+  --dur-base: 220ms;
+  --dur-slow: 320ms;
+}
+
+@keyframes rise-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+}
+
+@keyframes grow-x {
+  from {
+    transform: scaleX(0);
+  }
+}
+
+@keyframes reveal-x {
+  from {
+    clip-path: inset(0 100% 0 0);
+  }
+  to {
+    clip-path: inset(0 0 0 0);
+  }
+}
+
+@keyframes shimmer {
+  from {
+    background-position: 200% 0;
+  }
+  to {
+    background-position: -200% 0;
+  }
+}
+
+.rise-in {
+  animation: rise-in var(--dur-base) var(--ease-out) both;
+}
+
+/* Staggered entrance: set --i on each item; the delay is capped so long lists stay snappy. */
+.fade-up {
+  animation: fade-up var(--dur-base) var(--ease-out) backwards;
+  animation-delay: min(calc(var(--i, 0) * 20ms), 300ms);
+}
+
+.grow-x {
+  transform-origin: left center;
+  animation: grow-x var(--dur-slow) var(--ease-out) backwards;
+  animation-delay: min(calc(var(--i, 0) * 40ms), 300ms);
+}
+
+.reveal-x {
+  animation: reveal-x 700ms var(--ease-out) backwards;
+}
+
+.shimmer {
+  background-image: linear-gradient(90deg, var(--muted) 25%, color-mix(in srgb, var(--muted), var(--card) 60%) 50%, var(--muted) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.4s linear infinite;
+}
+
+/* Reloading content keeps its place and dims instead of collapsing. */
+.is-reloading {
+  opacity: 0.55;
+  transition: opacity var(--dur-fast) var(--ease-out);
+  pointer-events: none;
+}
+
+.is-reloading-done {
+  transition: opacity var(--dur-base) var(--ease-out);
+}
+
+/* Press feedback and gentle lift. */
+button:not(:disabled):active,
+a[data-slot="button"]:active {
+  transform: scale(0.98);
+}
+
+button,
+a[data-slot="button"] {
+  transition-property: color, background-color, border-color, box-shadow, transform, opacity;
+  transition-duration: var(--dur-fast);
+  transition-timing-function: var(--ease-out);
+}
+
+[data-stat],
+.lift {
+  transition: transform var(--dur-base) var(--ease-out), border-color var(--dur-base) var(--ease-out),
+    box-shadow var(--dur-base) var(--ease-out);
+}
+
+[data-stat]:hover,
+.lift:hover {
+  transform: translateY(-1px);
+  border-color: color-mix(in srgb, var(--primary) 35%, var(--border));
+}
+
+tbody tr {
+  transition: background-color var(--dur-fast) var(--ease-out);
+}
+
+/* Smooth color change while switching theme (class set for ~300ms by theme.ts). */
+html.theme-switching,
+html.theme-switching *,
+html.theme-switching *::before,
+html.theme-switching *::after {
+  transition: background-color var(--dur-slow) var(--ease-out), color var(--dur-slow) var(--ease-out),
+    border-color var(--dur-slow) var(--ease-out), fill var(--dur-slow) var(--ease-out),
+    stroke var(--dur-slow) var(--ease-out) !important;
+}
+
+/* Route change cross-fade (View Transitions API, where supported). */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation-duration: var(--dur-base);
+  animation-timing-function: var(--ease-out);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+
+  .rise-in,
+  .fade-up,
+  .grow-x,
+  .reveal-x {
+    animation: none;
+  }
+
+  .shimmer {
+    animation: none;
+  }
+
+  html.theme-switching,
+  html.theme-switching * {
+    transition: none !important;
+  }
+
+  button:not(:disabled):active,
+  a[data-slot="button"]:active,
+  [data-stat]:hover,
+  .lift:hover {
+    transform: none;
+  }
+}
