@@ -1,3 +1,4 @@
+import { PLAZO_DIAS } from "../format";
 import type { PqrCase } from "../types";
 
 const FILL = {
@@ -10,8 +11,11 @@ export function CaseTimeline({ caso }: { caso: PqrCase }) {
   const hasStart = caso.fechaInicial !== null && !caso.fechaInicialInvalida;
   const closed = caso.fechaSolucion !== null;
   const dias = closed ? caso.diasSolucion : (caso.riesgo?.diasAbiertos ?? null);
-  const estado = caso.riesgo?.estado ?? (dias !== null && dias > 10 ? "vencido" : dias !== null && dias > 5 ? "por-vencer" : "en-plazo");
-  const pct = dias === null ? 0 : Math.min(Math.max(dias, 0), 10) * 10;
+  const plazo = caso.riesgo ? caso.riesgo.diasAbiertos + caso.riesgo.diasParaVencer : PLAZO_DIAS;
+  const estado =
+    caso.riesgo?.estado ??
+    (dias !== null && dias > plazo ? "vencido" : dias !== null && dias > plazo / 2 ? "por-vencer" : "en-plazo");
+  const pct = dias === null ? 0 : (Math.min(Math.max(dias, 0), plazo) / plazo) * 100;
 
   return (
     <section aria-label="Línea de tiempo" className="border border-border p-4">
@@ -31,8 +35,8 @@ export function CaseTimeline({ caso }: { caso: PqrCase }) {
                 style={{ left: `${pct}%` }}
               />
             ) : null}
-            <span aria-hidden="true" className="absolute top-full left-1/2 mt-1 -translate-x-1/2 font-mono text-[0.65rem] text-muted-foreground">5</span>
-            <span aria-hidden="true" className="absolute top-full right-0 mt-1 translate-x-1/2 font-mono text-[0.65rem] text-muted-foreground">10</span>
+            <span aria-hidden="true" className="absolute top-full left-1/2 mt-1 -translate-x-1/2 font-mono text-[0.65rem] text-muted-foreground">{Math.floor(plazo / 2)}</span>
+            <span aria-hidden="true" className="absolute top-full right-0 mt-1 translate-x-1/2 font-mono text-[0.65rem] text-muted-foreground">{plazo}</span>
           </div>
           <dl className="flex justify-between gap-4 text-sm">
             <div>

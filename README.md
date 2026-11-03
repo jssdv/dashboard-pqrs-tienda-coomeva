@@ -17,13 +17,51 @@ Rama de trabajo: `feature/pqr-core`.
 - CLI de importación. Antes de escribir SQLite pide los festivos nacionales de Colombia (`/co/v1/{año}/nacionales.json`) para los años de las hojas, más el anterior y el siguiente. Si esa petición falla, no reemplaza los casos.
 - Resumen de agregados (`summarize`) sobre los casos ya importados: totales, catálogos, año, mes, días promedio, cola de más de 10 días hábiles, cierre por tipo, `sinFechaValida` y matriz proveedor × tipo. La cola usa `businessDays` contra la fecha de hoy en `America/Bogota` y los festivos guardados. Sin festivos cargados no inventa un conteo.
 - API local `GET /summary` que devuelve ese resumen. No lista casos: nombre, correo y texto libre no salen por HTTP.
-- `GET /api/casos` lista los casos completos y filtra por `cola`, `area`, `tipo` y `mes`. `POST /api/casos` da de alta y `POST /api/casos/:id/cerrar` cierra. La validación responde 400 con la lista de campos. Si faltan festivos al cerrar o al pedir la cola vencida, responde 503.
+- `GET /api/casos` lista los casos completos y filtra por `cola`, `area`, `tipo` y `mes`. `POST /api/casos` da de alta y `POST /api/casos/:id/cerrar` cierra. `GET/POST /api/casos/:id/bitacora` lista y registra avances sin cerrar el caso (la importación no los borra). La validación responde 400 con la lista de campos. Si faltan festivos al cerrar o al pedir la cola vencida, responde 503.
 - Webapp en `client/` (Vite, React, React Router, Tailwind CSS 4 y Recharts). Panel, Casos y Proveedores viven en esa interfaz; Casos filtra por plazo (en plazo, por vencer, vencido) y muestra el detalle de cada caso en un panel. `npm run dev` abre Vite en el puerto 5173 y proxea `/summary` y `/api` al servidor en el 3000. `npm run build` escribe `client/dist`. `npm run serve` sirve ese directorio en `/` y conserva la API.
 - Un caso nuevo exige fecha inicial, área, ID de orden, asociado, correo, fuente, tipo, tema y motivo. El id es `app-` más un UUID. Área, fuente, tipo y tema guardan el texto escrito y el valor oficial del diccionario. El cierre pide fecha y texto de solución, y recalcula los días hábiles. Si falta el año de esa fecha, lo pide al mismo servicio de festivos.
 
+## Uso: aplicación para macOS y Windows
+
+No hace falta instalar nada. Descarga el `.zip` de la última versión en la pestaña **Releases** del repositorio (`pqr-macos-arm64`, `pqr-macos-x64` o `pqr-windows-x64`) y:
+
+1. Descomprime el zip. Queda una carpeta `pqr-<sistema>-<arquitectura>/` con `pqr` (o `pqr.exe`), `data/` y `LEEME.txt`.
+2. Haz doble clic en `pqr` (macOS) o `pqr.exe` (Windows). Se abre el navegador en http://localhost:3000.
+3. La primera vez no hay usuarios: crea el administrador en `/setup`. Esa pantalla se cierra después.
+
+Puntos a tener en cuenta:
+
+- **Mantén la carpeta completa junta.** El ejecutable y `data/` van en la misma carpeta. La app no usa AppData, Application Support ni la carpeta del usuario: todo lo que escribe (SQLite, csv) queda en `data/`. Puedes mover la carpeta entera a otro sitio o a un USB.
+- **Respaldo:** con la app cerrada, copia `data/pqr.sqlite`. Para restaurar, reemplaza ese archivo.
+- **Ventana de consola:** en macOS se abre una ventana de Terminal y en Windows una consola. Mientras uses la app, no la cierres: cerrarla detiene el servidor.
+- **Puerto ocupado:** si 3000 está en uso, la app lo dice. Abre la app desde una terminal con `PORT=3001` para cambiarlo.
+
+### Roles
+
+- `admin`: todo, incluido crear usuarios y enlaces para compartir.
+- `user`: consulta y registra o cierra casos.
+- `viewer`: solo lectura.
+
+### Compartir con un enlace
+
+Como administrador, en la pantalla **Compartir** crea un enlace. La app muestra una dirección `/ver/<token>` con la IP de la red local. Quien lo abra debe iniciar sesión y verá el tablero en vivo; los cambios aparecen sin recargar. Puedes poner fecha de caducidad y revocar el enlace en cualquier momento.
+
+Si publicas la app con un túnel propio (por ejemplo, con una URL HTTPS), escribe esa dirección en **URL pública** de ajustes para que los enlaces la usen. La app no incluye túnel.
+
+> **Aviso:** en la red local la conexión es HTTP sin cifrar; contraseñas y sesiones viajan sin TLS. Úsala solo en redes de confianza. Para acceso desde fuera de la oficina, pon delante HTTPS (túnel o proxy).
+
+### Avisos del sistema operativo
+
+- **macOS (Gatekeeper):** el ejecutable no está firmado con una cuenta de Apple, así que la primera vez el sistema lo bloquea. Opciones: clic derecho sobre `pqr` > **Abrir** > **Abrir**; o en Terminal, `xattr -dr com.apple.quarantine "<ruta de la carpeta>"`.
+- **Windows (SmartScreen):** aparece "Windows protegió su PC". Pulsa **Más información** > **Ejecutar de todas formas**.
+
+### Desarrollo
+
+Para trabajar en el código, usa las órdenes de la sección **Arranque** (`npm install`, `npm run dev`, `npm test`). Para generar los binarios en tu sistema, `npm run build:bin` escribe `dist-bin/pqr-<sistema>-<arquitectura>/`. Los binarios para las tres plataformas los compila GitHub Actions al crear una etiqueta `v*` (ver `.github/workflows/build.yml`).
+
 ## Arranque
 
-Requiere Node.js 20+.
+Requiere Node.js 22.13+ (`node:sqlite` sin bandera).
 
 ```bash
 npm install

@@ -110,8 +110,12 @@ describe("importLoadedCases", () => {
       update: vi.fn(),
       listHolidays: () => [],
       listProveedores: () => [],
+      listProveedorInfo: () => [],
       addProveedor: vi.fn(),
+      updateProveedor: vi.fn(),
       renameProveedor: vi.fn(),
+      listBitacora: () => [],
+      addBitacora: vi.fn(),
     };
     const fetchImpl = (async (url: string) => {
       const year = String(url).match(/(\d{4})/)?.[1];
@@ -136,8 +140,12 @@ describe("importLoadedCases", () => {
       update: vi.fn(),
       listHolidays: () => [],
       listProveedores: () => [],
+      listProveedorInfo: () => [],
       addProveedor: vi.fn(),
+      updateProveedor: vi.fn(),
       renameProveedor: vi.fn(),
+      listBitacora: () => [],
+      addBitacora: vi.fn(),
     };
     const requested: string[] = [];
     const fetchImpl = (async (url: string) => {

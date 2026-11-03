@@ -1,4 +1,6 @@
 import type {
+  BitacoraEntry,
+  BitacoraFields,
   Catalogs,
   CaseQuery,
   CloseFields,
@@ -25,8 +27,115 @@ async function readBody(response: Response): Promise<Record<string, unknown>> {
   return body ?? {};
 }
 
+// A 401 outside the auth endpoints means the session expired: send the user to log in and come back here.
+function apiFetch(url: string, init?: RequestInit): Promise<Response> {
+  return fetch(url, { credentials: "same-origin", ...init }).then((response) => {
+    const { pathname, search } = window.location;
+    if (response.status === 401 && !url.startsWith("/api/auth/") && pathname !== "/login" && pathname !== "/setup") {
+      window.location.assign(`/login?next=${encodeURIComponent(pathname + search)}`);
+    }
+    return response;
+  });
+}
+
+export type Rol = "admin" | "user" | "viewer";
+
+export interface AuthUser {
+  id: number;
+  usuario: string;
+  rol: Rol;
+  activo: boolean;
+  creadoEn: string;
+}
+
+async function jsonRequest<T>(url: string, method: string, fields?: object): Promise<T> {
+  const response = await apiFetch(url, {
+    method,
+    headers: fields ? { "content-type": "application/json" } : undefined,
+    body: fields ? JSON.stringify(fields) : undefined,
+  });
+  const body = await readBody(response);
+  if (!response.ok) {
+    throw new ApiError(
+      typeof body.error === "string" ? body.error : "No se pudo completar la acción",
+      response.status,
+    );
+  }
+  return body as unknown as T;
+}
+
+export async function getMe(): Promise<AuthUser | null> {
+  return jsonRequest<{ user: AuthUser }>("/api/auth/me", "GET").then((body) => body.user, () => null);
+}
+
+export async function getSetupRequired(): Promise<boolean> {
+  const body = await jsonRequest<{ requiereSetup: boolean }>("/api/auth/estado", "GET");
+  return body.requiereSetup;
+}
+
+export async function login(usuario: string, password: string): Promise<AuthUser> {
+  return (await jsonRequest<{ user: AuthUser }>("/api/auth/login", "POST", { usuario, password })).user;
+}
+
+export async function setupAdmin(usuario: string, password: string): Promise<AuthUser> {
+  return (await jsonRequest<{ user: AuthUser }>("/api/auth/setup", "POST", { usuario, password })).user;
+}
+
+export async function logout(): Promise<void> {
+  await jsonRequest("/api/auth/logout", "POST");
+}
+
+export async function getUsers(): Promise<AuthUser[]> {
+  return (await jsonRequest<{ usuarios: AuthUser[] }>("/api/admin/usuarios", "GET")).usuarios;
+}
+
+export async function createUser(fields: { usuario: string; password: string; rol: Rol }): Promise<AuthUser> {
+  return (await jsonRequest<{ user: AuthUser }>("/api/admin/usuarios", "POST", fields)).user;
+}
+
+export async function updateUser(id: number, fields: { rol?: Rol; activo?: boolean; password?: string }): Promise<void> {
+  await jsonRequest(`/api/admin/usuarios/${id}`, "PUT", fields);
+}
+
+export interface Enlace {
+  id: number;
+  creadoPor: string;
+  expira: string | null;
+  revocado: boolean;
+}
+
+export async function getEnlaces(): Promise<Enlace[]> {
+  return (await jsonRequest<{ enlaces: Enlace[] }>("/api/admin/enlaces", "GET")).enlaces;
+}
+
+// The full URL comes back once; the server keeps only its hash.
+export async function createEnlace(expira: string): Promise<{ url: string; expira: string | null }> {
+  return jsonRequest("/api/admin/enlaces", "POST", { expira });
+}
+
+export async function revokeEnlace(id: number): Promise<void> {
+  await jsonRequest(`/api/admin/enlaces/${id}`, "DELETE");
+}
+
+export interface ShareInfo {
+  puerto: number;
+  urls: string[];
+}
+
+export async function getShareInfo(): Promise<ShareInfo> {
+  return jsonRequest("/api/admin/info", "GET");
+}
+
+export async function getUrlPublica(): Promise<string> {
+  return (await jsonRequest<{ url_publica: string }>("/api/admin/ajustes", "GET")).url_publica;
+}
+
+export async function setUrlPublica(url: string): Promise<string> {
+  return (await jsonRequest<{ url_publica: string }>("/api/admin/ajustes", "PUT", { url_publica: url })).url_publica;
+}
+
 export async function getSummary(): Promise<DashboardSummary> {
-  const response = await fetch("/summary");
+  const response = await apiFetch("/summary");
   const body = await readBody(response);
   if (!response.ok) {
     throw new ApiError(
@@ -38,7 +147,7 @@ export async function getSummary(): Promise<DashboardSummary> {
 }
 
 export async function getCatalogs(): Promise<Catalogs> {
-  const response = await fetch("/api/catalogos");
+  const response = await apiFetch("/api/catalogos");
   const body = await readBody(response);
   if (!response.ok) {
     throw new ApiError(
@@ -55,7 +164,7 @@ export async function getCases(query: CaseQuery): Promise<PqrCase[]> {
     if (value) params.set(key, value);
   }
   const search = params.toString();
-  const response = await fetch(search ? `/api/casos?${search}` : "/api/casos");
+  const response = await apiFetch(search ? `/api/casos?${search}` : "/api/casos");
   const body = await readBody(response);
   if (!response.ok) {
     throw new ApiError(
@@ -75,7 +184,7 @@ export async function exportCases(source: URLSearchParams): Promise<void> {
     if (value) params.set(key, value);
   }
   const search = params.toString();
-  const response = await fetch(search ? `/api/casos/exportar?${search}` : "/api/casos/exportar");
+  const response = await apiFetch(search ? `/api/casos/exportar?${search}` : "/api/casos/exportar");
   if (!response.ok) {
     const body = await readBody(response);
     throw new ApiError(
@@ -99,8 +208,25 @@ export async function createCase(fields: CreateFields): Promise<PqrCase> {
   return postJson("/api/casos", fields);
 }
 
-export interface ProveedorRow {
+export interface ProveedorFields {
+  contacto: string;
+  correo: string;
+  telefono: string;
+  notas: string;
+  activo: boolean;
+  plazoDias: number | null;
+}
+
+export interface Scorecard {
+  cerrados: number;
+  fueraDePlazoPct: number | null;
+  reincidentes: number;
+  causas: Array<{ key: string; count: number }>;
+}
+
+export interface ProveedorRow extends ProveedorFields {
   nombre: string;
+  scorecard?: Scorecard;
   casos: number;
   abiertos: number;
   vencidos: number | null;
@@ -108,7 +234,7 @@ export interface ProveedorRow {
 }
 
 export async function getProveedores(): Promise<ProveedorRow[]> {
-  const response = await fetch("/api/proveedores");
+  const response = await apiFetch("/api/proveedores");
   const body = await readBody(response);
   if (!response.ok) {
     throw new ApiError(
@@ -120,7 +246,7 @@ export async function getProveedores(): Promise<ProveedorRow[]> {
 }
 
 export async function getProviderTimeline(nombre: string): Promise<TimelinePoint[]> {
-  const response = await fetch(`/api/proveedores/${encodeURIComponent(nombre)}/linea`);
+  const response = await apiFetch(`/api/proveedores/${encodeURIComponent(nombre)}/linea`);
   const body = await readBody(response);
   if (!response.ok) {
     throw new ApiError(
@@ -132,7 +258,7 @@ export async function getProviderTimeline(nombre: string): Promise<TimelinePoint
 }
 
 export async function createProveedor(nombre: string): Promise<void> {
-  const response = await fetch("/api/proveedores", {
+  const response = await apiFetch("/api/proveedores", {
     method: "POST",
     headers: { "content-type": "application/json" },
     body: JSON.stringify({ nombre }),
@@ -147,7 +273,7 @@ export async function createProveedor(nombre: string): Promise<void> {
 }
 
 export async function renameProveedor(desde: string, hacia: string): Promise<void> {
-  const response = await fetch("/api/proveedores/renombrar", {
+  const response = await apiFetch("/api/proveedores/renombrar", {
     method: "POST",
     headers: { "content-type": "application/json" },
     body: JSON.stringify({ desde, hacia }),
@@ -161,12 +287,41 @@ export async function renameProveedor(desde: string, hacia: string): Promise<voi
   }
 }
 
+export async function updateProveedor(nombre: string, fields: ProveedorFields): Promise<void> {
+  const response = await apiFetch(`/api/proveedores/${encodeURIComponent(nombre)}`, {
+    method: "PUT",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify(fields),
+  });
+  const body = await readBody(response);
+  if (!response.ok) {
+    throw new ApiError(
+      typeof body.error === "string" ? body.error : "No se pudo guardar el proveedor",
+      response.status,
+    );
+  }
+}
+
 export async function closeCase(id: string, fields: CloseFields): Promise<PqrCase> {
   return postJson(`/api/casos/${encodeURIComponent(id)}/cerrar`, fields);
 }
 
-async function postJson(url: string, fields: CreateFields | CloseFields): Promise<PqrCase> {
-  const response = await fetch(url, {
+export async function getBitacora(id: string): Promise<BitacoraEntry[]> {
+  const response = await apiFetch(`/api/casos/${encodeURIComponent(id)}/bitacora`);
+  const body = await readBody(response);
+  if (!response.ok) throw new ApiError("No se pudo cargar la bitácora", response.status);
+  return Array.isArray(body.entries) ? (body.entries as unknown as BitacoraEntry[]) : [];
+}
+
+export async function addBitacoraEntry(id: string, fields: BitacoraFields): Promise<BitacoraEntry> {
+  return postJson<BitacoraEntry>(`/api/casos/${encodeURIComponent(id)}/bitacora`, fields);
+}
+
+async function postJson<T = PqrCase>(
+  url: string,
+  fields: CreateFields | CloseFields | BitacoraFields,
+): Promise<T> {
+  const response = await apiFetch(url, {
     method: "POST",
     headers: { "content-type": "application/json" },
     body: JSON.stringify(fields),
@@ -182,5 +337,5 @@ async function postJson(url: string, fields: CreateFields | CloseFields): Promis
       response.status,
     );
   }
-  return body as unknown as PqrCase;
+  return body as unknown as T;
 }

@@ -75,7 +75,7 @@ it("opens the detail with type links and the timeline request", async () => {
   fireEvent.click(await screen.findByRole("button", { name: "Tienda" }));
   const link = await screen.findByRole("link", { name: /^3 · 2 abiertos/ });
   expect(link.getAttribute("href")).toBe("/casos?area=Tienda&tipo=RECLAMO");
-  await waitFor(() => expect(fetchMock).toHaveBeenCalledWith("/api/proveedores/Tienda/linea"));
+  await waitFor(() => expect(fetchMock).toHaveBeenCalledWith("/api/proveedores/Tienda/linea", expect.anything()));
   expect(screen.getByRole("button", { name: "Tienda" }).getAttribute("aria-expanded")).toBe("true");
 });
 
@@ -84,7 +84,10 @@ it("encodes provider names with a slash", async () => {
   renderPage();
   fireEvent.click(await screen.findByRole("button", { name: "Educación / Coomeva" }));
   await waitFor(() =>
-    expect(fetchMock).toHaveBeenCalledWith(`/api/proveedores/${encodeURIComponent("Educación / Coomeva")}/linea`),
+    expect(fetchMock).toHaveBeenCalledWith(
+      `/api/proveedores/${encodeURIComponent("Educación / Coomeva")}/linea`,
+      expect.anything(),
+    ),
   );
 });
 

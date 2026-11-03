@@ -24,16 +24,16 @@ FECHA INICIAL, FECHA SOLUCION, AREA, ID ORDEN, ASOCIADO, CORREO, FUENTE, TIPO PQ
 - **Hojas**: solo `PQRs` + año de 4 dígitos. `Festivos` se ignora.
 - **Diccionario** `data/dictionary.csv` (`field,from,to`) para `area`, `fuente`, `tipo`, `tema`. Sin entrada → valor original recortado.
 - **Días hábiles** (`businessDays`): sábado y domingo libres, festivos nacionales libres, ambos extremos cuentan. Rango invertido da negativo; menor a −5 se trunca a 0.
-- **Cola vencida** (`openQueue`): sin fecha de solución, fecha inicial válida y más de 10 días hábiles hasta hoy. Lanza error si no hay festivos.
+- **Cola vencida** (`openQueue`): sin fecha de solución, fecha inicial válida y más días hábiles hasta hoy que su plazo (15 por defecto, Ley 1755 de 2015 art. 14; propio por proveedor). Lanza error si no hay festivos.
 - **Festivos**: se piden para los años de las hojas, el anterior y el siguiente (`yearsToLoad`). Fuente: `https://calendariosnacionales.com/co/v1/{año}/nacionales.json`.
 
 ## Resumen (`summarize`)
 
-`DashboardSummary`: totales (total, abiertos, cerrados, fechas inválidas); `sinFechaValida` (abiertos sin fecha inicial utilizable); conteos por año, área, fuente, tipo, tema, mes; flujo mensual entrados/cerrados; antigüedad (`0-5`, `6-10`, `mas-10`) de abiertos; abiertos por área y tema; promedio de días; `colaVencida` / `colaError`; tasa de cierre por tipo (`closeRates`); matriz proveedor × tipo (`providerTypeMatrix`); `serieMensual` (`monthSeries`): por mes, entrados, cerrados, pendientes al cierre (acumulado de entrados menos cerrados) y días promedio de solución, con meses contiguos.
+`DashboardSummary`: totales (total, abiertos, cerrados, fechas inválidas); `sinFechaValida` (abiertos sin fecha inicial utilizable); conteos por año, área, fuente, tipo, tema, mes; flujo mensual entrados/cerrados; antigüedad (`en-plazo`, `por-vencer`, `vencido`) de abiertos; abiertos por área y tema; promedio de días; `colaVencida` / `colaError`; tasa de cierre por tipo (`closeRates`); matriz proveedor × tipo (`providerTypeMatrix`); `serieMensual` (`monthSeries`): por mes, entrados, cerrados, pendientes al cierre (acumulado de entrados menos cerrados) y días promedio de solución, con meses contiguos.
 
 ## Riesgo de vencimiento (`risk.ts`)
 
-`riskOf(caso, holidays, today)` → `{diasAbiertos, diasParaVencer, estado}` con plazo de 10 días hábiles: `en-plazo` (0–5), `por-vencer` (6–10), `vencido` (>10). Cerrados y casos sin fecha válida dan `null`; sin festivos lanza error. `providerTimeline(cases, area)` da entrados, cerrados y días promedio por mes de un proveedor. En agregados, los valores nulos se agrupan como `(sin valor)`.
+`riskOf(caso, holidays, today, plazos?)` → `{diasAbiertos, diasParaVencer, estado, vence}` con plazo de 15 días hábiles por defecto (festivos de Colombia): `en-plazo` (hasta la mitad del plazo, 0–7), `por-vencer` (8–15), `vencido` (>15). Cerrados y casos sin fecha válida dan `null`; sin festivos lanza error. `providerTimeline(cases, area)` da entrados, cerrados y días promedio por mes de un proveedor. En agregados, los valores nulos se agrupan como `(sin valor)`.
 
 ## Alta de caso (`validateCreate` / `caseFromCreate`)
 

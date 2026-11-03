@@ -27,6 +27,8 @@ function sample(overrides: Partial<PqrCase> = {}): PqrCase {
     temaOriginal: "CINE",
     motivo: "texto",
     solucion: null,
+    causaRaiz: null,
+    accionCorrectiva: null,
     ...overrides,
   };
 }
@@ -51,4 +53,36 @@ it("inserts and updates one case without dropping holidays", () => {
   db.insert(row);
   db.update(sample({ id: "app-1", sheetYear: 2026, rowNumber: 0, solucion: "Listo" }));
   expect(db.list()[0]?.solucion).toBe("Listo");
+});
+
+it("keeps bitácora entries across replaceAll", () => {
+  const db = openSqliteRepository(path.join(os.tmpdir(), `pqr-bit-${Date.now()}.sqlite`));
+  db.replaceAll([sample()]);
+  db.addBitacora("2026-2", { fecha: "2026-01-10", texto: "uno" }, "2026-01-10T10:00:00Z");
+  const second = db.addBitacora("2026-2", { fecha: "2026-01-12", texto: "dos" }, "2026-01-12T10:00:00Z");
+  db.replaceAll([sample()]);
+  expect(db.listBitacora("2026-2").map((e) => e.texto)).toEqual(["dos", "uno"]);
+  expect(db.listBitacora("2026-2")[0]).toEqual(second);
+  expect(db.listBitacora("otro")).toEqual([]);
+});
+
+it("edits proveedor data, keeps it on rename and refuses a duplicate name", () => {
+  const repo = openSqliteRepository(path.join(os.tmpdir(), `pqr-prov-${Date.now()}-${Math.random()}.sqlite`));
+  repo.insert(sample());
+  repo.addProveedor("Natech");
+  repo.updateProveedor("Natech", {
+    contacto: "Ana",
+    correo: "ana@natech.co",
+    telefono: "300",
+    notas: "",
+    activo: false,
+    plazoDias: 5,
+  });
+  repo.renameProveedor("Natech", "Natech SAS");
+  expect(repo.listProveedorInfo().find((p) => p.nombre === "Natech SAS")).toMatchObject({
+    contacto: "Ana",
+    activo: false,
+    plazoDias: 5,
+  });
+  expect(() => repo.renameProveedor("Natech SAS", "TIENDA COOMEVA")).toThrow(/Ya existe/);
 });

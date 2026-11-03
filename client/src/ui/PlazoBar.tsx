@@ -1,3 +1,5 @@
+import { PLAZO_DIAS } from "../format";
+
 const FILL = {
   "en-plazo": "bg-primary",
   "por-vencer": "bg-warning",
@@ -7,18 +9,20 @@ const FILL = {
 export function PlazoBar({
   dias,
   estado,
+  plazo = PLAZO_DIAS,
 }: {
   dias: number | null;
+  plazo?: number;
   estado: "en-plazo" | "por-vencer" | "vencido" | null;
 }) {
   if (dias === null || estado === null) {
     return <span className="text-xs text-muted-foreground">Sin fecha de inicio</span>;
   }
-  const pct = Math.min(Math.max(dias, 0), 10) * 10;
+  const pct = (Math.min(Math.max(dias, 0), plazo) / plazo) * 100;
   return (
     <div
       role="img"
-      aria-label={`${dias} días hábiles de 10`}
+      aria-label={`${dias} días hábiles de ${plazo}`}
       className="relative h-1.5 w-full min-w-16 overflow-hidden bg-muted"
     >
       <div data-fill className={`grow-x h-full ${FILL[estado]}`} style={{ width: `${pct}%` }} />

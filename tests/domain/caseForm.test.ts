@@ -3,6 +3,7 @@ import { businessDays } from "../../src/domain/businessDays";
 import {
   applyClose,
   caseFromCreate,
+  validateBitacora,
   validateClose,
   validateCreate,
 } from "../../src/domain/caseForm";
@@ -174,5 +175,37 @@ describe("applyClose", () => {
     expect(() =>
       applyClose(caso(), { fechaSolucion: "2026-01-06", solucion: "Listo" }, []),
     ).toThrow(/holidays/);
+  });
+});
+
+describe("validateBitacora", () => {
+  it("accepts a past date with text", () => {
+    expect(validateBitacora({ fecha: "2026-01-12", texto: " avance " }, "2026-01-19")).toEqual({
+      ok: true,
+      fields: { fecha: "2026-01-12", texto: "avance" },
+    });
+  });
+
+  it("flags empty text and future or invalid dates", () => {
+    const fields = (fecha: string, texto: string) => {
+      const r = validateBitacora({ fecha, texto }, "2026-01-19");
+      return r.ok ? [] : r.errors.map((e) => e.field);
+    };
+    expect(fields("2026-01-12", "")).toEqual(["texto"]);
+    expect(fields("2026-02-01", "x")).toEqual(["fecha"]);
+    expect(fields("", "x")).toEqual(["fecha"]);
+    expect(fields("no", "x")).toEqual(["fecha"]);
+  });
+});
+
+describe("validateClose causa raíz", () => {
+  it("accepts a known cause and corrective action, rejects an unknown one", () => {
+    const ok = validateClose(
+      { fechaSolucion: "2026-01-12", solucion: "ok", causaRaiz: "Logística", accionCorrectiva: " Cambiar courier " },
+      "2026-01-05",
+    );
+    expect(ok).toMatchObject({ ok: true, fields: { causaRaiz: "Logística", accionCorrectiva: "Cambiar courier" } });
+    const bad = validateClose({ fechaSolucion: "2026-01-12", solucion: "ok", causaRaiz: "Magia" }, "2026-01-05");
+    expect(bad).toMatchObject({ ok: false, errors: [{ field: "causaRaiz" }] });
   });
 });

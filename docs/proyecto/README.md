@@ -18,7 +18,7 @@ Flujo: libro Excel → normalización → SQLite → API HTTP → webapp React.
 |---|---|
 | Lenguaje | TypeScript (ESM), Node 20+ |
 | Lectura Excel | exceljs |
-| Persistencia | SQLite (better-sqlite3) |
+| Persistencia | SQLite (`node:sqlite`) |
 | Servidor | `node:http` (sin framework) |
 | Frontend | React 19, React Router 7, Tailwind CSS 4, Recharts, Radix / shadcn, react-aria |
 | Build / dev | Vite 7, tsx |

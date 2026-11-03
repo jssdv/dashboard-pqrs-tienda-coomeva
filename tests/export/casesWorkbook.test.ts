@@ -58,6 +58,9 @@ describe("buildCasesWorkbook", () => {
       "Correo",
       "Motivo",
       "Solución",
+      "Vence",
+      "Causa raíz",
+      "Acción correctiva",
     ]);
     expect(sheet?.getRow(2).getCell(1).value).toBe("A-1");
   });

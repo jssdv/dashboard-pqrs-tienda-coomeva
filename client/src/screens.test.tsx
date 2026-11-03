@@ -382,7 +382,7 @@ it("filters by plazo with the inline Plazo select on wide screens", async () => 
   );
   await screen.findByRole("textbox", { name: "Buscar" });
   choose(screen.getByRole("button", { name: /Plazo/ }), "Por vencer");
-  await waitFor(() => expect(fetchMock).toHaveBeenLastCalledWith("/api/casos?plazo=por-vencer"));
+  await waitFor(() => expect(fetchMock).toHaveBeenLastCalledWith("/api/casos?plazo=por-vencer", expect.anything()));
 });
 
 it("opens Filtros on wide screens and filters by provider with the searchable combobox", async () => {
@@ -404,7 +404,10 @@ it("opens Filtros on wide screens and filters by provider with the searchable co
   fireEvent.change(input, { target: { value: "educacion" } });
   fireEvent.click(within(screen.getByRole("listbox", { hidden: true })).getByRole("option", { name: "Educación / Coomeva", hidden: true }));
   await waitFor(() =>
-    expect(fetchMock).toHaveBeenLastCalledWith(`/api/casos?area=${encodeURIComponent("Educación / Coomeva").replace(/%20/g, "+")}`),
+    expect(fetchMock).toHaveBeenLastCalledWith(
+      `/api/casos?area=${encodeURIComponent("Educación / Coomeva").replace(/%20/g, "+")}`,
+      expect.anything(),
+    ),
   );
   expect(screen.getByText("Proveedor Educación / Coomeva")).toBeTruthy();
 });
@@ -444,7 +447,7 @@ it("keeps a url provider that is not in the list selected and lets you clear it"
   const input = screen.getByRole("combobox", { name: "Proveedor" }) as HTMLInputElement;
   expect(input.value).toBe("Inexistente");
   fireEvent.click(screen.getByRole("button", { name: "Limpiar Proveedor" }));
-  await waitFor(() => expect(fetchMock).toHaveBeenLastCalledWith("/api/casos"));
+  await waitFor(() => expect(fetchMock).toHaveBeenLastCalledWith("/api/casos", expect.anything()));
   expect(screen.queryByText("Proveedor Inexistente")).toBeNull();
 });
 

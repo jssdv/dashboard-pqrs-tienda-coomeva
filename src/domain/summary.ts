@@ -2,7 +2,7 @@ import { closeRates, type CloseRate } from "./closeRate.js";
 import { monthSeries, type MonthPoint } from "./monthSeries.js";
 import { bogotaToday, openQueue } from "./openQueue.js";
 import { providerTypeMatrix, type MatrixRow } from "./providerTypeMatrix.js";
-import { riskOf } from "./risk.js";
+import { riskOf, type PlazoEstado, type Plazos } from "./risk.js";
 import type { CatalogField, PqrCase } from "./types.js";
 
 export interface CountBucket {
@@ -17,7 +17,7 @@ export interface MonthFlow {
 }
 
 export interface AgingBucket {
-  key: "0-5" | "6-10" | "mas-10";
+  key: PlazoEstado;
   count: number;
 }
 
@@ -74,17 +74,17 @@ function agingBuckets(
   cases: readonly PqrCase[],
   holidays: readonly string[],
   today: string,
+  plazos?: Plazos,
 ): AgingBucket[] {
-  const counts = { "0-5": 0, "6-10": 0, "mas-10": 0 };
-  const bucket = { "en-plazo": "0-5", "por-vencer": "6-10", vencido: "mas-10" } as const;
+  const counts: Record<PlazoEstado, number> = { "en-plazo": 0, "por-vencer": 0, vencido: 0 };
   for (const row of cases) {
-    const risk = riskOf(row, holidays, today);
-    if (risk) counts[bucket[risk.estado]] += 1;
+    const risk = riskOf(row, holidays, today, plazos);
+    if (risk) counts[risk.estado] += 1;
   }
   return [
-    { key: "0-5", count: counts["0-5"] },
-    { key: "6-10", count: counts["6-10"] },
-    { key: "mas-10", count: counts["mas-10"] },
+    { key: "en-plazo", count: counts["en-plazo"] },
+    { key: "por-vencer", count: counts["por-vencer"] },
+    { key: "vencido", count: counts.vencido },
   ];
 }
 
@@ -102,14 +102,14 @@ function catalogBuckets(cases: readonly PqrCase[], field: CatalogField): CountBu
 
 export function summarize(
   cases: PqrCase[],
-  clock: { holidays: readonly string[]; today: string } = { holidays: [], today: bogotaToday() },
+  clock: { holidays: readonly string[]; today: string; plazos?: Plazos } = { holidays: [], today: bogotaToday() },
 ): DashboardSummary {
   let colaVencida: number | null = null;
   let colaError: string | null = null;
   let antiguedad: AgingBucket[] | null = null;
   try {
-    colaVencida = openQueue(cases, clock.holidays, clock.today).length;
-    antiguedad = agingBuckets(cases, clock.holidays, clock.today);
+    colaVencida = openQueue(cases, clock.holidays, clock.today, clock.plazos).length;
+    antiguedad = agingBuckets(cases, clock.holidays, clock.today, clock.plazos);
   } catch (error) {
     colaError = error instanceof Error ? error.message : String(error);
   }

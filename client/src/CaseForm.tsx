@@ -11,7 +11,7 @@ import { FormDialog } from "./ui/FormDialog";
 import { PlazoBar } from "./ui/PlazoBar";
 import { Select } from "./ui/Select";
 import { TipoTag } from "./ui/TipoTag";
-import type { Catalogs, CloseFields, CreateFields, FieldError, PqrCase } from "./types";
+import { CAUSAS_RAIZ, type Catalogs, type CloseFields, type CreateFields, type FieldError, type PqrCase } from "./types";
 
 const EMPTY_CREATE: CreateFields = {
   fechaInicial: "",
@@ -172,6 +172,8 @@ export function CerrarCaso() {
   const [caso, setCaso] = useState<PqrCase | null>(null);
   const [missing, setMissing] = useState(false);
   const [fields, setFields] = useState<CloseFields>(() => ({ fechaSolucion: bogotaToday(), solucion: "" }));
+  const [causa, setCausa] = useState("");
+  const [accion, setAccion] = useState("");
   const [errors, setErrors] = useState<FieldError[]>([]);
   const [pending, setPending] = useState(false);
 
@@ -197,7 +199,11 @@ export function CerrarCaso() {
     event.preventDefault();
     setPending(true);
     try {
-      await closeCase(id, fields);
+      await closeCase(id, {
+        ...fields,
+        ...(causa ? { causaRaiz: causa } : {}),
+        ...(accion.trim() ? { accionCorrectiva: accion.trim() } : {}),
+      });
       reload();
       navigate("/casos");
     } catch (reason) {
@@ -240,6 +246,21 @@ export function CerrarCaso() {
           onChange={(value) => setFields((current) => ({ ...current, solucion: value }))}
           autoFocus
         />
+        <Select
+          label="Causa raíz (opcional)"
+          value={causa}
+          onChange={setCausa}
+          options={CAUSAS_RAIZ.map((value) => ({ value, label: value }))}
+          allLabel="Sin definir"
+        />
+        <Field
+          id="accionCorrectiva"
+          label="Acción correctiva (opcional)"
+          type="textarea"
+          value={accion}
+          error=""
+          onChange={setAccion}
+        />
       </div>
     </FormDialog>
   );
@@ -271,7 +292,11 @@ function CaseSummary({ caso }: { caso: PqrCase }) {
       </dl>
       {riesgo ? (
         <div className="grid gap-1">
-          <PlazoBar dias={riesgo.diasAbiertos} estado={riesgo.estado} />
+          <PlazoBar
+            dias={riesgo.diasAbiertos}
+            estado={riesgo.estado}
+            plazo={riesgo.diasAbiertos + riesgo.diasParaVencer}
+          />
           <p className="m-0 text-xs text-muted-foreground">
             Abierto desde {caso.fechaInicial} · {riesgo.diasAbiertos} días hábiles
           </p>

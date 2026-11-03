@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
@@ -21,6 +21,7 @@ import { SegmentedBar } from "./ui/SegmentedBar";
 import { StatCard } from "./ui/StatCard";
 import { TipoTag } from "./ui/TipoTag";
 import { useChartColors } from "./useChartColors";
+import { useLive } from "./useLive";
 import type { CountBucket, DashboardSummary, MonthPoint } from "./types";
 
 const TOP = 8;
@@ -194,9 +195,9 @@ function Plazos({ summary }: { summary: DashboardSummary }) {
   return (
     <SegmentedBar
       segments={[
-        { key: "en-plazo", label: "En plazo (0 a 5 días hábiles)", count: enPlazo.count, tone: "ok", href: casosHref({ plazo: "en-plazo" }) },
-        { key: "por-vencer", label: "Por vencer (6 a 10)", count: porVencer.count, tone: "warn", href: casosHref({ plazo: "por-vencer" }) },
-        { key: "vencido", label: "Vencido (más de 10)", count: vencido.count, tone: "danger", href: casosHref({ plazo: "vencido" }) },
+        { key: "en-plazo", label: "En plazo", count: enPlazo.count, tone: "ok", href: casosHref({ plazo: "en-plazo" }) },
+        { key: "por-vencer", label: "Por vencer", count: porVencer.count, tone: "warn", href: casosHref({ plazo: "por-vencer" }) },
+        { key: "vencido", label: "Vencido", count: vencido.count, tone: "danger", href: casosHref({ plazo: "vencido" }) },
         {
           key: "sin-fecha",
           label: "Sin fecha de inicio",
@@ -316,22 +317,18 @@ export function Resumen() {
   const [error, setError] = useState<string | null>(null);
   const [range, setRange] = useState("12");
 
+  const load = useCallback(
+    () =>
+      getSummary().then(setSummary, (reason: unknown) => {
+        setError(reason instanceof ApiError ? reason.message : "No se pudo cargar el resumen");
+      }),
+    [],
+  );
+
   useEffect(() => {
-    let cancelled = false;
-    getSummary().then(
-      (next) => {
-        if (!cancelled) setSummary(next);
-      },
-      (reason: unknown) => {
-        if (!cancelled) {
-          setError(reason instanceof ApiError ? reason.message : "No se pudo cargar el resumen");
-        }
-      },
-    );
-    return () => {
-      cancelled = true;
-    };
-  }, []);
+    load();
+  }, [load]);
+  useLive(load);
 
   const flow = useMemo(() => {
     if (!summary) return [];
@@ -406,7 +403,7 @@ export function Resumen() {
           index={4}
           tone="danger"
           label="Vencidos"
-          note="Más de 10 días hábiles abiertos"
+          note="Abiertos fuera del plazo"
           value={colaMissing ? "Sin festivos" : String(summary.colaVencida)}
           href={colaMissing ? undefined : casosHref({ plazo: "vencido" })}
         />

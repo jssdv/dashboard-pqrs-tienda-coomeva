@@ -57,22 +57,6 @@ it("shows today's date in the sidebar footer", () => {
   expect(document.querySelector("aside")?.textContent).toMatch(/Datos al /);
 });
 
-it("shows the theme as text next to the toggle", () => {
-  stubSummary(null);
-  localStorage.setItem("pqr-theme", "light");
-  renderShell();
-  expect(screen.getByRole("button", { name: /Cambiar tema/ }).textContent).toContain("Claro");
-});
-
-it("toggles the theme from the top bar", () => {
-  stubSummary(null);
-  localStorage.setItem("pqr-theme", "light");
-  renderShell();
-  fireEvent.click(screen.getByRole("button", { name: /Cambiar tema/ }));
-  expect(localStorage.getItem("pqr-theme")).toBe("dark");
-  expect(document.documentElement.classList.contains("dark")).toBe(true);
-});
-
 it("renders actions passed to PageHead", () => {
   render(<PageHead title="Casos" actions={<button type="button">Acción</button>} />);
   expect(screen.getByRole("button", { name: "Acción" })).toBeTruthy();

@@ -1,5 +1,7 @@
 import type { ReactNode } from "react";
-import { Link, NavLink, Outlet, useLocation } from "react-router-dom";
+import { Link, NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
+import { logout } from "./api";
+import { useAuth } from "./auth";
 import { useEffect, useRef, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -14,7 +16,6 @@ import {
 } from "@/components/ui/sheet";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { CommandPalette } from "./CommandPalette";
-import { ThemeToggle } from "./ui/ThemeToggle";
 import { useVencidos } from "./useVencidos";
 
 const navClass = (compact: boolean) => ({ isActive }: { isActive: boolean }) =>
@@ -38,6 +39,7 @@ function Nav({
   onNavigate?: () => void;
 }) {
   const item = (label: string) => (compact ? { "aria-label": label, title: label } : {});
+  const { user } = useAuth();
   return (
     <div className="grid gap-4">
       <nav aria-label="Principal" className="grid gap-px" onClick={onNavigate}>
@@ -69,6 +71,12 @@ function Nav({
           <span className={NUM}>03</span>
           {compact ? null : "Proveedores"}
         </NavLink>
+        {user?.rol === "admin" ? (
+          <NavLink to="/admin" viewTransition className={navClass(compact)} {...item("Administración")}>
+            <span className={NUM}>04</span>
+            {compact ? null : "Administración"}
+          </NavLink>
+        ) : null}
       </nav>
     </div>
   );
@@ -80,6 +88,7 @@ const CRUMBS: Array<[RegExp, string[]]> = [
   [/^\/casos\/nuevo$/, ["Casos", "Nuevo caso"]],
   [/^\/casos\/[^/]+\/cerrar$/, ["Casos", "Cerrar caso"]],
   [/^\/proveedores$/, ["Proveedores"]],
+  [/^\/admin$/, ["Administración"]],
 ];
 
 function crumbsOf(pathname: string): string[] {
@@ -98,6 +107,14 @@ export function Shell() {
   const [searchOpen, setSearchOpen] = useState(false);
   const searchButton = useRef<HTMLButtonElement>(null);
   const returnFocus = useRef<HTMLElement | null>(null);
+  const { setUser, canWrite } = useAuth();
+  const navigate = useNavigate();
+
+  async function onLogout() {
+    await logout().catch(() => {});
+    setUser(null);
+    navigate("/login", { replace: true });
+  }
 
   function openSearch(from?: HTMLElement | null) {
     const active = document.activeElement;
@@ -133,11 +150,11 @@ export function Shell() {
           Saltar al contenido
         </a>
         <aside className="hidden w-52 shrink-0 flex-col border-r border-border bg-card px-3 py-5 lg:flex">
-          <div className="mb-6 flex items-center gap-2 px-3">
-            <span className="grid size-8 place-items-center bg-primary font-display text-xs font-bold text-primary-foreground">
-              PQ
+          <div className="mb-6 px-3">
+            <img src="/logo.png" alt="Tienda Coomeva" className="h-auto w-32" />
+            <span className="mt-1 block font-mono text-[0.7rem] tracking-widest text-muted-foreground uppercase">
+              PQRS
             </span>
-            <span className="font-display text-base font-semibold tracking-tight">PQRS</span>
           </div>
           <Nav vencidos={vencidos} />
           <div className="mt-auto pt-6">
@@ -176,9 +193,13 @@ export function Shell() {
                 Ctrl K
               </kbd>
             </Button>
-            <ThemeToggle />
-            <Button asChild className="hidden min-h-11 md:inline-flex">
-              <Link to="/casos/nuevo">Nuevo caso</Link>
+            {canWrite ? (
+              <Button asChild className="hidden min-h-11 md:inline-flex">
+                <Link to="/casos/nuevo">Nuevo caso</Link>
+              </Button>
+            ) : null}
+            <Button type="button" variant="ghost" className="min-h-11" onClick={onLogout}>
+              Cerrar sesión
             </Button>
             <div className="md:hidden">
               <Sheet open={open} onOpenChange={setOpen}>
@@ -189,7 +210,10 @@ export function Shell() {
                 </SheetTrigger>
                 <SheetContent side="left">
                   <SheetHeader>
-                    <SheetTitle>PQRS</SheetTitle>
+                    <SheetTitle>
+                      <img src="/logo.png" alt="Tienda Coomeva" className="h-auto w-28" />
+                      <span className="sr-only">PQRS</span>
+                    </SheetTitle>
                     <SheetDescription>Navegación</SheetDescription>
                   </SheetHeader>
                   <div className="px-4">

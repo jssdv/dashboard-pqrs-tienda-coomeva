@@ -1,3 +1,5 @@
+export type PlazoEstado = "en-plazo" | "por-vencer" | "vencido";
+
 export interface CountBucket {
   key: string;
   count: number;
@@ -17,7 +19,7 @@ export interface MonthFlow {
 }
 
 export interface AgingBucket {
-  key: "0-5" | "6-10" | "mas-10";
+  key: PlazoEstado;
   count: number;
 }
 
@@ -66,12 +68,12 @@ export interface DashboardSummary {
   matrizProveedorTipo: MatrixRow[];
 }
 
-export type PlazoEstado = "en-plazo" | "por-vencer" | "vencido";
 
 export interface Riesgo {
   diasAbiertos: number;
   diasParaVencer: number;
   estado: PlazoEstado;
+  vence?: string;
 }
 
 export interface PqrCase {
@@ -96,6 +98,8 @@ export interface PqrCase {
   temaOriginal: string | null;
   motivo: string | null;
   solucion: string | null;
+  causaRaiz?: string | null;
+  accionCorrectiva?: string | null;
   riesgo?: Riesgo;
 }
 
@@ -111,13 +115,17 @@ export interface CreateFields {
   motivo: string;
 }
 
+export const CAUSAS_RAIZ = ["Producto", "Logística", "Atención", "Información", "Otro"] as const;
+
 export interface CloseFields {
   fechaSolucion: string;
   solucion: string;
+  causaRaiz?: string;
+  accionCorrectiva?: string;
 }
 
 export interface FieldError {
-  field: keyof CreateFields | keyof CloseFields | "form";
+  field: keyof CreateFields | keyof CloseFields | keyof BitacoraFields | "form";
   message: string;
 }
 
@@ -142,4 +150,15 @@ export interface Catalogs {
   fuente: string[];
   tipo: string[];
   tema: string[];
+}
+
+export interface BitacoraFields {
+  fecha: string;
+  texto: string;
+}
+
+export interface BitacoraEntry extends BitacoraFields {
+  id: number;
+  caseId: string;
+  creadoEn: string;
 }

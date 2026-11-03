@@ -36,22 +36,22 @@ describe("bogotaToday", () => {
 });
 
 describe("openQueue", () => {
-  it("includes an open case whose business-day age is greater than 10", () => {
-    const queued = openQueue([caso({ id: "2026-2" })], ["2026-01-01"], "2026-01-19");
+  it("includes an open case whose business-day age is greater than 15", () => {
+    const queued = openQueue([caso({ id: "2026-2" })], ["2026-01-01"], "2026-01-26");
     expect(queued.map((row) => row.id)).toEqual(["2026-2"]);
   });
 
-  it("excludes a case that is exactly 10 business days old, closed, or missing a valid start", () => {
+  it("excludes a case that is exactly 15 business days old, closed, or missing a valid start", () => {
     const rows = [
       caso({ id: "exact" }),
       caso({ id: "closed", fechaSolucion: "2026-01-06", diasSolucion: 1 }),
       caso({ id: "bad-start", fechaInicial: null, fechaInicialInvalida: true }),
     ];
-    expect(openQueue(rows, ["2026-01-01"], "2026-01-16")).toEqual([]);
+    expect(openQueue(rows, ["2026-01-01"], "2026-01-23")).toEqual([]);
   });
 
   it("does not count a stored holiday as a business day", () => {
-    expect(openQueue([caso({ id: "2026-2" })], ["2026-01-12"], "2026-01-19")).toEqual([]);
+    expect(openQueue([caso({ id: "2026-2" })], ["2026-01-12"], "2026-01-26")).toEqual([]);
   });
 
   it("throws when no holidays are loaded", () => {

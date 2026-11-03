@@ -10,6 +10,8 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet";
 import { plazoLabel, textOrDash } from "./format";
+import { useAuth } from "./auth";
+import { Bitacora } from "./Bitacora";
 import { CaseTimeline } from "./ui/CaseTimeline";
 import { TipoTag } from "./ui/TipoTag";
 import type { PqrCase } from "./types";
@@ -25,6 +27,7 @@ function Field({ label, value }: { label: string; value: string | null }) {
 
 export function CaseDetail({ caso, onClose }: { caso: PqrCase | null; onClose: () => void }) {
   const open = caso !== null && caso.fechaSolucion === null;
+  const { canWrite } = useAuth();
   const plazo = caso ? plazoLabel(caso.riesgo) : null;
   return (
     <Sheet open={caso !== null} onOpenChange={(next) => (next ? undefined : onClose())}>
@@ -45,6 +48,7 @@ export function CaseDetail({ caso, onClose }: { caso: PqrCase | null; onClose: (
                 <dl className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                   <Field label="Fecha inicial" value={caso.fechaInicial} />
                   <Field label="Fecha de solución" value={caso.fechaSolucion} />
+                  {caso.riesgo?.vence ? <Field label="Vence" value={caso.riesgo.vence} /> : null}
                   <div className="min-w-0">
                     <dt className="text-sm text-muted-foreground">Tipo</dt>
                     <dd className="m-0"><TipoTag tipo={caso.tipo} /></dd>
@@ -66,10 +70,13 @@ export function CaseDetail({ caso, onClose }: { caso: PqrCase | null; onClose: (
                 <dl className="grid gap-3">
                   <Field label="Motivo" value={caso.motivo} />
                   <Field label="Solución" value={caso.solucion} />
+                  <Field label="Causa raíz" value={caso.causaRaiz ?? null} />
+                  <Field label="Acción correctiva" value={caso.accionCorrectiva ?? null} />
                 </dl>
               </section>
+              <Bitacora caseId={caso.id} />
             </div>
-            {open ? (
+            {open && canWrite ? (
               <SheetFooter>
                 <Button asChild className="min-h-11 w-full">
                   <Link to={`/casos/${encodeURIComponent(caso.id)}/cerrar`}>Cerrar caso</Link>

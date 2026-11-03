@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Mark } from "./ui/Mark";
 import { ApiError, exportCases, getCases } from "./api";
 import { CaseDetail } from "./CaseDetail";
+import { useLive } from "./useLive";
 import { CaseFilters } from "./CaseFilters";
 import { plazoLabel, textOrDash } from "./format";
 import { matchesSearch } from "./matchesSearch";
@@ -58,7 +59,7 @@ function chipsFrom(params: URLSearchParams): Array<{ key: string; text: string }
     const value = params.get(key);
     if (value) chips.push({ key, text: `${label} ${value}` });
   }
-  if (params.get("cola") === "vencida") chips.push({ key: "cola", text: "Más de 10 días hábiles" });
+  if (params.get("cola") === "vencida") chips.push({ key: "cola", text: "Fuera de plazo" });
   if (params.get("fecha") === "invalida") chips.push({ key: "fecha", text: "Sin fecha de inicio" });
   return chips;
 }
@@ -76,6 +77,7 @@ export function Casos() {
   const [message, setMessage] = useState<string | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
+  useLive(() => setReloadKey((key) => key + 1));
   const [exporting, setExporting] = useState(false);
   const [exportError, setExportError] = useState<string | null>(null);
   const atList = useMatch("/casos") !== null;
@@ -274,7 +276,11 @@ function PlazoCell({ row }: { row: PqrCase }) {
   const TEXT = { secondary: "text-muted-foreground", warning: "text-warning-foreground", destructive: "text-destructive" } as const;
   return (
     <div className="grid min-w-28 gap-1">
-      <PlazoBar dias={row.riesgo.diasAbiertos} estado={row.riesgo.estado} />
+      <PlazoBar
+        dias={row.riesgo.diasAbiertos}
+        estado={row.riesgo.estado}
+        plazo={row.riesgo.diasAbiertos + row.riesgo.diasParaVencer}
+      />
       <span className={`text-xs font-medium ${TEXT[plazo.variant]}`}>{plazo.text}</span>
     </div>
   );
