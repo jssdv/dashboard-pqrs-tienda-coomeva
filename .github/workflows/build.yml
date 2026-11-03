@@ -16,7 +16,7 @@ jobs:
         include:
           - os: macos-14
             asset: pqr-macos-arm64
-          - os: macos-13
+          - os: macos-15-intel
             asset: pqr-macos-x64
           - os: windows-latest
             asset: pqr-windows-x64
