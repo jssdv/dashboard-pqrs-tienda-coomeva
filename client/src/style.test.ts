@@ -1,5 +1,5 @@
 import { readdirSync, readFileSync, statSync } from "node:fs";
-import { join, relative } from "node:path";
+import { join, relative, sep } from "node:path";
 import { describe, expect, it } from "vitest";
 
 const ROOT = join(__dirname, "../..");
@@ -17,9 +17,11 @@ const FILES = [...sources(join(ROOT, "client/src")), ...sources(join(ROOT, "src/
 );
 
 function offenders(pattern: RegExp, allow: RegExp[] = []): string[] {
-  return FILES.filter((path) => !allow.some((rule) => rule.test(relative(ROOT, path)))).flatMap((path) => {
+  // Normalize to "/" so the allow-list regexes also match on Windows.
+  const rel = (path: string) => relative(ROOT, path).split(sep).join("/");
+  return FILES.filter((path) => !allow.some((rule) => rule.test(rel(path)))).flatMap((path) => {
     const text = readFileSync(path, "utf8");
-    return pattern.test(text) ? [relative(ROOT, path)] : [];
+    return pattern.test(text) ? [rel(path)] : [];
   });
 }
 
