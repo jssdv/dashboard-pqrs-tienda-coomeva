@@ -7,6 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { ApiError, addBitacoraEntry, getBitacora } from "./api";
 import { useAuth } from "./auth";
 import { bogotaToday } from "./metrics";
+import { useLive } from "./useLive";
 import type { BitacoraEntry, FieldError } from "./types";
 
 export function Bitacora({ caseId }: { caseId: string }) {
@@ -17,6 +18,9 @@ export function Bitacora({ caseId }: { caseId: string }) {
   const [errors, setErrors] = useState<FieldError[]>([]);
   const [saving, setSaving] = useState(false);
   const { canWrite } = useAuth();
+  useLive(() => {
+    getBitacora(caseId).then(setEntries, () => {});
+  });
 
   useEffect(() => {
     let live = true;

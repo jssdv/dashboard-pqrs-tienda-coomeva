@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
@@ -21,6 +21,7 @@ import { SegmentedBar } from "./ui/SegmentedBar";
 import { StatCard } from "./ui/StatCard";
 import { TipoTag } from "./ui/TipoTag";
 import { useChartColors } from "./useChartColors";
+import { useLive } from "./useLive";
 import type { CountBucket, DashboardSummary, MonthPoint } from "./types";
 
 const TOP = 8;
@@ -316,22 +317,18 @@ export function Resumen() {
   const [error, setError] = useState<string | null>(null);
   const [range, setRange] = useState("12");
 
+  const load = useCallback(
+    () =>
+      getSummary().then(setSummary, (reason: unknown) => {
+        setError(reason instanceof ApiError ? reason.message : "No se pudo cargar el resumen");
+      }),
+    [],
+  );
+
   useEffect(() => {
-    let cancelled = false;
-    getSummary().then(
-      (next) => {
-        if (!cancelled) setSummary(next);
-      },
-      (reason: unknown) => {
-        if (!cancelled) {
-          setError(reason instanceof ApiError ? reason.message : "No se pudo cargar el resumen");
-        }
-      },
-    );
-    return () => {
-      cancelled = true;
-    };
-  }, []);
+    load();
+  }, [load]);
+  useLive(load);
 
   const flow = useMemo(() => {
     if (!summary) return [];

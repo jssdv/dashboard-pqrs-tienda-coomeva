@@ -1,5 +1,6 @@
 import { DatabaseSync } from "node:sqlite";
 import type { AuthRepository, Rol, UserRecord } from "../auth/repository.js";
+import type { EnlaceRecord, ShareRepository } from "../share/repository.js";
 import type { BitacoraEntry } from "../domain/caseForm.js";
 import type { PqrCase } from "../domain/types.js";
 import {
@@ -73,7 +74,7 @@ function caseValues(row: PqrCase): Array<string | number | null> {
   ];
 }
 
-export function openSqliteRepository(dbPath: string): CaseRepository & AuthRepository {
+export function openSqliteRepository(dbPath: string): CaseRepository & AuthRepository & ShareRepository {
   const db = new DatabaseSync(dbPath);
   // node:sqlite has no db.transaction(); BEGIN/COMMIT/ROLLBACK by hand, like better-sqlite3 did.
   const transaction =
@@ -185,6 +186,21 @@ export function openSqliteRepository(dbPath: string): CaseRepository & AuthRepos
       userId INTEGER NOT NULL,
       expiraEn TEXT NOT NULL,
       creadoEn TEXT NOT NULL
+    )
+  `);
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS enlaces (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      token_hash TEXT NOT NULL UNIQUE,
+      creado_por INTEGER NOT NULL,
+      expira TEXT,
+      revocado INTEGER NOT NULL DEFAULT 0
+    )
+  `);
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS ajustes (
+      clave TEXT PRIMARY KEY,
+      valor TEXT NOT NULL
     )
   `);
   const toUser = (row: UserRow): UserRecord => ({ ...row, activo: row.activo === 1 });
@@ -358,6 +374,44 @@ export function openSqliteRepository(dbPath: string): CaseRepository & AuthRepos
     },
     deleteSessionsOfUser(userId) {
       db.prepare("DELETE FROM sessions WHERE userId = ?").run(userId);
+    },
+    listEnlaces() {
+      return (
+        db
+          .prepare(
+            `SELECT e.id, u.usuario AS creadoPor, e.expira, e.revocado
+             FROM enlaces e LEFT JOIN users u ON u.id = e.creado_por ORDER BY e.id DESC`,
+          )
+          .all() as Array<Omit<EnlaceRecord, "revocado"> & { revocado: number }>
+      ).map((row) => ({ ...row, creadoPor: row.creadoPor ?? "", revocado: row.revocado === 1 }));
+    },
+    insertEnlace(tokenHash, creadoPor, expira) {
+      const { lastInsertRowid } = db
+        .prepare("INSERT INTO enlaces (token_hash, creado_por, expira) VALUES (?, ?, ?)")
+        .run(tokenHash, creadoPor, expira);
+      return Number(lastInsertRowid);
+    },
+    findEnlaceByHash(tokenHash) {
+      const row = db
+        .prepare(
+          `SELECT e.id, u.usuario AS creadoPor, e.expira, e.revocado
+           FROM enlaces e LEFT JOIN users u ON u.id = e.creado_por WHERE e.token_hash = ?`,
+        )
+        .get(tokenHash) as { id: number; creadoPor: string | null; expira: string | null; revocado: number } | undefined;
+      return row ? { ...row, creadoPor: row.creadoPor ?? "", revocado: row.revocado === 1 } : null;
+    },
+    revokeEnlace(id) {
+      return db.prepare("UPDATE enlaces SET revocado = 1 WHERE id = ?").run(id).changes > 0;
+    },
+    getAjuste(clave) {
+      const row = db.prepare("SELECT valor FROM ajustes WHERE clave = ?").get(clave) as { valor: string } | undefined;
+      return row?.valor ?? null;
+    },
+    setAjuste(clave, valor) {
+      db.prepare("INSERT INTO ajustes (clave, valor) VALUES (?, ?) ON CONFLICT(clave) DO UPDATE SET valor = excluded.valor").run(
+        clave,
+        valor,
+      );
     },
   };
 }

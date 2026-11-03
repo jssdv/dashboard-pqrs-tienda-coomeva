@@ -15,6 +15,9 @@ import {
   validateUsuario,
 } from "../auth/users.js";
 import { hashPassword } from "../auth/password.js";
+import type { ShareRepository } from "../share/repository.js";
+import { enlaceValido, expiraDe, hashToken, lanBases, newToken, URL_PUBLICA, urlPublicaValida } from "../share/links.js";
+import { createEventHub } from "./events.js";
 import { applyClose, caseFromCreate, validateBitacora, validateClose, validateCreate } from "../domain/caseForm.js";
 import { Dictionary } from "../domain/dictionary.js";
 import { bogotaToday, openQueue } from "../domain/openQueue.js";
@@ -45,7 +48,7 @@ const MIME: Record<string, string> = {
 };
 
 export interface SummaryServerOptions {
-  auth: AuthRepository;
+  auth: AuthRepository & ShareRepository;
   dictionary?: Dictionary;
   fetchImpl?: typeof fetch;
   now?: () => Date;
@@ -53,6 +56,7 @@ export interface SummaryServerOptions {
 
 const SESSION_COOKIE = "pqr_session";
 const READ_METHODS = ["GET", "HEAD"];
+const WRITE_METHODS = ["POST", "PUT", "DELETE"];
 const LOGIN_WINDOW_MS = 60_000;
 const MAX_FAILED_LOGINS = 5;
 
@@ -425,6 +429,65 @@ async function handleAdminRoute(
   return false;
 }
 
+async function handleShareRoute(
+  req: IncomingMessage,
+  res: ServerResponse,
+  url: URL,
+  share: ShareRepository,
+  me: AuthUser,
+): Promise<boolean> {
+  const port = req.socket.localPort ?? 0;
+  if (req.method === "GET" && url.pathname === "/api/admin/info") {
+    json(res, 200, { puerto: port, urls: lanBases(port) });
+    return true;
+  }
+  if (req.method === "GET" && url.pathname === "/api/admin/ajustes") {
+    json(res, 200, { url_publica: share.getAjuste(URL_PUBLICA) ?? "" });
+    return true;
+  }
+  if (req.method === "PUT" && url.pathname === "/api/admin/ajustes") {
+    const raw = await readFields(req, res);
+    if (!raw) return true;
+    const valor = (raw.url_publica ?? "").trim().replace(/\/+$/, "");
+    if (valor && !urlPublicaValida(valor)) {
+      json(res, 400, { error: "La URL pública debe empezar por http:// o https://" });
+      return true;
+    }
+    share.setAjuste(URL_PUBLICA, valor);
+    json(res, 200, { url_publica: valor });
+    return true;
+  }
+  if (req.method === "GET" && url.pathname === "/api/admin/enlaces") {
+    json(res, 200, { enlaces: share.listEnlaces() });
+    return true;
+  }
+  if (req.method === "POST" && url.pathname === "/api/admin/enlaces") {
+    const raw = await readFields(req, res);
+    if (!raw) return true;
+    const expira = expiraDe((raw.expira ?? "").trim());
+    if (expira === undefined) {
+      json(res, 400, { error: "La fecha de vencimiento debe ser una fecha futura (AAAA-MM-DD)" });
+      return true;
+    }
+    const token = newToken();
+    const id = share.insertEnlace(hashToken(token), me.id, expira);
+    // Prefer the admin's public URL, else the first LAN address; the Host header is the last resort.
+    const base = share.getAjuste(URL_PUBLICA) || lanBases(port)[0] || `http://${req.headers.host}`;
+    json(res, 201, { id, url: `${base}/ver/${token}`, expira });
+    return true;
+  }
+  const revoke = url.pathname.match(/^\/api\/admin\/enlaces\/(\d+)$/);
+  if (revoke && req.method === "DELETE") {
+    if (!share.revokeEnlace(Number(revoke[1]))) {
+      json(res, 404, { error: "not found" });
+      return true;
+    }
+    json(res, 200, { ok: true });
+    return true;
+  }
+  return false;
+}
+
 function serveClient(url: URL, res: ServerResponse): boolean {
   const indexPath = join(clientDist, "index.html");
   if (!existsSync(indexPath)) return false;
@@ -457,10 +520,17 @@ export function createSummaryServer(repository: CaseRepository, options: Summary
   const today = () => bogotaToday(options.now ? options.now() : new Date());
   const { auth } = options;
   const limit = createLoginLimit();
+  const hub = createEventHub();
 
   return createServer(async (req, res) => {
     try {
       const url = new URL(req.url ?? "/", "http://127.0.0.1");
+      // Every successful write tells open dashboards to refetch; login/logout are not data changes.
+      if (WRITE_METHODS.includes(req.method ?? "") && !url.pathname.startsWith("/api/auth/")) {
+        res.on("finish", () => {
+          if (res.statusCode < 300) hub.emit("change");
+        });
+      }
       const plazos = (): Plazos =>
         new Map(
           repository
@@ -484,12 +554,17 @@ export function createSummaryServer(repository: CaseRepository, options: Summary
             return;
           }
           if (await handleAdminRoute(req, res, url, auth, me)) return;
+          if (await handleShareRoute(req, res, url, auth, me)) return;
         } else if (me.rol === "viewer" && !READ_METHODS.includes(req.method ?? "")) {
           json(res, 403, { error: "Tu rol solo permite consultar" });
           return;
         }
       }
 
+      if (req.method === "GET" && url.pathname === "/api/events") {
+        hub.subscribe(res);
+        return;
+      }
       if (req.method === "GET" && url.pathname === "/summary") {
         json(res, 200, summarize(repository.list(), clock()));
         return;
@@ -715,6 +790,20 @@ export function createSummaryServer(repository: CaseRepository, options: Summary
         }
         json(res, 201, repository.addBitacora(id, result.fields, (options.now?.() ?? new Date()).toISOString()));
         return;
+      }
+
+      const ver = url.pathname.match(/^\/ver\/([^/]+)$/);
+      if (req.method === "GET" && ver) {
+        if (!enlaceValido(auth, decodeURIComponent(ver[1]))) {
+          res.writeHead(404, { "Content-Type": "text/html; charset=utf-8" });
+          res.end("<!doctype html><meta charset=utf-8><title>Enlace no válido</title><p>Este enlace no es válido o ya venció.</p>");
+          return;
+        }
+        if (!userForSession(auth, cookieValue(req, SESSION_COOKIE))) {
+          res.writeHead(302, { Location: `/login?next=${encodeURIComponent(url.pathname)}` });
+          res.end();
+          return;
+        }
       }
 
       if ((req.method === "GET" || req.method === "HEAD") && serveClient(url, res)) return;

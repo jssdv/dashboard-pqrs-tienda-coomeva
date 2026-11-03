@@ -97,6 +97,43 @@ export async function updateUser(id: number, fields: { rol?: Rol; activo?: boole
   await jsonRequest(`/api/admin/usuarios/${id}`, "PUT", fields);
 }
 
+export interface Enlace {
+  id: number;
+  creadoPor: string;
+  expira: string | null;
+  revocado: boolean;
+}
+
+export async function getEnlaces(): Promise<Enlace[]> {
+  return (await jsonRequest<{ enlaces: Enlace[] }>("/api/admin/enlaces", "GET")).enlaces;
+}
+
+// The full URL comes back once; the server keeps only its hash.
+export async function createEnlace(expira: string): Promise<{ url: string; expira: string | null }> {
+  return jsonRequest("/api/admin/enlaces", "POST", { expira });
+}
+
+export async function revokeEnlace(id: number): Promise<void> {
+  await jsonRequest(`/api/admin/enlaces/${id}`, "DELETE");
+}
+
+export interface ShareInfo {
+  puerto: number;
+  urls: string[];
+}
+
+export async function getShareInfo(): Promise<ShareInfo> {
+  return jsonRequest("/api/admin/info", "GET");
+}
+
+export async function getUrlPublica(): Promise<string> {
+  return (await jsonRequest<{ url_publica: string }>("/api/admin/ajustes", "GET")).url_publica;
+}
+
+export async function setUrlPublica(url: string): Promise<string> {
+  return (await jsonRequest<{ url_publica: string }>("/api/admin/ajustes", "PUT", { url_publica: url })).url_publica;
+}
+
 export async function getSummary(): Promise<DashboardSummary> {
   const response = await apiFetch("/summary");
   const body = await readBody(response);

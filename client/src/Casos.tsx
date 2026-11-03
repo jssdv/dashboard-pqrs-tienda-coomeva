@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Mark } from "./ui/Mark";
 import { ApiError, exportCases, getCases } from "./api";
 import { CaseDetail } from "./CaseDetail";
+import { useLive } from "./useLive";
 import { CaseFilters } from "./CaseFilters";
 import { plazoLabel, textOrDash } from "./format";
 import { matchesSearch } from "./matchesSearch";
@@ -76,6 +77,7 @@ export function Casos() {
   const [message, setMessage] = useState<string | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
+  useLive(() => setReloadKey((key) => key + 1));
   const [exporting, setExporting] = useState(false);
   const [exportError, setExportError] = useState<string | null>(null);
   const atList = useMatch("/casos") !== null;

@@ -16,6 +16,7 @@ import { useAuth } from "./auth";
 import { ProveedorDetalle } from "./ProveedorDetalle";
 import { ProveedorEditar } from "./ProveedorEditar";
 import { PageHead } from "./Shell";
+import { useLive } from "./useLive";
 import { useMinWidth } from "./useMinWidth";
 import type { MatrixRow } from "./types";
 
@@ -43,6 +44,9 @@ export function Proveedores() {
       setError(reason instanceof Error ? reason.message : "No se pudieron cargar los proveedores");
     });
   }, [load]);
+  useLive(() => {
+    load().catch(() => {});
+  });
 
   async function onCreate(event: FormEvent) {
     event.preventDefault();

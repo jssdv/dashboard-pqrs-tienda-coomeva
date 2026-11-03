@@ -7,6 +7,7 @@ import { useAuth } from "./auth";
 import { FormDialog } from "./ui/FormDialog";
 import { Select } from "./ui/Select";
 import type { Option } from "./ui/options";
+import { Compartir } from "./Compartir";
 import { PageHead, fieldClass } from "./Shell";
 
 const ROLES: Option[] = [
@@ -241,6 +242,7 @@ export function Admin() {
       {resetting ? (
         <ResetPasswordDialog target={resetting} onClose={() => setResetting(null)} onDone={reload} />
       ) : null}
+      <Compartir />
     </>
   );
 }
