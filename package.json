@@ -1,6 +1,9 @@
 {
   "name": "pqr-core",
   "private": true,
+  "engines": {
+    "node": ">=22.5"
+  },
   "type": "module",
   "scripts": {
     "start": "vite build && tsx src/cli/serveSummary.ts data/pqr.sqlite",
@@ -14,7 +17,6 @@
     "@react-stately/utils": "^3.12.1",
     "@tailwindcss/typography": "^0.5.20",
     "@untitledui/icons": "^0.0.23",
-    "better-sqlite3": "^11.10.0",
     "class-variance-authority": "^0.7.1",
     "cn": "^0.4.0",
     "exceljs": "^4.4.0",
@@ -34,7 +36,6 @@
   "devDependencies": {
     "@tailwindcss/vite": "^4.3.3",
     "@testing-library/react": "^16.3.3",
-    "@types/better-sqlite3": "^7.6.13",
     "@types/node": "^22.15.0",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",

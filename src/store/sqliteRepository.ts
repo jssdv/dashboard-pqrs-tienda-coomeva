@@ -1,4 +1,4 @@
-import Database from "better-sqlite3";
+import { DatabaseSync } from "node:sqlite";
 import type { BitacoraEntry } from "../domain/caseForm.js";
 import type { PqrCase } from "../domain/types.js";
 import {
@@ -68,7 +68,20 @@ function caseValues(row: PqrCase): Array<string | number | null> {
 }
 
 export function openSqliteRepository(dbPath: string): CaseRepository {
-  const db = new Database(dbPath);
+  const db = new DatabaseSync(dbPath);
+  // node:sqlite has no db.transaction(); BEGIN/COMMIT/ROLLBACK by hand, like better-sqlite3 did.
+  const transaction =
+    <A extends unknown[]>(fn: (...args: A) => void) =>
+    (...args: A) => {
+      db.exec("BEGIN");
+      try {
+        fn(...args);
+        db.exec("COMMIT");
+      } catch (error) {
+        db.exec("ROLLBACK");
+        throw error;
+      }
+    };
   db.exec(`
     CREATE TABLE IF NOT EXISTS holidays (
       date TEXT PRIMARY KEY
@@ -121,7 +134,7 @@ export function openSqliteRepository(dbPath: string): CaseRepository {
   const insert = db.prepare(
     `INSERT INTO cases (${COLUMNS.join(", ")}) VALUES (${COLUMNS.map(() => "?").join(", ")})`,
   );
-  const replace = db.transaction((cases: PqrCase[]) => {
+  const replace = transaction((cases: PqrCase[]) => {
     db.exec("DELETE FROM cases");
     for (const row of cases) insert.run(...caseValues(row));
   });
@@ -131,7 +144,7 @@ export function openSqliteRepository(dbPath: string): CaseRepository {
       .join(", ")} WHERE id = ?`,
   );
   const addHoliday = db.prepare("INSERT OR IGNORE INTO holidays (date) VALUES (?)");
-  const addHolidaySet = db.transaction((dates: readonly string[]) => {
+  const addHolidaySet = transaction((dates: readonly string[]) => {
     for (const date of dates) addHoliday.run(date);
   });
   db.exec(`
@@ -177,12 +190,12 @@ export function openSqliteRepository(dbPath: string): CaseRepository {
     ).map((row) => row.nombre);
     return [...new Set([...stored, ...used])].sort((a, b) => a.localeCompare(b, "es"));
   };
-  const renameProveedorTx = db.transaction((desde: string, hacia: string) => {
+  const renameProveedorTx = transaction((desde: string, hacia: string) => {
     insertProveedor.run(desde);
     db.prepare("UPDATE proveedores SET nombre = ? WHERE nombre = ?").run(hacia, desde);
     db.prepare("UPDATE cases SET area = ? WHERE area = ?").run(hacia, desde);
   });
-  const updateProveedorTx = db.transaction((nombre: string, fields: ProveedorFields) => {
+  const updateProveedorTx = transaction((nombre: string, fields: ProveedorFields) => {
     insertProveedor.run(nombre);
     db.prepare(
       "UPDATE proveedores SET contacto = ?, correo = ?, telefono = ?, notas = ?, activo = ?, plazoDias = ? WHERE nombre = ?",
@@ -256,7 +269,7 @@ export function openSqliteRepository(dbPath: string): CaseRepository {
     listBitacora(caseId) {
       return db
         .prepare("SELECT * FROM bitacora WHERE caseId = ? ORDER BY fecha DESC, id DESC")
-        .all(caseId) as BitacoraEntry[];
+        .all(caseId) as unknown as BitacoraEntry[];
     },
     addBitacora(caseId, fields, creadoEn) {
       const { lastInsertRowid } = db
