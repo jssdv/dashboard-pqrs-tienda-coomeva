@@ -2,7 +2,7 @@ import { useEffect, useState, type FormEvent } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { ApiError, createUser, getUsers, updateUser, type AuthUser, type Rol } from "./api";
+import { ApiError, createUser, getUsers, importarLibro, updateUser, type AuthUser, type ImportSummary, type Rol } from "./api";
 import { useAuth } from "./auth";
 import { FormDialog } from "./ui/FormDialog";
 import { Select } from "./ui/Select";
@@ -68,6 +68,62 @@ function NewUserDialog({ onClose, onCreated }: { onClose: () => void; onCreated:
           <p className="m-0 text-xs text-muted-foreground">Mínimo 8 caracteres.</p>
         </div>
         <Select label="Rol" value={rol} onChange={setRol} options={ROLES} allLabel={null} required />
+        {error ? (
+          <p role="alert" className="m-0 text-sm text-destructive">
+            {error}
+          </p>
+        ) : null}
+      </div>
+    </FormDialog>
+  );
+}
+
+function ImportDialog({
+  onClose,
+  onImported,
+}: {
+  onClose: () => void;
+  onImported: (summary: ImportSummary) => void;
+}) {
+  const [file, setFile] = useState<File | null>(null);
+  const [error, setError] = useState("");
+  const [pending, setPending] = useState(false);
+
+  async function onSubmit(event: FormEvent) {
+    event.preventDefault();
+    if (!file) return;
+    setPending(true);
+    setError("");
+    try {
+      onImported(await importarLibro(file));
+      onClose();
+    } catch (reason) {
+      setError(messageOf(reason, "No se pudo importar el libro"));
+      setPending(false);
+    }
+  }
+
+  return (
+    <FormDialog
+      title="Importar libro de PQRs"
+      description="Reemplaza todos los casos, incluidas las altas y cierres hechos en la app. La bitácora se conserva."
+      width="md"
+      submitLabel="Importar y reemplazar"
+      pending={pending}
+      onClose={onClose}
+      onSubmit={onSubmit}
+    >
+      <div className="grid gap-4">
+        <div className="grid gap-1.5">
+          <Label htmlFor="import-libro">Libro .xlsx</Label>
+          <Input
+            id="import-libro"
+            type="file"
+            accept=".xlsx"
+            onChange={(event) => setFile(event.target.files?.[0] ?? null)}
+            required
+          />
+        </div>
         {error ? (
           <p role="alert" className="m-0 text-sm text-destructive">
             {error}
@@ -144,6 +200,8 @@ export function Admin() {
   const [error, setError] = useState("");
   const [creating, setCreating] = useState(false);
   const [resetting, setResetting] = useState<AuthUser | null>(null);
+  const [importing, setImporting] = useState(false);
+  const [notice, setNotice] = useState("");
 
   const reload = async () => setUsers(await getUsers());
 
@@ -168,14 +226,24 @@ export function Admin() {
         title="Usuarios"
         lede={users.length > 0 ? `${users.length} ${users.length === 1 ? "usuario" : "usuarios"}` : undefined}
         actions={
-          <Button type="button" className="min-h-11" onClick={() => setCreating(true)}>
-            Nuevo usuario
-          </Button>
+          <div className="flex flex-wrap gap-2">
+            <Button type="button" variant="outline" className="min-h-11" onClick={() => setImporting(true)}>
+              Importar libro
+            </Button>
+            <Button type="button" className="min-h-11" onClick={() => setCreating(true)}>
+              Nuevo usuario
+            </Button>
+          </div>
         }
       />
       {error ? (
         <p role="alert" className="mb-4 border border-orange-300 bg-orange-50 p-3">
           {error}
+        </p>
+      ) : null}
+      {notice ? (
+        <p role="status" className="mb-4 border border-border bg-card p-3 text-sm">
+          {notice}
         </p>
       ) : null}
       <div className="overflow-x-auto border border-border bg-card">
@@ -241,6 +309,16 @@ export function Admin() {
       ) : null}
       {resetting ? (
         <ResetPasswordDialog target={resetting} onClose={() => setResetting(null)} onDone={reload} />
+      ) : null}
+      {importing ? (
+        <ImportDialog
+          onClose={() => setImporting(false)}
+          onImported={(summary) =>
+            setNotice(
+              `Importados ${summary.imported} casos. Filas omitidas: ${summary.skipped}. Fechas inválidas: ${summary.invalidDates}.`,
+            )
+          }
+        />
       ) : null}
       <Compartir />
     </>

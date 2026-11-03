@@ -418,7 +418,7 @@ export function Resumen() {
       </div>
       {summary.total === 0 ? (
         <p className="mt-6 border border-border bg-card p-6">
-          Todavía no hay casos importados. Ejecuta <code className="font-mono">npm run import</code>.
+          Todavía no hay casos importados. Un administrador puede importar el libro desde Administración.
         </p>
       ) : (
         <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-2">

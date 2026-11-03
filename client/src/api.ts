@@ -97,6 +97,26 @@ export async function updateUser(id: number, fields: { rol?: Rol; activo?: boole
   await jsonRequest(`/api/admin/usuarios/${id}`, "PUT", fields);
 }
 
+export interface ImportSummary {
+  imported: number;
+  skipped: number;
+  invalidDates: number;
+  holidays: number;
+}
+
+export async function importarLibro(file: File): Promise<ImportSummary> {
+  const response = await apiFetch("/api/admin/importar", {
+    method: "POST",
+    headers: { "content-type": "application/octet-stream" },
+    body: file,
+  });
+  const body = await readBody(response);
+  if (!response.ok) {
+    throw new ApiError(typeof body.error === "string" ? body.error : "No se pudo importar el libro", response.status);
+  }
+  return body as unknown as ImportSummary;
+}
+
 export interface Enlace {
   id: number;
   creadoPor: string;

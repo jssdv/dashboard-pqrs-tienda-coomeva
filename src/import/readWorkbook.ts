@@ -20,11 +20,10 @@ function cellValue(value: ExcelJS.CellValue): RawCell {
   return String(value);
 }
 
-export async function readWorkbook(
-  filePath: string,
-): Promise<{ rows: RawRow[]; holidays: string[] }> {
+export async function readWorkbook(data: Buffer): Promise<{ rows: RawRow[]; holidays: string[] }> {
   const workbook = new ExcelJS.Workbook();
-  await workbook.xlsx.readFile(filePath);
+  // ExcelJS's typings name a different Buffer generic than this project's @types/node.
+  await workbook.xlsx.load(data as unknown as Parameters<ExcelJS.Xlsx["load"]>[0]);
   const rows: RawRow[] = [];
   for (const sheet of workbook.worksheets) {
     const match = sheet.name.match(/^PQRs\s+(\d{4})$/i);

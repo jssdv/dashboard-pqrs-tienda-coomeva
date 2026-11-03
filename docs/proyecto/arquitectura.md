@@ -26,8 +26,8 @@ El Excel es solo entrada. La base SQLite es la copia de trabajo.
 | Festivos | `src/holidays/` | Descarga festivos nacionales, orquesta importación |
 | Almacén | `src/store/` | Interfaz `CaseRepository` + implementación SQLite |
 | API | `src/api/summaryServer.ts` | Servidor HTTP, JSON y archivos estáticos |
-| CLI | `src/cli/` | `importWorkbook.ts`, `serveSummary.ts` |
-| UI base | `src/components/`, `src/lib/`, `src/styles/`, `src/utils/`, `src/hooks/` | Componentes shadcn/Untitled UI, tema, utilidades |
+| Arranque | `src/cli/` | `main.ts` (ejecutable portable y `npm start`), `appFolder.ts` |
+| UI base | `src/components/ui/` | Componentes shadcn usados por la webapp |
 | Webapp | `client/src/` | Pantallas y cliente de API |
 | Datos | `data/dictionary.csv` | Diccionario oficial de catálogos |
 | Pruebas | `tests/`, `client/src/*.test.*` | Vitest |

@@ -13,12 +13,12 @@ Rama de trabajo: `feature/pqr-core`.
 - Hojas cuyo nombre es `PQRs` más un año de cuatro dígitos. Las hojas `Festivos` no se leen.
 - Diccionario CSV `field,from,to` para `area`, `fuente`, `tipo` y `tema`. Si no hay entrada, el valor oficial es el original recortado.
 - `data/dictionary.csv` ya trae el mapeo oficial (boletería, pines, devoluciones, fuentes y áreas).
-- Repositorio SQLite que reemplaza todos los casos en cada importación. `npm run import` borra las altas y los cierres hechos en la app. Los festivos nacionales quedan en la tabla `holidays` y se vuelven a completar en la misma importación.
-- CLI de importación. Antes de escribir SQLite pide los festivos nacionales de Colombia (`/co/v1/{año}/nacionales.json`) para los años de las hojas, más el anterior y el siguiente. Si esa petición falla, no reemplaza los casos.
+- Repositorio SQLite que reemplaza todos los casos en cada importación. Importar desde la app borra las altas y los cierres hechos en la app. Los festivos nacionales quedan en la tabla `holidays` y se vuelven a completar en la misma importación.
+- Importación desde Administración (solo `admin`, `POST /api/admin/importar`). Antes de escribir SQLite pide los festivos nacionales de Colombia (`/co/v1/{año}/nacionales.json`) para los años de las hojas, más el anterior y el siguiente. Si esa petición falla, no reemplaza los casos.
 - Resumen de agregados (`summarize`) sobre los casos ya importados: totales, catálogos, año, mes, días promedio, cola de más de 10 días hábiles, cierre por tipo, `sinFechaValida` y matriz proveedor × tipo. La cola usa `businessDays` contra la fecha de hoy en `America/Bogota` y los festivos guardados. Sin festivos cargados no inventa un conteo.
 - API local `GET /summary` que devuelve ese resumen. No lista casos: nombre, correo y texto libre no salen por HTTP.
 - `GET /api/casos` lista los casos completos y filtra por `cola`, `area`, `tipo` y `mes`. `POST /api/casos` da de alta y `POST /api/casos/:id/cerrar` cierra. `GET/POST /api/casos/:id/bitacora` lista y registra avances sin cerrar el caso (la importación no los borra). La validación responde 400 con la lista de campos. Si faltan festivos al cerrar o al pedir la cola vencida, responde 503.
-- Webapp en `client/` (Vite, React, React Router, Tailwind CSS 4 y Recharts). Panel, Casos y Proveedores viven en esa interfaz; Casos filtra por plazo (en plazo, por vencer, vencido) y muestra el detalle de cada caso en un panel. `npm run dev` abre Vite en el puerto 5173 y proxea `/summary` y `/api` al servidor en el 3000. `npm run build` escribe `client/dist`. `npm run serve` sirve ese directorio en `/` y conserva la API.
+- Webapp en `client/` (Vite, React, React Router, Tailwind CSS 4 y Recharts). Panel, Casos y Proveedores viven en esa interfaz; Casos filtra por plazo (en plazo, por vencer, vencido) y muestra el detalle de cada caso en un panel. `npm run dev` abre Vite en el puerto 5173 y proxea `/summary` y `/api` al servidor en el 3000. `npm run build` escribe `client/dist`, que el servidor sirve en `/` junto con la API.
 - Un caso nuevo exige fecha inicial, área, ID de orden, asociado, correo, fuente, tipo, tema y motivo. El id es `app-` más un UUID. Área, fuente, tipo y tema guardan el texto escrito y el valor oficial del diccionario. El cierre pide fecha y texto de solución, y recalcula los días hábiles. Si falta el año de esa fecha, lo pide al mismo servicio de festivos.
 
 ## Uso: aplicación para macOS y Windows
@@ -79,20 +79,9 @@ npm start
 
 `npm start` compila la webapp y la sirve con `data/pqr.sqlite` en http://localhost:3000.
 
-Importar un libro (el `.xlsx` no se versiona):
+Importar el libro: en **Administración > Importar libro** (solo `admin`). Sube el `.xlsx` (no se versiona); la app reemplaza todos los casos y responde `imported`, `skipped`, `invalidDates` y `holidays`.
 
-```bash
-npm run import -- ./ruta/al/libro.xlsx ./data/dictionary.csv ./data/pqr.sqlite
-```
-
-Servir la API y, si ya existe `client/dist`, la webapp. Escucha en `0.0.0.0` y en `PORT`, o en el puerto 3000. `GET /summary` sigue devolviendo el JSON, sin personas ni texto libre.
-
-```bash
-npm run build
-npm run serve -- ./data/pqr.sqlite
-```
-
-El segundo argumento opcional es el diccionario. Si se omite, usa `./data/dictionary.csv`.
+`GET /summary` devuelve el JSON, sin personas ni texto libre.
 
 Durante el desarrollo, deja el servidor en el 3000 y abre la interfaz con Vite:
 
@@ -101,12 +90,6 @@ npm run dev
 ```
 
 Vite usa el puerto 5173 y reenvía `/summary` y `/api` a `http://127.0.0.1:3000`.
-
-La importación imprime una línea JSON:
-
-```json
-{"imported": 0, "skipped": 0, "invalidDates": 0, "holidays": 0}
-```
 
 `*.sqlite` está en `.gitignore`. Nombres, correos y texto libre se quedan en ese archivo local.
 
