@@ -3,6 +3,18 @@ import { createServer, type IncomingMessage, type Server, type ServerResponse } 
 import { dirname, extname, join, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 import { randomUUID } from "node:crypto";
+import { type AuthRepository, type Rol, type UserRecord } from "../auth/repository.js";
+import { createSession, endSession, SESSION_MAX_AGE_S, userForSession } from "../auth/sessions.js";
+import {
+  authenticate,
+  createUser,
+  isRol,
+  publicUser,
+  type AuthUser,
+  validatePassword,
+  validateUsuario,
+} from "../auth/users.js";
+import { hashPassword } from "../auth/password.js";
 import { applyClose, caseFromCreate, validateBitacora, validateClose, validateCreate } from "../domain/caseForm.js";
 import { Dictionary } from "../domain/dictionary.js";
 import { bogotaToday, openQueue } from "../domain/openQueue.js";
@@ -33,10 +45,16 @@ const MIME: Record<string, string> = {
 };
 
 export interface SummaryServerOptions {
+  auth: AuthRepository;
   dictionary?: Dictionary;
   fetchImpl?: typeof fetch;
   now?: () => Date;
 }
+
+const SESSION_COOKIE = "pqr_session";
+const READ_METHODS = ["GET", "HEAD"];
+const LOGIN_WINDOW_MS = 60_000;
+const MAX_FAILED_LOGINS = 5;
 
 interface CaseQuery {
   cola?: string;
@@ -218,8 +236,189 @@ function isSpaRoute(pathname: string): boolean {
     pathname === "/casos" ||
     pathname === "/casos/nuevo" ||
     pathname === "/proveedores" ||
+    pathname === "/login" ||
+    pathname === "/setup" ||
+    pathname === "/admin" ||
+    /^\/ver\/[^/]+$/.test(pathname) ||
     /^\/casos\/[^/]+\/cerrar$/.test(pathname)
   );
+}
+
+function cookieValue(req: IncomingMessage, name: string): string | undefined {
+  for (const part of (req.headers.cookie ?? "").split(";")) {
+    const [key, ...value] = part.trim().split("=");
+    if (key === name) return value.join("=");
+  }
+  return undefined;
+}
+
+function setSessionCookie(req: IncomingMessage, res: ServerResponse, token: string, maxAge: number): void {
+  const forwarded = String(req.headers["x-forwarded-proto"] ?? "").split(",")[0].trim();
+  const secure = forwarded === "https" ? "; Secure" : "";
+  res.setHeader("Set-Cookie", `${SESSION_COOKIE}=${token}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${maxAge}${secure}`);
+}
+
+// ponytail: in-memory failure window per IP. Lost on restart, and behind a proxy every
+// client shares one IP, so the limit becomes global. Upgrade path: a sqlite table if that bites.
+interface LoginLimit {
+  blocked(ip: string): boolean;
+  failed(ip: string): void;
+}
+
+function createLoginLimit(): LoginLimit {
+  const failures = new Map<string, number[]>();
+  const recent = (ip: string): number[] => {
+    const kept = (failures.get(ip) ?? []).filter((at) => Date.now() - at < LOGIN_WINDOW_MS);
+    failures.set(ip, kept);
+    return kept;
+  };
+  return {
+    blocked: (ip) => recent(ip).length >= MAX_FAILED_LOGINS,
+    failed(ip) {
+      failures.set(ip, [...recent(ip), Date.now()]);
+    },
+  };
+}
+
+async function readFields(req: IncomingMessage, res: ServerResponse): Promise<Record<string, string> | null> {
+  try {
+    return await readJson(req);
+  } catch {
+    json(res, 400, { error: "El cuerpo no es JSON válido" });
+    return null;
+  }
+}
+
+async function handleAuthRoute(
+  req: IncomingMessage,
+  res: ServerResponse,
+  url: URL,
+  auth: AuthRepository,
+  limit: LoginLimit,
+): Promise<boolean> {
+  const token = cookieValue(req, SESSION_COOKIE);
+  if (req.method === "GET" && url.pathname === "/api/auth/me") {
+    const user = userForSession(auth, token);
+    if (!user) json(res, 401, { error: "No autenticado" });
+    else json(res, 200, { user });
+    return true;
+  }
+  if (req.method === "POST" && url.pathname === "/api/auth/logout") {
+    if (token) endSession(auth, token);
+    setSessionCookie(req, res, "", 0);
+    json(res, 200, { ok: true });
+    return true;
+  }
+  if (req.method === "POST" && url.pathname === "/api/auth/setup") {
+    if (auth.countUsers() > 0) {
+      json(res, 409, { error: "Ya existe un administrador" });
+      return true;
+    }
+    const raw = await readFields(req, res);
+    if (!raw) return true;
+    const usuario = (raw.usuario ?? "").trim();
+    const error = validateUsuario(usuario) ?? validatePassword(raw.password ?? "");
+    if (error) {
+      json(res, 400, { error });
+      return true;
+    }
+    const user = await createUser(auth, usuario, raw.password, "admin");
+    if (!user) {
+      json(res, 409, { error: "Ya existe un administrador" });
+      return true;
+    }
+    setSessionCookie(req, res, createSession(auth, user.id), SESSION_MAX_AGE_S);
+    json(res, 201, { user });
+    return true;
+  }
+  if (req.method === "POST" && url.pathname === "/api/auth/login") {
+    const ip = req.socket.remoteAddress ?? "";
+    if (limit.blocked(ip)) {
+      json(res, 429, { error: "Demasiados intentos. Espera un minuto." });
+      return true;
+    }
+    const raw = await readFields(req, res);
+    if (!raw) return true;
+    const user = await authenticate(auth, (raw.usuario ?? "").trim(), raw.password ?? "");
+    if (!user) {
+      limit.failed(ip);
+      json(res, 401, { error: "Usuario o contraseña incorrectos" });
+      return true;
+    }
+    setSessionCookie(req, res, createSession(auth, user.id), SESSION_MAX_AGE_S);
+    json(res, 200, { user: publicUser(user) });
+    return true;
+  }
+  return false;
+}
+
+async function handleAdminRoute(
+  req: IncomingMessage,
+  res: ServerResponse,
+  url: URL,
+  auth: AuthRepository,
+  me: AuthUser,
+): Promise<boolean> {
+  if (req.method === "GET" && url.pathname === "/api/admin/usuarios") {
+    json(res, 200, { usuarios: auth.listUsers().map(publicUser) });
+    return true;
+  }
+  if (req.method === "POST" && url.pathname === "/api/admin/usuarios") {
+    const raw = await readFields(req, res);
+    if (!raw) return true;
+    const usuario = (raw.usuario ?? "").trim();
+    const rol = raw.rol ?? "";
+    const error =
+      validateUsuario(usuario) ?? validatePassword(raw.password ?? "") ?? (isRol(rol) ? null : "Rol no válido");
+    if (error) {
+      json(res, 400, { error });
+      return true;
+    }
+    const user = await createUser(auth, usuario, raw.password, rol as Rol);
+    if (!user) {
+      json(res, 409, { error: `Ya existe un usuario llamado "${usuario}"` });
+      return true;
+    }
+    json(res, 201, { user });
+    return true;
+  }
+  const match = url.pathname.match(/^\/api\/admin\/usuarios\/(\d+)$/);
+  if (match && req.method === "PUT") {
+    const target = auth.findUserById(Number(match[1]));
+    if (!target) {
+      json(res, 404, { error: "not found" });
+      return true;
+    }
+    const raw = await readFields(req, res);
+    if (!raw) return true;
+    const next: UserRecord = { ...target };
+    if ("rol" in raw) {
+      if (!isRol(raw.rol)) {
+        json(res, 400, { error: "Rol no válido" });
+        return true;
+      }
+      next.rol = raw.rol;
+    }
+    if ("activo" in raw) next.activo = raw.activo !== "false";
+    if (raw.password) {
+      const error = validatePassword(raw.password);
+      if (error) {
+        json(res, 400, { error });
+        return true;
+      }
+      next.passwordHash = await hashPassword(raw.password);
+    }
+    if (target.id === me.id && (!next.activo || next.rol !== "admin")) {
+      json(res, 400, { error: "No puedes desactivarte ni quitarte el rol de administrador" });
+      return true;
+    }
+    auth.updateUser(next);
+    // Desactivar o cambiar la contraseña cierra las sesiones abiertas de esa cuenta.
+    if (!next.activo || raw.password) auth.deleteSessionsOfUser(next.id);
+    json(res, 200, { user: publicUser(next) });
+    return true;
+  }
+  return false;
 }
 
 function serveClient(url: URL, res: ServerResponse): boolean {
@@ -248,13 +447,12 @@ function serveClient(url: URL, res: ServerResponse): boolean {
   return true;
 }
 
-export function createSummaryServer(
-  repository: CaseRepository,
-  options: SummaryServerOptions = {},
-): Server {
+export function createSummaryServer(repository: CaseRepository, options: SummaryServerOptions): Server {
   const dictionary = options.dictionary ?? new Dictionary(new Map());
   const fetchImpl = options.fetchImpl ?? fetch;
   const today = () => bogotaToday(options.now ? options.now() : new Date());
+  const { auth } = options;
+  const limit = createLoginLimit();
 
   return createServer(async (req, res) => {
     try {
@@ -267,6 +465,26 @@ export function createSummaryServer(
             .map((info) => [info.nombre, info.plazoDias as number]),
         );
       const clock = () => ({ holidays: repository.listHolidays(), today: today(), plazos: plazos() });
+
+      if (url.pathname.startsWith("/api/auth/")) {
+        if (await handleAuthRoute(req, res, url, auth, limit)) return;
+      } else if (url.pathname === "/summary" || url.pathname.startsWith("/api/")) {
+        const me = userForSession(auth, cookieValue(req, SESSION_COOKIE));
+        if (!me) {
+          json(res, 401, { error: "No autenticado" });
+          return;
+        }
+        if (url.pathname.startsWith("/api/admin/")) {
+          if (me.rol !== "admin") {
+            json(res, 403, { error: "Solo administradores" });
+            return;
+          }
+          if (await handleAdminRoute(req, res, url, auth, me)) return;
+        } else if (me.rol === "viewer" && !READ_METHODS.includes(req.method ?? "")) {
+          json(res, 403, { error: "Tu rol solo permite consultar" });
+          return;
+        }
+      }
 
       if (req.method === "GET" && url.pathname === "/summary") {
         json(res, 200, summarize(repository.list(), clock()));

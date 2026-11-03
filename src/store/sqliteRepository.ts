@@ -1,4 +1,5 @@
 import { DatabaseSync } from "node:sqlite";
+import type { AuthRepository, Rol, UserRecord } from "../auth/repository.js";
 import type { BitacoraEntry } from "../domain/caseForm.js";
 import type { PqrCase } from "../domain/types.js";
 import {
@@ -39,6 +40,11 @@ function flag(value: number): boolean {
   return value === 1;
 }
 
+interface UserRow extends Omit<UserRecord, "activo" | "rol"> {
+  rol: Rol;
+  activo: number;
+}
+
 function caseValues(row: PqrCase): Array<string | number | null> {
   return [
     row.id,
@@ -67,7 +73,7 @@ function caseValues(row: PqrCase): Array<string | number | null> {
   ];
 }
 
-export function openSqliteRepository(dbPath: string): CaseRepository {
+export function openSqliteRepository(dbPath: string): CaseRepository & AuthRepository {
   const db = new DatabaseSync(dbPath);
   // node:sqlite has no db.transaction(); BEGIN/COMMIT/ROLLBACK by hand, like better-sqlite3 did.
   const transaction =
@@ -163,6 +169,30 @@ export function openSqliteRepository(dbPath: string): CaseRepository {
     )
   `);
   db.exec("CREATE INDEX IF NOT EXISTS bitacora_case ON bitacora (caseId)");
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS users (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      usuario TEXT NOT NULL UNIQUE COLLATE NOCASE,
+      passwordHash TEXT NOT NULL,
+      rol TEXT NOT NULL,
+      activo INTEGER NOT NULL DEFAULT 1,
+      creadoEn TEXT NOT NULL
+    )
+  `);
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS sessions (
+      tokenHash TEXT PRIMARY KEY,
+      userId INTEGER NOT NULL,
+      expiraEn TEXT NOT NULL,
+      creadoEn TEXT NOT NULL
+    )
+  `);
+  const toUser = (row: UserRow): UserRecord => ({ ...row, activo: row.activo === 1 });
+  const insertUser = db.prepare(
+    "INSERT INTO users (usuario, passwordHash, rol, activo, creadoEn) VALUES (?, ?, ?, ?, ?)",
+  );
+  const updateUser = db.prepare("UPDATE users SET passwordHash = ?, rol = ?, activo = ? WHERE id = ?");
+  const insertSession = db.prepare("INSERT INTO sessions (tokenHash, userId, expiraEn, creadoEn) VALUES (?, ?, ?, ?)");
   const storedColumns = new Set(
     (db.prepare("PRAGMA table_info(proveedores)").all() as Array<{ name: string }>).map(
       (column) => column.name,
@@ -286,6 +316,48 @@ export function openSqliteRepository(dbPath: string): CaseRepository {
         fechaInicialInvalida: flag(Number(row.fechaInicialInvalida)),
         fechaSolucionInvalida: flag(Number(row.fechaSolucionInvalida)),
       }));
+    },
+    countUsers() {
+      return (db.prepare("SELECT COUNT(*) AS total FROM users").get() as { total: number }).total;
+    },
+    listUsers() {
+      return (db.prepare("SELECT * FROM users ORDER BY usuario").all() as unknown as UserRow[]).map(toUser);
+    },
+    findUserById(id) {
+      const row = db.prepare("SELECT * FROM users WHERE id = ?").get(id) as UserRow | undefined;
+      return row ? toUser(row) : null;
+    },
+    findUserByUsuario(usuario) {
+      const row = db.prepare("SELECT * FROM users WHERE usuario = ?").get(usuario) as UserRow | undefined;
+      return row ? toUser(row) : null;
+    },
+    insertUser(user) {
+      const { lastInsertRowid } = insertUser.run(
+        user.usuario,
+        user.passwordHash,
+        user.rol,
+        user.activo ? 1 : 0,
+        user.creadoEn,
+      );
+      return { id: Number(lastInsertRowid), ...user };
+    },
+    updateUser(user) {
+      updateUser.run(user.passwordHash, user.rol, user.activo ? 1 : 0, user.id);
+    },
+    insertSession(tokenHash, userId, expiraEn, creadoEn) {
+      insertSession.run(tokenHash, userId, expiraEn, creadoEn);
+    },
+    findSession(tokenHash) {
+      const row = db.prepare("SELECT userId, expiraEn FROM sessions WHERE tokenHash = ?").get(tokenHash) as
+        | { userId: number; expiraEn: string }
+        | undefined;
+      return row ?? null;
+    },
+    deleteSession(tokenHash) {
+      db.prepare("DELETE FROM sessions WHERE tokenHash = ?").run(tokenHash);
+    },
+    deleteSessionsOfUser(userId) {
+      db.prepare("DELETE FROM sessions WHERE userId = ?").run(userId);
     },
   };
 }

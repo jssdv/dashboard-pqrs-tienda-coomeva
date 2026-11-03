@@ -13,7 +13,10 @@ try {
   const dictionaryPath = process.argv[3] ?? "data/dictionary.csv";
   const dictionary = parseDictionary(readFileSync(dictionaryPath, "utf8"));
   const port = Number(process.env.PORT ?? 3000);
-  createSummaryServer(openSqliteRepository(dbPath), { dictionary }).listen(port, "0.0.0.0", () => console.log(`http://localhost:${port}`));
+  const repository = openSqliteRepository(dbPath);
+  createSummaryServer(repository, { dictionary, auth: repository }).listen(port, "0.0.0.0", () =>
+    console.log(`http://localhost:${port}`),
+  );
 } catch (error) {
   console.error(error instanceof Error ? error.message : String(error));
   process.exit(1);
