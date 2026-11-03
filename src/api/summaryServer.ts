@@ -2,6 +2,7 @@ import { existsSync, readFileSync, statSync } from "node:fs";
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from "node:http";
 import { dirname, extname, join, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
+import { getAsset, isSea } from "node:sea";
 import { randomUUID } from "node:crypto";
 import { type AuthRepository, type Rol, type UserRecord } from "../auth/repository.js";
 import { createSession, endSession, SESSION_MAX_AGE_S, userForSession } from "../auth/sessions.js";
@@ -30,8 +31,6 @@ import { summarize } from "../domain/summary.js";
 import type { CatalogField, PqrCase } from "../domain/types.js";
 import { ensureHolidayYears } from "../holidays/nationalHolidays.js";
 import { ProveedorExistsError, type CaseRepository, type ProveedorFields } from "../store/repository.js";
-
-const clientDist = join(dirname(fileURLToPath(import.meta.url)), "../../client/dist");
 
 const MIME: Record<string, string> = {
   ".html": "text/html; charset=utf-8",
@@ -488,29 +487,39 @@ async function handleShareRoute(
   return false;
 }
 
-function serveClient(url: URL, res: ServerResponse): boolean {
-  const indexPath = join(clientDist, "index.html");
-  if (!existsSync(indexPath)) return false;
-
-  const pathname = decodeURIComponent(url.pathname).replace(/\/+$/, "") || "/";
-  const root = resolve(clientDist);
-  const relative = pathname === "/" ? "index.html" : pathname.replace(/^\/+/, "");
+// In the single-file build the client is embedded as SEA assets keyed by path inside client/dist.
+// Dev reads client/dist from disk. Dev path is computed lazily: the CJS bundle has no import.meta.
+function clientFile(relative: string): Buffer | undefined {
+  if (isSea()) {
+    // Missing keys throw on some Node builds instead of returning undefined.
+    try {
+      const asset = getAsset(relative);
+      return asset === undefined ? undefined : Buffer.from(asset);
+    } catch {
+      return undefined;
+    }
+  }
+  const root = resolve(dirname(fileURLToPath(import.meta.url)), "../../client/dist");
   const filePath = resolve(root, relative);
-  if (filePath !== root && !filePath.startsWith(root + sep)) {
-    json(res, 404, { error: "not found" });
+  if (!filePath.startsWith(root + sep) || !existsSync(filePath) || !statSync(filePath).isFile()) return undefined;
+  return readFileSync(filePath);
+}
+
+function serveClient(url: URL, res: ServerResponse): boolean {
+  const pathname = decodeURIComponent(url.pathname).replace(/\/+$/, "") || "/";
+  const relative = pathname === "/" ? "index.html" : pathname.replace(/^\/+/, "");
+
+  const file = clientFile(relative);
+  if (file && pathname !== "/") {
+    res.writeHead(200, { "Content-Type": MIME[extname(relative)] ?? "application/octet-stream" });
+    res.end(file);
     return true;
   }
 
-  if (pathname !== "/" && existsSync(filePath) && statSync(filePath).isFile()) {
-    const type = MIME[extname(filePath)] ?? "application/octet-stream";
-    res.writeHead(200, { "Content-Type": type });
-    res.end(readFileSync(filePath));
-    return true;
-  }
-
-  if (!isSpaRoute(pathname)) return false;
+  const index = clientFile("index.html");
+  if (!index || !isSpaRoute(pathname)) return false;
   res.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
-  res.end(readFileSync(indexPath));
+  res.end(index);
   return true;
 }
 
