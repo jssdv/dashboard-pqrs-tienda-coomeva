@@ -59,6 +59,15 @@ Si publicas la app con un túnel propio (por ejemplo, con una URL HTTPS), escrib
 
 Para trabajar en el código, usa las órdenes de la sección **Arranque** (`npm install`, `npm run dev`, `npm test`). Para generar los binarios en tu sistema, `npm run build:bin` escribe `dist-bin/pqr-<sistema>-<arquitectura>/`. Los binarios para las tres plataformas los compila GitHub Actions al crear una etiqueta `v*` (ver `.github/workflows/build.yml`).
 
+## Respaldos y actualización
+
+- Al arrancar, la app comprueba la base con `PRAGMA quick_check`, hace una copia en `data/respaldos/pqr_AAAAMMDD_HHMMSS.sqlite` (con `VACUUM INTO`, sin cerrar nada) y luego aplica las migraciones pendientes. Al cerrar con Ctrl+C o al detener el proceso, hace otra copia. Se conservan las últimas 10; las anteriores se borran.
+- Las migraciones usan `PRAGMA user_version`. Cada una corre en una transacción junto con su número de versión: si falla, se revierte y la base queda como estaba, con el respaldo previo a mano. Una base creada antes de este control (versión 0 con tablas) se revisa, se repara lo que falte y se marca con la versión actual.
+- Si la base tiene una versión más nueva que la app, la app se niega a abrirla y no la toca. Actualiza la aplicación.
+- Si el archivo está dañado, la app no borra nada: muestra la ruta del respaldo más reciente. Para restaurar, cierra PQR, renombra `data/pqr.sqlite` y copia ese respaldo como `data/pqr.sqlite`.
+- Errores de arranque en español con código de salida 1: archivo dañado, carpeta sin permiso de escritura, base bloqueada por otra copia (espera 10 s) y puerto ocupado.
+- Para añadir un cambio de esquema: agrega una entrada a `MIGRACIONES` en `src/store/esquema.ts` con el siguiente número (`{ version: 2, aplicar: "ALTER TABLE ..." }`). No cambies migraciones ya publicadas.
+
 ## Arranque
 
 Requiere Node.js 22.13+ (`node:sqlite` sin bandera).

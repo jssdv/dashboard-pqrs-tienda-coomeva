@@ -15,15 +15,32 @@ try {
   ensureDefaultCsvs(dataDir);
   const dbPath = process.env.PQR_DB ? resolve(process.env.PQR_DB) : join(dataDir, "pqr.sqlite");
   const dictionary = parseDictionary(readFileSync(join(dataDir, "dictionary.csv"), "utf8"));
-  const repository = openSqliteRepository(dbPath);
+  const repository = openSqliteRepository(dbPath, { respaldos: join(dataDir, "respaldos") });
   // INSERT OR IGNORE: safe on every start, and lets closing cases work offline for the listed years.
   repository.addHolidays(parseHolidayCsv(readFileSync(join(dataDir, "holidays.csv"), "utf8")));
 
   const server = createSummaryServer(repository, { dictionary, auth: repository });
   server.on("error", (error: NodeJS.ErrnoException) => {
-    console.error(error.code === "EADDRINUSE" ? `El puerto ${port} ya está en uso. Usa PORT=<otro> para cambiarlo.` : error.message);
+    console.error(
+      error.code === "EADDRINUSE"
+        ? `El puerto ${port} ya está en uso: puede que otra copia de PQR esté abierta. Ciérrala, o abre con PORT=<otro> para cambiarlo.`
+        : error.message,
+    );
     process.exit(1);
   });
+  // Cierre limpio: respaldo consistente y base cerrada. SQLite escribe de forma síncrona, así que no hace falta esperar peticiones.
+  const apagar = () => {
+    server.closeAllConnections();
+    try {
+      console.log(`Respaldo al cerrar: ${repository.respaldar()}`);
+    } catch (error) {
+      console.error(`No se pudo crear el respaldo al cerrar: ${error instanceof Error ? error.message : String(error)}`);
+    }
+    repository.cerrar();
+    process.exit(0);
+  };
+  process.once("SIGINT", apagar);
+  process.once("SIGTERM", apagar);
   server.listen(port, "0.0.0.0", () => {
     const local = `http://localhost:${port}`;
     console.log(`PQR listo. Abre: ${local}`);

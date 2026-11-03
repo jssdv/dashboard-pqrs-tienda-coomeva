@@ -1,3 +1,5 @@
+import { accessSync, constants } from "node:fs";
+import { dirname, join } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import type { AuthRepository, Rol, UserRecord } from "../auth/repository.js";
 import type { EnlaceRecord, ShareRepository } from "../share/repository.js";
@@ -10,32 +12,28 @@ import {
   type ProveedorFields,
   type ProveedorInfo,
 } from "./repository.js";
+import {
+  ErrorArranque,
+  clasificarErrorSqlite,
+  crearRespaldo,
+  mensajeCorrupto,
+} from "./arranque.js";
+import { COLUMNS, hayTablas, migrar, TODAS_LAS_MIGRACIONES, userVersion, type Migracion } from "./esquema.js";
 
-const COLUMNS = [
-  "id",
-  "sheetYear",
-  "rowNumber",
-  "fechaInicial",
-  "fechaSolucion",
-  "fechaInicialInvalida",
-  "fechaSolucionInvalida",
-  "diasSolucion",
-  "area",
-  "areaOriginal",
-  "idOrden",
-  "asociado",
-  "correo",
-  "fuente",
-  "fuenteOriginal",
-  "tipo",
-  "tipoOriginal",
-  "tema",
-  "temaOriginal",
-  "motivo",
-  "solucion",
-  "causaRaiz",
-  "accionCorrectiva",
-] as const;
+export interface OpcionesRepositorio {
+  // Carpeta de respaldos. Por defecto, respaldos/ junto a la base.
+  respaldos?: string;
+  // Solo para pruebas: lista de migraciones a aplicar en lugar de la real.
+  migraciones?: Migracion[];
+}
+
+export type SqliteRepository = CaseRepository &
+  AuthRepository &
+  ShareRepository & {
+    // Copia consistente a respaldos/ y devuelve su ruta. Pensado para el cierre limpio.
+    respaldar(): string;
+    cerrar(): void;
+  };
 
 function flag(value: number): boolean {
   return value === 1;
@@ -74,8 +72,41 @@ function caseValues(row: PqrCase): Array<string | number | null> {
   ];
 }
 
-export function openSqliteRepository(dbPath: string): CaseRepository & AuthRepository & ShareRepository {
+// Abre la base y deja el esquema al día, o falla con un mensaje claro. Orden: integridad (solo lectura),
+// versión futura (no se toca el archivo), respaldo, migraciones con sello, verificación.
+function abrirBase(dbPath: string, respaldos: string, migraciones: Migracion[]): DatabaseSync {
   const db = new DatabaseSync(dbPath);
+  try {
+    db.exec("PRAGMA busy_timeout = 10000");
+    const filas = db.prepare("PRAGMA quick_check").all() as Array<{ quick_check: string }>;
+    if (filas.length !== 1 || filas[0].quick_check !== "ok") {
+      throw mensajeCorrupto(dbPath, respaldos, filas.map((fila) => fila.quick_check).slice(0, 3).join("; "));
+    }
+    const version = userVersion(db);
+    const ultima = Math.max(...migraciones.map((migracion) => migracion.version));
+    if (version > ultima) {
+      throw new ErrorArranque(
+        `La base ${dbPath} la creó una versión más nueva de PQR (esquema ${version}; esta versión llega hasta ${ultima}). Usa la versión más nueva de la aplicación. No se modificó el archivo.`,
+      );
+    }
+    // ":memory:" (pruebas) no tiene archivo: nada que comprobar ni respaldar.
+    if (dbPath === ":memory:") {
+      migrar(db, migraciones, null);
+      return db;
+    }
+    accessSync(dbPath, constants.W_OK);
+    const respaldo = hayTablas(db) ? crearRespaldo(db, respaldos) : null;
+    migrar(db, migraciones, respaldo);
+    return db;
+  } catch (error) {
+    db.close();
+    throw clasificarErrorSqlite(error, { dbPath, respaldos });
+  }
+}
+
+export function openSqliteRepository(dbPath: string, opciones: OpcionesRepositorio = {}): SqliteRepository {
+  const respaldos = opciones.respaldos ?? join(dirname(dbPath), "respaldos");
+  const db = abrirBase(dbPath, respaldos, opciones.migraciones ?? TODAS_LAS_MIGRACIONES);
   // node:sqlite has no db.transaction(); BEGIN/COMMIT/ROLLBACK by hand, like better-sqlite3 did.
   const transaction =
     <A extends unknown[]>(fn: (...args: A) => void) =>
@@ -89,55 +120,6 @@ export function openSqliteRepository(dbPath: string): CaseRepository & AuthRepos
         throw error;
       }
     };
-  db.exec(`
-    CREATE TABLE IF NOT EXISTS holidays (
-      date TEXT PRIMARY KEY
-    )
-  `);
-  db.exec(`
-    CREATE TABLE IF NOT EXISTS cases (
-      id TEXT PRIMARY KEY,
-      sheetYear INTEGER NOT NULL,
-      rowNumber INTEGER NOT NULL,
-      fechaInicial TEXT,
-      fechaSolucion TEXT,
-      fechaInicialInvalida INTEGER NOT NULL,
-      fechaSolucionInvalida INTEGER NOT NULL,
-      diasSolucion INTEGER,
-      area TEXT,
-      areaOriginal TEXT,
-      idOrden TEXT,
-      asociado TEXT,
-      correo TEXT,
-      fuente TEXT,
-      fuenteOriginal TEXT,
-      tipo TEXT,
-      tipoOriginal TEXT,
-      tema TEXT,
-      temaOriginal TEXT,
-      motivo TEXT,
-      solucion TEXT,
-      causaRaiz TEXT,
-      accionCorrectiva TEXT
-    )
-  `);
-  const existing = new Set(
-    (db.prepare("PRAGMA table_info(cases)").all() as Array<{ name: string }>).map(
-      (column) => column.name,
-    ),
-  );
-  for (const retired of [
-    "valorDevolucion",
-    "mesCompra",
-    "tipoDevolucion",
-    "fechaSolicitud",
-    "observaciones",
-  ]) {
-    if (existing.has(retired)) db.exec(`ALTER TABLE cases DROP COLUMN ${retired}`);
-  }
-  for (const added of ["causaRaiz", "accionCorrectiva"]) {
-    if (!existing.has(added)) db.exec(`ALTER TABLE cases ADD COLUMN ${added} TEXT`);
-  }
   const insert = db.prepare(
     `INSERT INTO cases (${COLUMNS.join(", ")}) VALUES (${COLUMNS.map(() => "?").join(", ")})`,
   );
@@ -154,76 +136,12 @@ export function openSqliteRepository(dbPath: string): CaseRepository & AuthRepos
   const addHolidaySet = transaction((dates: readonly string[]) => {
     for (const date of dates) addHoliday.run(date);
   });
-  db.exec(`
-    CREATE TABLE IF NOT EXISTS proveedores (
-      nombre TEXT PRIMARY KEY
-    )
-  `);
-  // Sin FK a cases: replaceAll borra los casos, la bitácora sobrevive por id estable.
-  db.exec(`
-    CREATE TABLE IF NOT EXISTS bitacora (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      caseId TEXT NOT NULL,
-      fecha TEXT NOT NULL,
-      texto TEXT NOT NULL,
-      creadoEn TEXT NOT NULL
-    )
-  `);
-  db.exec("CREATE INDEX IF NOT EXISTS bitacora_case ON bitacora (caseId)");
-  db.exec(`
-    CREATE TABLE IF NOT EXISTS users (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      usuario TEXT NOT NULL UNIQUE COLLATE NOCASE,
-      passwordHash TEXT NOT NULL,
-      rol TEXT NOT NULL,
-      activo INTEGER NOT NULL DEFAULT 1,
-      creadoEn TEXT NOT NULL
-    )
-  `);
-  db.exec(`
-    CREATE TABLE IF NOT EXISTS sessions (
-      tokenHash TEXT PRIMARY KEY,
-      userId INTEGER NOT NULL,
-      expiraEn TEXT NOT NULL,
-      creadoEn TEXT NOT NULL
-    )
-  `);
-  db.exec(`
-    CREATE TABLE IF NOT EXISTS enlaces (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      token_hash TEXT NOT NULL UNIQUE,
-      creado_por INTEGER NOT NULL,
-      expira TEXT,
-      revocado INTEGER NOT NULL DEFAULT 0
-    )
-  `);
-  db.exec(`
-    CREATE TABLE IF NOT EXISTS ajustes (
-      clave TEXT PRIMARY KEY,
-      valor TEXT NOT NULL
-    )
-  `);
   const toUser = (row: UserRow): UserRecord => ({ ...row, activo: row.activo === 1 });
   const insertUser = db.prepare(
     "INSERT INTO users (usuario, passwordHash, rol, activo, creadoEn) VALUES (?, ?, ?, ?, ?)",
   );
   const updateUser = db.prepare("UPDATE users SET passwordHash = ?, rol = ?, activo = ? WHERE id = ?");
   const insertSession = db.prepare("INSERT INTO sessions (tokenHash, userId, expiraEn, creadoEn) VALUES (?, ?, ?, ?)");
-  const storedColumns = new Set(
-    (db.prepare("PRAGMA table_info(proveedores)").all() as Array<{ name: string }>).map(
-      (column) => column.name,
-    ),
-  );
-  for (const [column, type] of [
-    ["contacto", "TEXT NOT NULL DEFAULT ''"],
-    ["correo", "TEXT NOT NULL DEFAULT ''"],
-    ["telefono", "TEXT NOT NULL DEFAULT ''"],
-    ["notas", "TEXT NOT NULL DEFAULT ''"],
-    ["activo", "INTEGER NOT NULL DEFAULT 1"],
-    ["plazoDias", "INTEGER"],
-  ] as const) {
-    if (!storedColumns.has(column)) db.exec(`ALTER TABLE proveedores ADD COLUMN ${column} ${type}`);
-  }
   const insertProveedor = db.prepare("INSERT OR IGNORE INTO proveedores (nombre) VALUES (?)");
   const names = (): string[] => {
     const stored = (
@@ -412,6 +330,12 @@ export function openSqliteRepository(dbPath: string): CaseRepository & AuthRepos
         clave,
         valor,
       );
+    },
+    respaldar() {
+      return crearRespaldo(db, respaldos);
+    },
+    cerrar() {
+      db.close();
     },
   };
 }
