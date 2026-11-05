@@ -263,6 +263,19 @@ function isSpaRoute(pathname: string): boolean {
   );
 }
 
+// Con un túnel (PQR_PROXY=1) todas las visitas externas llegan desde 127.0.0.1: sin esto, un
+// límite de login por IP bloquearía a todos a la vez. Sin el flag, los encabezados se ignoran
+// (cualquiera podría falsificarlos para saltarse el límite).
+export function clientIp(req: IncomingMessage): string {
+  if (process.env.PQR_PROXY === "1") {
+    const cloudflare = req.headers["cf-connecting-ip"];
+    if (typeof cloudflare === "string" && cloudflare.trim()) return cloudflare.trim();
+    const forwarded = String(req.headers["x-forwarded-for"] ?? "").split(",")[0].trim();
+    if (forwarded) return forwarded;
+  }
+  return req.socket.remoteAddress ?? "";
+}
+
 function cookieValue(req: IncomingMessage, name: string): string | undefined {
   for (const part of (req.headers.cookie ?? "").split(";")) {
     const [key, ...value] = part.trim().split("=");
@@ -355,7 +368,7 @@ async function handleAuthRoute(
     return true;
   }
   if (req.method === "POST" && url.pathname === "/api/auth/login") {
-    const ip = req.socket.remoteAddress ?? "";
+    const ip = clientIp(req);
     if (limit.blocked(ip)) {
       json(res, 429, { error: "Demasiados intentos. Espera un minuto." });
       return true;

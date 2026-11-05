@@ -46,7 +46,21 @@ Puntos a tener en cuenta:
 
 Como administrador, en la pantalla **Compartir** crea un enlace. La app muestra una dirección `/ver/<token>` con la IP de la red local. Quien lo abra debe iniciar sesión y verá el tablero en vivo; los cambios aparecen sin recargar. Puedes poner fecha de caducidad y revocar el enlace en cualquier momento.
 
-Si publicas la app con un túnel propio (por ejemplo, con una URL HTTPS), escribe esa dirección en **URL pública** de ajustes para que los enlaces la usen. La app no incluye túnel.
+#### Abrir el enlace desde otra red (internet)
+
+Los enlaces de la red local no funcionan fuera de la oficina. Para abrirlos desde fuera:
+
+1. Instala `cloudflared` una vez: `brew install cloudflared` (Windows: `winget install --id Cloudflare.cloudflared`).
+2. Arranca la app con `PQR_PROXY=1 npm start`. Así el límite de intentos de login cuenta cada visitante por separado.
+3. En otra terminal, en la carpeta del proyecto, ejecuta `npm run acceso-externo`. Muestra una dirección `https://....trycloudflare.com`.
+4. En **Compartir > URL pública** pega esa dirección y guarda. Los enlaces nuevos usarán esa URL.
+
+En Windows (sin `npm`/bash para el script), ejecuta directamente `cloudflared tunnel --url http://127.0.0.1:3000`.
+
+Notas:
+- La dirección `trycloudflare.com` cambia cada vez que reinicias el túnel: vuelve a copiarla en URL pública.
+- Es un túnel de prueba. Para una dirección fija usa un túnel con nombre de Cloudflare (requiere cuenta y dominio).
+- Quien tenga la dirección solo llega al inicio de sesión: sigue necesitando usuario y contraseña.
 
 > **Aviso:** en la red local la conexión es HTTP sin cifrar; contraseñas y sesiones viajan sin TLS. Úsala solo en redes de confianza. Para acceso desde fuera de la oficina, pon delante HTTPS (túnel o proxy).
 
