@@ -33,8 +33,10 @@ export function sameName(a: string, b: string): boolean {
 export interface CaseRepository {
   replaceAll(cases: PqrCase[]): void;
   list(): PqrCase[];
-  insert(caso: PqrCase): void;
-  update(caso: PqrCase): void;
+  insert(caso: PqrCase, creadoPor: string): void;
+  // cerradoPor solo se pasa al cerrar el caso; sin él la columna no cambia.
+  update(caso: PqrCase, cerradoPor?: string): void;
+  remove(id: string): void;
   listHolidays(): string[];
   addHolidays(dates: readonly string[]): void;
   listProveedores(): string[];
@@ -43,5 +45,8 @@ export interface CaseRepository {
   updateProveedor(nombre: string, fields: ProveedorFields): void;
   renameProveedor(desde: string, hacia: string): void;
   listBitacora(caseId: string): BitacoraEntry[];
-  addBitacora(caseId: string, fields: BitacoraFields, creadoEn: string): BitacoraEntry;
+  getBitacora(id: number): BitacoraEntry | null;
+  addBitacora(caseId: string, fields: BitacoraFields, creadoEn: string, autor: string): BitacoraEntry;
+  updateBitacora(id: number, fields: BitacoraFields): void;
+  removeBitacora(id: number): void;
 }

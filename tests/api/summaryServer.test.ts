@@ -78,6 +78,10 @@ function memoryRepo(cases: PqrCase[], holidays: string[] = ["2026-01-01"]): Case
       const index = rows.findIndex((item) => item.id === row.id);
       if (index >= 0) rows[index] = row;
     },
+    remove(id) {
+      const index = rows.findIndex((item) => item.id === id);
+      if (index >= 0) rows.splice(index, 1);
+    },
     listHolidays: () => dates,
     addHolidays(more) {
       dates.push(...more);
@@ -89,10 +93,19 @@ function memoryRepo(cases: PqrCase[], holidays: string[] = ["2026-01-01"]): Case
     renameProveedor() {},
     listBitacora: (caseId) =>
       notes.filter((n) => n.caseId === caseId).sort((a, b) => b.fecha.localeCompare(a.fecha) || b.id - a.id),
-    addBitacora(caseId, fields, creadoEn) {
-      const entry = { id: notes.length + 1, caseId, ...fields, creadoEn };
+    getBitacora: (id) => notes.find((n) => n.id === id) ?? null,
+    addBitacora(caseId, fields, creadoEn, autor) {
+      const entry = { id: notes.length + 1, caseId, ...fields, creadoEn, autor };
       notes.push(entry);
       return entry;
+    },
+    updateBitacora(id, fields) {
+      const entry = notes.find((n) => n.id === id);
+      if (entry) Object.assign(entry, fields);
+    },
+    removeBitacora(id) {
+      const index = notes.findIndex((n) => n.id === id);
+      if (index >= 0) notes.splice(index, 1);
     },
   };
 }
@@ -761,6 +774,35 @@ describe("bitácora", () => {
       expect(bad.status).toBe(400);
       expect((await bad.json()).errors.map((e: { field: string }) => e.field)).toEqual(["fecha", "texto"]);
       expect((await authed(`http://127.0.0.1:${port}/api/casos/nope/bitacora`)).status).toBe(404);
+    } finally {
+      await new Promise((resolve) => server.close(resolve));
+    }
+  });
+
+  it("records the author; only the author or an admin can edit or delete an entry", async () => {
+    const other = auth.insertUser({
+      usuario: "otra",
+      passwordHash: "unused",
+      rol: "user",
+      activo: true,
+      creadoEn: "2026-01-01T00:00:00.000Z",
+    });
+    const otherCookie = `pqr_session=${createSession(auth, other.id)}`;
+    const repo = memoryRepo([open]);
+    const server = serve(repo, { now });
+    const port = await listen(server);
+    try {
+      const created = await (
+        await authed(`http://127.0.0.1:${port}/api/casos/app-1/bitacora`, jsonPost({ fecha: "2026-01-12", texto: "Llamé" }))
+      ).json();
+      expect(created.autor).toBe("admin");
+      const url = `http://127.0.0.1:${port}/api/bitacora/${created.id}`;
+      expect((await fetch(url, { method: "DELETE", headers: { cookie: otherCookie } })).status).toBe(403);
+      const edited = await authed(url, { ...jsonPost({ fecha: "2026-01-13", texto: "Llamé otra vez" }), method: "PUT" });
+      expect(edited.status).toBe(200);
+      expect(repo.listBitacora("app-1")[0]).toMatchObject({ texto: "Llamé otra vez", autor: "admin" });
+      expect((await authed(url, { method: "DELETE" })).status).toBe(200);
+      expect(repo.listBitacora("app-1")).toEqual([]);
     } finally {
       await new Promise((resolve) => server.close(resolve));
     }

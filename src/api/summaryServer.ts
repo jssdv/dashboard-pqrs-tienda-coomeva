@@ -565,10 +565,12 @@ export function createSummaryServer(repository: CaseRepository, options: Summary
         );
       const clock = () => ({ holidays: repository.listHolidays(), today: today(), plazos: plazos() });
 
+      // Usuario de la sesión. Las rutas de /api/ (salvo auth) lo tienen siempre; se usa para dejar constancia de autoría.
+      let me: AuthUser | null = null;
       if (url.pathname.startsWith("/api/auth/")) {
         if (await handleAuthRoute(req, res, url, auth, limit)) return;
       } else if (url.pathname === "/summary" || url.pathname.startsWith("/api/")) {
-        const me = userForSession(auth, cookieValue(req, SESSION_COOKIE));
+        me = userForSession(auth, cookieValue(req, SESSION_COOKIE));
         if (!me) {
           json(res, 401, { error: "No autenticado" });
           return;
@@ -765,8 +767,83 @@ export function createSummaryServer(repository: CaseRepository, options: Summary
         }
         const created = caseFromCreate(result.fields, dictionary, `app-${randomUUID()}`);
         if (created.area) repository.addProveedor(created.area);
-        repository.insert(created);
+        repository.insert(created, me!.usuario);
         json(res, 201, created);
+        return;
+      }
+
+      // Editar caso: cualquier escritor. Un caso cerrado conserva su cierre y se revalida con la nueva fecha inicial.
+      const apiCase = url.pathname.match(/^\/api\/casos\/([^/]+)$/);
+      if (apiCase && (req.method === "PUT" || req.method === "DELETE")) {
+        const id = decodeURIComponent(apiCase[1]);
+        const caso = repository.list().find((row) => row.id === id);
+        if (!caso) {
+          json(res, 404, { error: "not found" });
+          return;
+        }
+        if (req.method === "DELETE") {
+          if (me!.rol !== "admin") {
+            json(res, 403, { error: "Solo administradores pueden eliminar casos" });
+            return;
+          }
+          repository.remove(id);
+          json(res, 200, { ok: true });
+          return;
+        }
+        let raw: Record<string, string>;
+        try {
+          raw = await readJson(req);
+        } catch {
+          json(res, 400, { errors: [{ field: "form", message: "El cuerpo no es JSON válido" }] });
+          return;
+        }
+        const result = validateCreate(raw, catalogsOf(repository));
+        if (!result.ok) {
+          json(res, 400, { errors: result.errors });
+          return;
+        }
+        const fresh = caseFromCreate(result.fields, dictionary, id);
+        // Lo que no viene del formulario de creación (fila de origen, cierre, autoría) se conserva.
+        let next: PqrCase = {
+          ...caso,
+          ...fresh,
+          rowNumber: caso.rowNumber,
+          fechaSolucion: caso.fechaSolucion,
+          fechaSolucionInvalida: caso.fechaSolucionInvalida,
+          solucion: caso.solucion,
+          causaRaiz: caso.causaRaiz,
+          accionCorrectiva: caso.accionCorrectiva,
+          diasSolucion: caso.diasSolucion,
+        };
+        if (caso.fechaSolucion) {
+          const closing = validateClose(
+            {
+              fechaSolucion: caso.fechaSolucion,
+              solucion: caso.solucion ?? "",
+              causaRaiz: caso.causaRaiz ?? "",
+              accionCorrectiva: caso.accionCorrectiva ?? "",
+            },
+            next.fechaInicial,
+          );
+          if (!closing.ok) {
+            json(res, 400, { errors: closing.errors });
+            return;
+          }
+          try {
+            await ensureHolidayYears(
+              repository,
+              [Number(next.fechaInicial?.slice(0, 4)), Number(caso.fechaSolucion.slice(0, 4))],
+              fetchImpl,
+            );
+          } catch (error) {
+            json(res, 503, { error: error instanceof Error ? error.message : String(error) });
+            return;
+          }
+          next = applyClose(next, closing.fields, repository.listHolidays());
+        }
+        if (next.area) repository.addProveedor(next.area);
+        repository.update(next);
+        json(res, 200, next);
         return;
       }
 
@@ -825,7 +902,7 @@ export function createSummaryServer(repository: CaseRepository, options: Summary
             .map((value) => Number(value.slice(0, 4)));
           await ensureHolidayYears(repository, years, fetchImpl);
           const closed = applyClose(caso, result.fields, repository.listHolidays());
-          repository.update(closed);
+          repository.update(closed, me!.usuario);
           json(res, 200, closed);
         } catch (error) {
           const message = error instanceof Error ? error.message : String(error);
@@ -857,7 +934,45 @@ export function createSummaryServer(repository: CaseRepository, options: Summary
           json(res, 400, { errors: result.errors });
           return;
         }
-        json(res, 201, repository.addBitacora(id, result.fields, (options.now?.() ?? new Date()).toISOString()));
+        json(
+          res,
+          201,
+          repository.addBitacora(id, result.fields, (options.now?.() ?? new Date()).toISOString(), me!.usuario),
+        );
+        return;
+      }
+
+      // Editar o eliminar un avance: quien lo escribió o un administrador.
+      const apiEntry = url.pathname.match(/^\/api\/bitacora\/(\d+)$/);
+      if (apiEntry && (req.method === "PUT" || req.method === "DELETE")) {
+        const entry = repository.getBitacora(Number(apiEntry[1]));
+        if (!entry) {
+          json(res, 404, { error: "not found" });
+          return;
+        }
+        if (me!.rol !== "admin" && entry.autor !== me!.usuario) {
+          json(res, 403, { error: "Solo quien escribió el avance o un administrador puede cambiarlo" });
+          return;
+        }
+        if (req.method === "DELETE") {
+          repository.removeBitacora(entry.id);
+          json(res, 200, { ok: true });
+          return;
+        }
+        let raw: Record<string, string>;
+        try {
+          raw = await readJson(req);
+        } catch {
+          json(res, 400, { errors: [{ field: "form", message: "El cuerpo no es JSON válido" }] });
+          return;
+        }
+        const result = validateBitacora(raw, today());
+        if (!result.ok) {
+          json(res, 400, { errors: result.errors });
+          return;
+        }
+        repository.updateBitacora(entry.id, result.fields);
+        json(res, 200, { ...entry, ...result.fields });
         return;
       }
 

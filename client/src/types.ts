@@ -100,6 +100,8 @@ export interface PqrCase {
   solucion: string | null;
   causaRaiz?: string | null;
   accionCorrectiva?: string | null;
+  creadoPor?: string | null;
+  cerradoPor?: string | null;
   riesgo?: Riesgo;
 }
 
@@ -161,4 +163,5 @@ export interface BitacoraEntry extends BitacoraFields {
   id: number;
   caseId: string;
   creadoEn: string;
+  autor: string | null;
 }

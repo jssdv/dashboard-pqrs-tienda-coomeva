@@ -32,4 +32,7 @@ export interface PqrCase {
   solucion: string | null;
   causaRaiz?: string | null;
   accionCorrectiva?: string | null;
+  // Usuario que abrió y, si está cerrado, que cerró. null = caso anterior o importado.
+  creadoPor?: string | null;
+  cerradoPor?: string | null;
 }

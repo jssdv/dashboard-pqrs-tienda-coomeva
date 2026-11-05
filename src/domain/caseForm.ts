@@ -191,6 +191,8 @@ export interface BitacoraEntry extends BitacoraFields {
   id: number;
   caseId: string;
   creadoEn: string;
+  // null = avance anterior a registrar autores.
+  autor: string | null;
 }
 
 export function validateBitacora(

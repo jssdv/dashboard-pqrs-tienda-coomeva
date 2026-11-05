@@ -338,12 +338,29 @@ export async function addBitacoraEntry(id: string, fields: BitacoraFields): Prom
   return postJson<BitacoraEntry>(`/api/casos/${encodeURIComponent(id)}/bitacora`, fields);
 }
 
+export async function updateBitacoraEntry(entryId: number, fields: BitacoraFields): Promise<BitacoraEntry> {
+  return postJson<BitacoraEntry>(`/api/bitacora/${entryId}`, fields, "PUT");
+}
+
+export async function deleteBitacoraEntry(entryId: number): Promise<void> {
+  await jsonRequest(`/api/bitacora/${entryId}`, "DELETE");
+}
+
+export async function updateCase(id: string, fields: CreateFields): Promise<PqrCase> {
+  return postJson(`/api/casos/${encodeURIComponent(id)}`, fields, "PUT");
+}
+
+export async function deleteCase(id: string): Promise<void> {
+  await jsonRequest(`/api/casos/${encodeURIComponent(id)}`, "DELETE");
+}
+
 async function postJson<T = PqrCase>(
   url: string,
   fields: CreateFields | CloseFields | BitacoraFields,
+  method = "POST",
 ): Promise<T> {
   const response = await apiFetch(url, {
-    method: "POST",
+    method,
     headers: { "content-type": "application/json" },
     body: JSON.stringify(fields),
   });

@@ -1,4 +1,6 @@
+import { useState } from "react";
 import { Link } from "react-router-dom";
+import { deleteCase } from "./api";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -25,10 +27,31 @@ function Field({ label, value }: { label: string; value: string | null }) {
   );
 }
 
-export function CaseDetail({ caso, onClose }: { caso: PqrCase | null; onClose: () => void }) {
+export function CaseDetail({
+  caso,
+  onClose,
+  onChanged,
+}: {
+  caso: PqrCase | null;
+  onClose: () => void;
+  onChanged: () => void;
+}) {
   const open = caso !== null && caso.fechaSolucion === null;
-  const { canWrite } = useAuth();
+  const { canWrite, user } = useAuth();
   const plazo = caso ? plazoLabel(caso.riesgo) : null;
+  const [actionError, setActionError] = useState<string | null>(null);
+
+  async function remove() {
+    if (!caso || !window.confirm(`¿Eliminar el caso ${caso.idOrden ?? caso.id} y su bitácora? No se puede deshacer.`)) return;
+    setActionError(null);
+    try {
+      await deleteCase(caso.id);
+      onChanged();
+      onClose();
+    } catch (reason) {
+      setActionError(reason instanceof Error ? reason.message : "No se pudo eliminar el caso");
+    }
+  }
   return (
     <Sheet open={caso !== null} onOpenChange={(next) => (next ? undefined : onClose())}>
       <SheetContent side="right" className="overflow-y-auto">
@@ -56,6 +79,8 @@ export function CaseDetail({ caso, onClose }: { caso: PqrCase | null; onClose: (
                   <Field label="Tema" value={caso.tema} />
                   <Field label="Fuente" value={caso.fuente} />
                   <Field label="ID de orden" value={caso.idOrden} />
+                  <Field label="Abierto por" value={caso.creadoPor ?? null} />
+                  {caso.fechaSolucion ? <Field label="Cerrado por" value={caso.cerradoPor ?? null} /> : null}
                 </dl>
               </section>
               <section aria-labelledby="det-persona" className="grid gap-3">
@@ -76,11 +101,24 @@ export function CaseDetail({ caso, onClose }: { caso: PqrCase | null; onClose: (
               </section>
               <Bitacora caseId={caso.id} />
             </div>
-            {open && canWrite ? (
+            {canWrite || user?.rol === "admin" ? (
               <SheetFooter>
-                <Button asChild className="min-h-11 w-full">
-                  <Link to={`/casos/${encodeURIComponent(caso.id)}/cerrar`}>Cerrar caso</Link>
-                </Button>
+                {actionError ? <p role="alert" className="text-sm text-destructive">{actionError}</p> : null}
+                {open && canWrite ? (
+                  <Button asChild className="min-h-11 w-full">
+                    <Link to={`/casos/${encodeURIComponent(caso.id)}/cerrar`}>Cerrar caso</Link>
+                  </Button>
+                ) : null}
+                {canWrite ? (
+                  <Button asChild variant="outline" className="min-h-11 w-full">
+                    <Link to={`/casos/${encodeURIComponent(caso.id)}/editar`}>Editar caso</Link>
+                  </Button>
+                ) : null}
+                {user?.rol === "admin" ? (
+                  <Button variant="ghost" className="min-h-11 w-full text-destructive" onClick={remove}>
+                    Eliminar caso
+                  </Button>
+                ) : null}
               </SheetFooter>
             ) : null}
           </>

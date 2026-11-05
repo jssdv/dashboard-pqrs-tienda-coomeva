@@ -34,14 +34,19 @@ describe("arranque de la base", () => {
     const dir = tmp();
     const file = path.join(dir, "pqr.sqlite");
     openSqliteRepository(file, { respaldos: path.join(dir, "respaldos") }).cerrar();
-    raw(file, "ALTER TABLE cases DROP COLUMN accionCorrectiva; ALTER TABLE proveedores DROP COLUMN notas; PRAGMA user_version = 0");
+    raw(
+      file,
+      "ALTER TABLE cases DROP COLUMN accionCorrectiva; ALTER TABLE proveedores DROP COLUMN notas; " +
+        "ALTER TABLE cases DROP COLUMN creadoPor; ALTER TABLE cases DROP COLUMN cerradoPor; " +
+        "ALTER TABLE bitacora DROP COLUMN autor; PRAGMA user_version = 0",
+    );
 
     openSqliteRepository(file, { respaldos: path.join(dir, "respaldos") }).cerrar();
 
     const db = new DatabaseSync(file);
     const cols = (db.prepare("PRAGMA table_info(cases)").all() as Array<{ name: string }>).map((c) => c.name);
     expect(cols).toContain("accionCorrectiva");
-    expect(userVersion(db)).toBe(1);
+    expect(userVersion(db)).toBe(TODAS_LAS_MIGRACIONES.at(-1)!.version);
     db.close();
   });
 
@@ -89,15 +94,15 @@ describe("arranque de la base", () => {
     openSqliteRepository(file, { respaldos }).cerrar();
     const rota = [
       ...MIGRACIONES,
-      { version: 2, aplicar: "CREATE TABLE nueva (x INTEGER); INSERT INTO no_existe VALUES (1);" },
+      { version: 3, aplicar: "CREATE TABLE nueva (x INTEGER); INSERT INTO no_existe VALUES (1);" },
     ];
     const migraciones = [TODAS_LAS_MIGRACIONES[0], ...rota];
 
     expect(() => openSqliteRepository(file, { respaldos, migraciones })).toThrow(
-      /versión 2.*Se revirtió.*Respaldo previo/s,
+      /versión 3.*Se revirtió.*Respaldo previo/s,
     );
     const db = new DatabaseSync(file);
-    expect(userVersion(db)).toBe(1);
+    expect(userVersion(db)).toBe(TODAS_LAS_MIGRACIONES.at(-1)!.version);
     expect(db.prepare("SELECT name FROM sqlite_master WHERE name = 'nueva'").all()).toHaveLength(0);
     db.close();
     expect(respaldosEn(respaldos).length).toBeGreaterThan(0);
