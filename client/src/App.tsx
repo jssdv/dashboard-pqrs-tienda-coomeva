@@ -2,7 +2,7 @@ import { createBrowserRouter, Navigate, Outlet, RouterProvider } from "react-rou
 import { Admin } from "./Admin";
 import { AuthProvider, RequireRole } from "./auth";
 import { Casos } from "./Casos";
-import { CerrarCaso, NuevoCaso } from "./CaseForm";
+import { CerrarCaso, EditarCaso, NuevoCaso } from "./CaseForm";
 import { Login } from "./Login";
 import { Proveedores } from "./Proveedores";
 import { Resumen } from "./Resumen";
@@ -50,6 +50,14 @@ const router = createBrowserRouter([
                 element: (
                   <RequireRole roles={[...WRITERS]}>
                     <CerrarCaso />
+                  </RequireRole>
+                ),
+              },
+              {
+                path: ":id/editar",
+                element: (
+                  <RequireRole roles={[...WRITERS]}>
+                    <EditarCaso />
                   </RequireRole>
                 ),
               },

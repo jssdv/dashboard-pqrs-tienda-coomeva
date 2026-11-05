@@ -148,7 +148,17 @@ const BASE: Migracion = { version: 1, aplicar: crearEsquemaBase };
 
 // Para cambiar el esquema, añade { version: 2, aplicar: "ALTER TABLE ..." } (o una función) al final.
 // Nunca cambies ni reordenes una migración ya publicada: las bases que la aplicaron no la vuelven a correr.
-export const MIGRACIONES: Migracion[] = [];
+export const MIGRACIONES: Migracion[] = [
+  {
+    version: 2,
+    // Quién abrió y cerró cada caso, y quién escribió cada avance de bitácora. Nulo = registro anterior.
+    aplicar: `
+      ALTER TABLE cases ADD COLUMN creadoPor TEXT;
+      ALTER TABLE cases ADD COLUMN cerradoPor TEXT;
+      ALTER TABLE bitacora ADD COLUMN autor TEXT;
+    `,
+  },
+];
 
 export const TODAS_LAS_MIGRACIONES: Migracion[] = [BASE, ...MIGRACIONES];
 

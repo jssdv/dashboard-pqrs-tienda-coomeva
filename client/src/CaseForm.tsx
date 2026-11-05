@@ -1,9 +1,9 @@
 import { useEffect, useState, type FormEvent } from "react";
-import { useNavigate, useOutletContext, useParams } from "react-router-dom";
+import { Navigate, useNavigate, useOutletContext, useParams } from "react-router-dom";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { ApiError, closeCase, createCase, getCases, getCatalogs } from "./api";
+import { ApiError, closeCase, createCase, getCases, getCatalogs, updateCase } from "./api";
 import { fieldMessage } from "./format";
 import { bogotaToday } from "./metrics";
 import { Combobox } from "./ui/Combobox";
@@ -54,10 +54,56 @@ function useReload(): () => void {
   return context?.reload ?? (() => {});
 }
 
+function createFieldsOf(caso: PqrCase): CreateFields {
+  return {
+    fechaInicial: caso.fechaInicial ?? "",
+    area: caso.area ?? "",
+    idOrden: caso.idOrden ?? "",
+    asociado: caso.asociado ?? "",
+    correo: caso.correo ?? "",
+    fuente: caso.fuente ?? "",
+    tipo: caso.tipo ?? "",
+    tema: caso.tema ?? "",
+    motivo: caso.motivo ?? "",
+  };
+}
+
 export function NuevoCaso() {
+  return <CaseFormDialog />;
+}
+
+export function EditarCaso() {
+  const { id = "" } = useParams();
+  const [caso, setCaso] = useState<PqrCase | null>(null);
+  const [missing, setMissing] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    getCases({}).then(
+      (rows) => {
+        if (cancelled) return;
+        const found = rows.find((row) => row.id === id) ?? null;
+        setCaso(found);
+        setMissing(!found);
+      },
+      () => {
+        if (!cancelled) setMissing(true);
+      },
+    );
+    return () => {
+      cancelled = true;
+    };
+  }, [id]);
+
+  if (caso) return <CaseFormDialog caso={caso} />;
+  if (missing) return <Navigate to="/casos" replace />;
+  return null;
+}
+
+function CaseFormDialog({ caso }: { caso?: PqrCase }) {
   const navigate = useNavigate();
   const reload = useReload();
-  const [fields, setFields] = useState<CreateFields>(EMPTY_CREATE);
+  const [fields, setFields] = useState<CreateFields>(() => (caso ? createFieldsOf(caso) : EMPTY_CREATE));
   const [errors, setErrors] = useState<FieldError[]>([]);
   const [pending, setPending] = useState(false);
   const [catalogs, setCatalogs] = useState<Catalogs | null>(null);
@@ -84,7 +130,7 @@ export function NuevoCaso() {
     event.preventDefault();
     setPending(true);
     try {
-      await createCase(fields);
+      await (caso ? updateCase(caso.id, fields) : createCase(fields));
       reload();
       navigate("/casos");
     } catch (reason) {
@@ -95,9 +141,11 @@ export function NuevoCaso() {
 
   return (
     <FormDialog
-      title="Nuevo caso"
-      description="La fecha y el texto de solución se registran al cerrar."
-      submitLabel="Guardar caso"
+      title={caso ? "Editar caso" : "Nuevo caso"}
+      description={
+        caso ? "Corrige los datos de registro. El cierre no cambia." : "La fecha y el texto de solución se registran al cerrar."
+      }
+      submitLabel={caso ? "Guardar cambios" : "Guardar caso"}
       pending={pending}
       disabled={!ready}
       onClose={() => navigate("/casos")}

@@ -257,7 +257,11 @@ export function Casos() {
           </nav>
         </div>
       ) : null}
-      <CaseDetail caso={selected} onClose={() => setSelectedId(null)} />
+      <CaseDetail
+        caso={selected}
+        onClose={() => setSelectedId(null)}
+        onChanged={() => setReloadKey((key) => key + 1)}
+      />
       <Outlet context={{ reload: () => setReloadKey((key) => key + 1) }} />
     </>
   );

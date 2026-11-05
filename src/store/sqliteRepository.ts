@@ -132,6 +132,12 @@ export function openSqliteRepository(dbPath: string, opciones: OpcionesRepositor
       .map((column) => `${column} = ?`)
       .join(", ")} WHERE id = ?`,
   );
+  const setCerradoPor = db.prepare("UPDATE cases SET cerradoPor = ? WHERE id = ?");
+  const setCreadoPor = db.prepare("UPDATE cases SET creadoPor = ? WHERE id = ?");
+  const removeCase = transaction((id: string) => {
+    db.prepare("DELETE FROM bitacora WHERE caseId = ?").run(id);
+    db.prepare("DELETE FROM cases WHERE id = ?").run(id);
+  });
   const addHoliday = db.prepare("INSERT OR IGNORE INTO holidays (date) VALUES (?)");
   const addHolidaySet = transaction((dates: readonly string[]) => {
     for (const date of dates) addHoliday.run(date);
@@ -178,12 +184,17 @@ export function openSqliteRepository(dbPath: string, opciones: OpcionesRepositor
     replaceAll(cases) {
       replace(cases);
     },
-    insert(caso) {
+    insert(caso, creadoPor) {
       insert.run(...caseValues(caso));
+      setCreadoPor.run(creadoPor, caso.id);
     },
-    update(caso) {
+    update(caso, cerradoPor) {
       const values = caseValues(caso);
       update.run(...values.slice(1), caso.id);
+      if (cerradoPor !== undefined) setCerradoPor.run(cerradoPor, caso.id);
+    },
+    remove(id) {
+      removeCase(id);
     },
     listHolidays() {
       return (
@@ -235,11 +246,20 @@ export function openSqliteRepository(dbPath: string, opciones: OpcionesRepositor
         .prepare("SELECT * FROM bitacora WHERE caseId = ? ORDER BY fecha DESC, id DESC")
         .all(caseId) as unknown as BitacoraEntry[];
     },
-    addBitacora(caseId, fields, creadoEn) {
+    getBitacora(id) {
+      return (db.prepare("SELECT * FROM bitacora WHERE id = ?").get(id) as unknown as BitacoraEntry | undefined) ?? null;
+    },
+    addBitacora(caseId, fields, creadoEn, autor) {
       const { lastInsertRowid } = db
-        .prepare("INSERT INTO bitacora (caseId, fecha, texto, creadoEn) VALUES (?, ?, ?, ?)")
-        .run(caseId, fields.fecha, fields.texto, creadoEn);
-      return { id: Number(lastInsertRowid), caseId, ...fields, creadoEn };
+        .prepare("INSERT INTO bitacora (caseId, fecha, texto, creadoEn, autor) VALUES (?, ?, ?, ?, ?)")
+        .run(caseId, fields.fecha, fields.texto, creadoEn, autor);
+      return { id: Number(lastInsertRowid), caseId, ...fields, creadoEn, autor };
+    },
+    updateBitacora(id, fields) {
+      db.prepare("UPDATE bitacora SET fecha = ?, texto = ? WHERE id = ?").run(fields.fecha, fields.texto, id);
+    },
+    removeBitacora(id) {
+      db.prepare("DELETE FROM bitacora WHERE id = ?").run(id);
     },
     list() {
       const rows = db
