@@ -591,7 +591,22 @@ export function createSummaryServer(repository: CaseRepository, options: Summary
         return;
       }
       if (req.method === "GET" && url.pathname === "/summary") {
-        json(res, 200, summarize(repository.list(), clock()));
+        const desde = url.searchParams.get("desde");
+        const hasta = url.searchParams.get("hasta");
+        const fechaOk = (value: string | null) => value === null || /^\d{4}-\d{2}-\d{2}$/.test(value);
+        if (!fechaOk(desde) || !fechaOk(hasta)) {
+          json(res, 400, { error: "Periodo inválido" });
+          return;
+        }
+        // ponytail: filtro en memoria sobre todos los casos; sin índice por fecha.
+        const cases = repository
+          .list()
+          .filter(
+            (row) =>
+              (desde === null && hasta === null) ||
+              (row.fechaInicial !== null && (desde === null || row.fechaInicial >= desde) && (hasta === null || row.fechaInicial <= hasta)),
+          );
+        json(res, 200, summarize(cases, clock()));
         return;
       }
       if (req.method === "GET" && url.pathname === "/api/catalogos") {
