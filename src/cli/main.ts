@@ -3,7 +3,8 @@ import { join, resolve } from "node:path";
 import { createSummaryServer } from "../api/summaryServer.js";
 import { parseDictionary } from "../domain/dictionary.js";
 import { parseHolidayCsv } from "../holidays/nationalHolidays.js";
-import { lanBases } from "../share/links.js";
+import { lanBases, URL_PUBLICA } from "../share/links.js";
+import { createTunnel } from "../share/tunnel.js";
 import { openSqliteRepository } from "../store/sqliteRepository.js";
 import { appFolder, ensureDataDir, ensureDefaultCsvs, openBrowser } from "./appFolder.js";
 
@@ -20,7 +21,14 @@ try {
   const extraHolidays = parseHolidayCsv(readFileSync(join(dataDir, "holidays.csv"), "utf8"));
   repository.addHolidays(extraHolidays);
 
-  const server = createSummaryServer(repository, { dictionary, extraHolidays, auth: repository });
+  // Acceso desde internet: el túnel va empaquetado en <app>/bin. Al activarse, su URL pasa a ser la URL pública.
+  const cloudflared = process.platform === "win32" ? "cloudflared.exe" : "cloudflared";
+  const tunnel = createTunnel(process.env.PQR_CLOUDFLARED ?? join(appFolder(), "bin", cloudflared), (url) => {
+    if (url) repository.setAjuste(URL_PUBLICA, url);
+    else if ((repository.getAjuste(URL_PUBLICA) ?? "").endsWith(".trycloudflare.com")) repository.setAjuste(URL_PUBLICA, "");
+  });
+  process.on("exit", () => tunnel.stop());
+  const server = createSummaryServer(repository, { dictionary, extraHolidays, auth: repository, tunnel });
   server.on("error", (error: NodeJS.ErrnoException) => {
     console.error(
       error.code === "EADDRINUSE"

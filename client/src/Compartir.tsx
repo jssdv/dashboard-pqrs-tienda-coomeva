@@ -7,11 +7,14 @@ import {
   createEnlace,
   getEnlaces,
   getShareInfo,
+  getTunel,
   getUrlPublica,
   revokeEnlace,
+  setTunel,
   setUrlPublica,
   type Enlace,
   type ShareInfo,
+  type TunnelStatus,
 } from "./api";
 import { fieldClass } from "./Shell";
 
@@ -40,13 +43,41 @@ export function Compartir() {
   const [error, setError] = useState("");
   const [pending, setPending] = useState(false);
 
+  const [tunel, setTunelState] = useState<TunnelStatus | null>(null);
+  const [tunelBusy, setTunelBusy] = useState(false);
+
   const reload = () => getEnlaces().then(setEnlaces);
 
   useEffect(() => {
     reload().catch((reason: unknown) => setError(messageOf(reason, "No se pudieron cargar los enlaces")));
     getShareInfo().then(setInfo, () => setInfo({ puerto: 0, urls: [] }));
     getUrlPublica().then(setPublica, () => {});
+    getTunel().then(setTunelState, () => {});
   }, []);
+
+  // Mientras el túnel abre, consulta hasta que termine; al quedar activo, la URL pública ya está guardada.
+  useEffect(() => {
+    if (tunel?.estado !== "iniciando") return;
+    const id = setInterval(() => {
+      getTunel().then((next) => {
+        setTunelState(next);
+        if (next.estado === "activo") getUrlPublica().then(setPublica, () => {});
+      }, () => {});
+    }, 1000);
+    return () => clearInterval(id);
+  }, [tunel?.estado]);
+
+  async function onTunel(activo: boolean) {
+    setTunelBusy(true);
+    setError("");
+    try {
+      setTunelState(await setTunel(activo));
+    } catch (reason) {
+      setError(messageOf(reason, "No se pudo cambiar el acceso desde internet"));
+    } finally {
+      setTunelBusy(false);
+    }
+  }
 
   async function onCreate(event: FormEvent) {
     event.preventDefault();
@@ -114,6 +145,42 @@ export function Compartir() {
           {error}
         </p>
       ) : null}
+
+      <div className="grid gap-3 border border-border bg-card p-4">
+        <h3 className="font-semibold">Acceso desde internet</h3>
+        {tunel === null ? null : !tunel.disponible ? (
+          <p className="text-sm text-muted-foreground">
+            Esta copia de la aplicación no incluye el acceso desde internet. Usa la versión más reciente.
+          </p>
+        ) : tunel.estado === "activo" && tunel.url ? (
+          <>
+            <p className="text-sm">Abierto. Quien tenga un enlace puede entrar desde cualquier red:</p>
+            <p className="font-mono text-sm break-all">{tunel.url}</p>
+            <p className="text-sm text-muted-foreground">
+              Funciona mientras esta computadora tenga la aplicación abierta. Al cerrarla, el acceso se apaga.
+            </p>
+            <Button variant="outline" className="w-fit" disabled={tunelBusy} onClick={() => onTunel(false)}>
+              Apagar acceso desde internet
+            </Button>
+          </>
+        ) : tunel.estado === "iniciando" ? (
+          <p className="text-sm">Abriendo el acceso… espera unos segundos.</p>
+        ) : (
+          <>
+            <p className="text-sm text-muted-foreground">
+              Permite abrir los enlaces desde cualquier red, sin instalar nada más.
+            </p>
+            {tunel.error ? (
+              <p role="alert" className="text-sm text-destructive">
+                {tunel.error}
+              </p>
+            ) : null}
+            <Button className="w-fit" disabled={tunelBusy} onClick={() => onTunel(true)}>
+              Activar acceso desde internet
+            </Button>
+          </>
+        )}
+      </div>
 
       <div className="grid gap-6 md:grid-cols-2">
         <div className="grid content-start gap-3 border border-border bg-card p-4">

@@ -48,18 +48,18 @@ Como administrador, en la pantalla **Compartir** crea un enlace. La app muestra 
 
 #### Abrir el enlace desde otra red (internet)
 
-Los enlaces de la red local no funcionan fuera de la oficina. Para abrirlos desde fuera:
+Sin instalar nada ni usar la terminal:
 
-1. Instala `cloudflared` una vez: `brew install cloudflared` (Windows: `winget install --id Cloudflare.cloudflared`).
-2. Arranca la app con `PQR_PROXY=1 npm start`. Así el límite de intentos de login cuenta cada visitante por separado.
-3. En otra terminal, en la carpeta del proyecto, ejecuta `npm run acceso-externo`. Muestra una dirección `https://....trycloudflare.com`.
-4. En **Compartir > URL pública** pega esa dirección y guarda. Los enlaces nuevos usarán esa URL.
+1. Abre la app y crea el usuario administrador (si es la primera vez).
+2. Ve a **Compartir > Acceso desde internet** y pulsa **Activar acceso desde internet**.
+3. Aparece una dirección `https://....trycloudflare.com`. Cualquiera con esa dirección y un usuario de la app puede entrar desde otra red.
 
-En Windows (sin `npm`/bash para el script), ejecuta directamente `cloudflared tunnel --url http://127.0.0.1:3000`.
+El túnel viene dentro de la aplicación (`bin/cloudflared`). Mientras la app esté abierta, el acceso sigue activo; al cerrarla, se apaga.
 
 Notas:
-- La dirección `trycloudflare.com` cambia cada vez que reinicias el túnel: vuelve a copiarla en URL pública.
-- Es un túnel de prueba. Para una dirección fija usa un túnel con nombre de Cloudflare (requiere cuenta y dominio).
+- La dirección cambia cada vez que activas el acceso.
+- Es el servicio de prueba de Cloudflare: no tiene garantía de disponibilidad. Para una dirección fija y permanente hace falta una cuenta de Cloudflare con dominio propio.
+- Los datos viajan cifrados (HTTPS) hasta Cloudflare y de ahí a la aplicación.
 - Quien tenga la dirección solo llega al inicio de sesión: sigue necesitando usuario y contraseña.
 
 > **Aviso:** en la red local la conexión es HTTP sin cifrar; contraseñas y sesiones viajan sin TLS. Úsala solo en redes de confianza. Para acceso desde fuera de la oficina, pon delante HTTPS (túnel o proxy).

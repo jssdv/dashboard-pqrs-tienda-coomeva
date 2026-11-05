@@ -10,8 +10,7 @@
     "test": "vitest run",
     "dev": "vite",
     "build": "vite build",
-    "build:bin": "node scripts/build-sea.mjs",
-    "acceso-externo": "bash scripts/acceso-externo.sh"
+    "build:bin": "node scripts/build-sea.mjs"
   },
   "dependencies": {
     "class-variance-authority": "^0.7.1",

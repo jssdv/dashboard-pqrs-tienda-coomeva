@@ -1,21 +1,16 @@
 import type { IncomingMessage } from "node:http";
-import { afterEach, expect, it } from "vitest";
+import { expect, it } from "vitest";
 import { clientIp } from "../../src/api/summaryServer.js";
 
-const req = (headers: Record<string, string>, remote = "127.0.0.1") =>
+const req = (headers: Record<string, string>, remote: string) =>
   ({ headers, socket: { remoteAddress: remote } }) as unknown as IncomingMessage;
 
-afterEach(() => {
-  delete process.env.PQR_PROXY;
+it("takes the real visitor from cf-connecting-ip only when the connection comes from loopback (the tunnel)", () => {
+  expect(clientIp(req({ "cf-connecting-ip": "203.0.113.9" }, "127.0.0.1"))).toBe("203.0.113.9");
+  expect(clientIp(req({ "cf-connecting-ip": "203.0.113.9" }, "::ffff:127.0.0.1"))).toBe("203.0.113.9");
 });
 
-it("ignores forwarding headers unless PQR_PROXY=1 (no spoofing the login limit)", () => {
-  expect(clientIp(req({ "cf-connecting-ip": "203.0.113.9" }))).toBe("127.0.0.1");
-});
-
-it("reads the real visitor behind a tunnel when PQR_PROXY=1", () => {
-  process.env.PQR_PROXY = "1";
-  expect(clientIp(req({ "cf-connecting-ip": "203.0.113.9" }))).toBe("203.0.113.9");
-  expect(clientIp(req({ "x-forwarded-for": "198.51.100.4, 10.0.0.1" }))).toBe("198.51.100.4");
+it("ignores the header from the LAN, so it cannot be spoofed to dodge the login limit", () => {
+  expect(clientIp(req({ "cf-connecting-ip": "203.0.113.9" }, "192.168.1.20"))).toBe("192.168.1.20");
   expect(clientIp(req({}, "10.0.0.7"))).toBe("10.0.0.7");
 });

@@ -17,6 +17,7 @@ import {
 } from "../auth/users.js";
 import { hashPassword } from "../auth/password.js";
 import type { ShareRepository } from "../share/repository.js";
+import { createTunnel, type TunnelController } from "../share/tunnel.js";
 import { enlaceValido, expiraDe, hashToken, lanBases, newToken, URL_PUBLICA, urlPublicaValida } from "../share/links.js";
 import { createEventHub } from "./events.js";
 import { applyClose, caseFromCreate, validateBitacora, validateClose, validateCreate } from "../domain/caseForm.js";
@@ -53,6 +54,7 @@ export interface SummaryServerOptions {
   extraHolidays?: string[];
   fetchImpl?: typeof fetch;
   now?: () => Date;
+  tunnel?: TunnelController;
 }
 
 const SESSION_COOKIE = "pqr_session";
@@ -263,16 +265,15 @@ function isSpaRoute(pathname: string): boolean {
   );
 }
 
-// Con un túnel (PQR_PROXY=1) todas las visitas externas llegan desde 127.0.0.1: sin esto, un
-// límite de login por IP bloquearía a todos a la vez. Sin el flag, los encabezados se ignoran
-// (cualquiera podría falsificarlos para saltarse el límite).
+const LOOPBACK = new Set(["127.0.0.1", "::1", "::ffff:127.0.0.1"]);
+
+// El túnel de Cloudflare conecta desde loopback y pone la IP real en cf-connecting-ip. Solo se confía
+// en ese encabezado desde loopback: desde la red local no se puede falsificar, así el límite de login
+// no se salta y, con el túnel, no bloquea a todos a la vez.
 export function clientIp(req: IncomingMessage): string {
-  if (process.env.PQR_PROXY === "1") {
-    const cloudflare = req.headers["cf-connecting-ip"];
-    if (typeof cloudflare === "string" && cloudflare.trim()) return cloudflare.trim();
-    const forwarded = String(req.headers["x-forwarded-for"] ?? "").split(",")[0].trim();
-    if (forwarded) return forwarded;
-  }
+  const remote = req.socket.remoteAddress ?? "";
+  const cloudflare = req.headers["cf-connecting-ip"];
+  if (LOOPBACK.has(remote) && typeof cloudflare === "string" && cloudflare.trim()) return cloudflare.trim();
   return req.socket.remoteAddress ?? "";
 }
 
@@ -461,10 +462,36 @@ async function handleShareRoute(
   req: IncomingMessage,
   res: ServerResponse,
   url: URL,
-  share: ShareRepository,
+  share: ShareRepository & AuthRepository,
   me: AuthUser,
+  tunnel: TunnelController,
 ): Promise<boolean> {
   const port = req.socket.localPort ?? 0;
+  if (req.method === "GET" && url.pathname === "/api/admin/tunel") {
+    json(res, 200, tunnel.status());
+    return true;
+  }
+  if (req.method === "POST" && url.pathname === "/api/admin/tunel") {
+    const raw = await readFields(req, res);
+    if (!raw) return true;
+    if (String(raw.activo) === "true") {
+      // Sin administrador creado, quien llegue primero por internet podría crearlo.
+      if (share.countUsers() === 0) {
+        json(res, 400, { error: "Crea primero el usuario administrador antes de abrir el acceso desde internet" });
+        return true;
+      }
+      try {
+        tunnel.start(port);
+      } catch (error) {
+        json(res, 400, { error: error instanceof Error ? error.message : String(error) });
+        return true;
+      }
+    } else {
+      tunnel.stop();
+    }
+    json(res, 200, tunnel.status());
+    return true;
+  }
   if (req.method === "GET" && url.pathname === "/api/admin/info") {
     json(res, 200, { puerto: port, urls: lanBases(port) });
     return true;
@@ -557,6 +584,7 @@ export function createSummaryServer(repository: CaseRepository, options: Summary
   const fetchImpl = options.fetchImpl ?? fetch;
   const today = () => bogotaToday(options.now ? options.now() : new Date());
   const { auth } = options;
+  const tunnel = options.tunnel ?? createTunnel(null, () => {});
   const limit = createLoginLimit();
   const hub = createEventHub();
 
@@ -592,7 +620,7 @@ export function createSummaryServer(repository: CaseRepository, options: Summary
             return;
           }
           if (await handleAdminRoute(req, res, url, auth, me)) return;
-          if (await handleShareRoute(req, res, url, auth, me)) return;
+          if (await handleShareRoute(req, res, url, auth, me, tunnel)) return;
         } else if (me.rol === "viewer" && !READ_METHODS.includes(req.method ?? "")) {
           json(res, 403, { error: "Tu rol solo permite consultar" });
           return;

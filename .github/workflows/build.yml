@@ -27,6 +27,18 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm test
+      - name: Bajar cloudflared (macOS)
+        if: runner.os == 'macOS'
+        run: |
+          curl -fsSL -o cloudflared.tgz https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-darwin-arm64.tgz
+          tar -xzf cloudflared.tgz
+          echo "CLOUDFLARED_BIN=$PWD/cloudflared" >> "$GITHUB_ENV"
+      - name: Bajar cloudflared (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          Invoke-WebRequest -Uri https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-windows-amd64.exe -OutFile cloudflared.exe
+          "CLOUDFLARED_BIN=$PWD\cloudflared.exe" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
       - run: npm run build:bin
       - name: Comprimir (macOS)
         if: runner.os == 'macOS'
