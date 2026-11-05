@@ -154,8 +154,9 @@ export async function setUrlPublica(url: string): Promise<string> {
   return (await jsonRequest<{ url_publica: string }>("/api/admin/ajustes", "PUT", { url_publica: url })).url_publica;
 }
 
-export async function getSummary(): Promise<DashboardSummary> {
-  const response = await apiFetch("/summary");
+export async function getSummary(periodo: { desde: string; hasta: string } | null = null): Promise<DashboardSummary> {
+  const query = periodo ? `?${new URLSearchParams({ desde: periodo.desde, hasta: periodo.hasta })}` : "";
+  const response = await apiFetch(`/summary${query}`);
   const body = await readBody(response);
   if (!response.ok) {
     throw new ApiError(

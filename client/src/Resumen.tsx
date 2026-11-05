@@ -17,6 +17,7 @@ import { axisTick, ChartTip, Meter, useMotion } from "./charts";
 import { casosHref, percent, promedioText } from "./format";
 import { bogotaMonth, completeMonths, deltaPct, tasaCierre } from "./metrics";
 import { Card, PageHead } from "./Shell";
+import { PeriodPicker, type Periodo } from "./ui/PeriodPicker";
 import { SegmentedBar } from "./ui/SegmentedBar";
 import { StatCard } from "./ui/StatCard";
 import { TipoTag } from "./ui/TipoTag";
@@ -316,13 +317,14 @@ export function Resumen() {
   const [summary, setSummary] = useState<DashboardSummary | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [range, setRange] = useState("12");
+  const [periodo, setPeriodo] = useState<Periodo>(null);
 
   const load = useCallback(
     () =>
-      getSummary().then(setSummary, (reason: unknown) => {
+      getSummary(periodo).then(setSummary, (reason: unknown) => {
         setError(reason instanceof ApiError ? reason.message : "No se pudo cargar el resumen");
       }),
-    [],
+    [periodo],
   );
 
   useEffect(() => {
@@ -356,6 +358,7 @@ export function Resumen() {
         section="Panel"
         title="Panel"
         lede={colaMissing ? `${summary.abiertos} abiertos` : `${summary.abiertos} abiertos · ${summary.colaVencida} vencidos`}
+        actions={<PeriodPicker value={periodo} onChange={setPeriodo} />}
       />
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4" aria-label="Indicadores">
         <StatCard
@@ -418,7 +421,9 @@ export function Resumen() {
       </div>
       {summary.total === 0 ? (
         <p className="mt-6 border border-border bg-card p-6">
-          Todavía no hay casos importados. Un administrador puede importar el libro desde Administración.
+          {periodo
+            ? "No hay casos con fecha de inicio en este periodo."
+            : "Todavía no hay casos importados. Un administrador puede importar el libro desde Administración."}
         </p>
       ) : (
         <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-2">
