@@ -154,6 +154,21 @@ export async function setUrlPublica(url: string): Promise<string> {
   return (await jsonRequest<{ url_publica: string }>("/api/admin/ajustes", "PUT", { url_publica: url })).url_publica;
 }
 
+export interface TunnelStatus {
+  estado: "apagado" | "iniciando" | "activo";
+  url: string | null;
+  error: string | null;
+  disponible: boolean;
+}
+
+export async function getTunel(): Promise<TunnelStatus> {
+  return jsonRequest("/api/admin/tunel", "GET");
+}
+
+export async function setTunel(activo: boolean): Promise<TunnelStatus> {
+  return jsonRequest("/api/admin/tunel", "POST", { activo });
+}
+
 export async function getSummary(periodo: { desde: string; hasta: string } | null = null): Promise<DashboardSummary> {
   const query = periodo ? `?${new URLSearchParams({ desde: periodo.desde, hasta: periodo.hasta })}` : "";
   const response = await apiFetch(`/summary${query}`);

@@ -88,6 +88,16 @@ if (process.platform === "darwin") {
 }
 
 mkdirSync(join(folder, "data"), { recursive: true });
+// Acceso desde internet: CLOUDFLARED_BIN apunta al ejecutable cloudflared de esta plataforma (lo baja el workflow de CI).
+// Sin él, la app se compila igual y la opción de internet aparece deshabilitada.
+if (process.env.CLOUDFLARED_BIN) {
+  mkdirSync(join(folder, "bin"), { recursive: true });
+  const tunel = join(folder, "bin", process.platform === "win32" ? "cloudflared.exe" : "cloudflared");
+  copyFileSync(process.env.CLOUDFLARED_BIN, tunel);
+  chmodSync(tunel, 0o755);
+} else {
+  console.warn("CLOUDFLARED_BIN no definido: esta copia no tendrá acceso desde internet.");
+}
 copyFileSync(join(root, "scripts", "LEEME.txt"), join(folder, "LEEME.txt"));
 rmSync(work, { recursive: true, force: true });
 console.log(`built ${exe}`);

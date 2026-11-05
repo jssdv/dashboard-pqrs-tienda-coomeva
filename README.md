@@ -46,7 +46,21 @@ Puntos a tener en cuenta:
 
 Como administrador, en la pantalla **Compartir** crea un enlace. La app muestra una dirección `/ver/<token>` con la IP de la red local. Quien lo abra debe iniciar sesión y verá el tablero en vivo; los cambios aparecen sin recargar. Puedes poner fecha de caducidad y revocar el enlace en cualquier momento.
 
-Si publicas la app con un túnel propio (por ejemplo, con una URL HTTPS), escribe esa dirección en **URL pública** de ajustes para que los enlaces la usen. La app no incluye túnel.
+#### Abrir el enlace desde otra red (internet)
+
+Sin instalar nada ni usar la terminal:
+
+1. Abre la app y crea el usuario administrador (si es la primera vez).
+2. Ve a **Compartir > Acceso desde internet** y pulsa **Activar acceso desde internet**.
+3. Aparece una dirección `https://....trycloudflare.com`. Cualquiera con esa dirección y un usuario de la app puede entrar desde otra red.
+
+El túnel viene dentro de la aplicación (`bin/cloudflared`). Mientras la app esté abierta, el acceso sigue activo; al cerrarla, se apaga.
+
+Notas:
+- La dirección cambia cada vez que activas el acceso.
+- Es el servicio de prueba de Cloudflare: no tiene garantía de disponibilidad. Para una dirección fija y permanente hace falta una cuenta de Cloudflare con dominio propio.
+- Los datos viajan cifrados (HTTPS) hasta Cloudflare y de ahí a la aplicación.
+- Quien tenga la dirección solo llega al inicio de sesión: sigue necesitando usuario y contraseña.
 
 > **Aviso:** en la red local la conexión es HTTP sin cifrar; contraseñas y sesiones viajan sin TLS. Úsala solo en redes de confianza. Para acceso desde fuera de la oficina, pon delante HTTPS (túnel o proxy).
 
